@@ -17,6 +17,7 @@
     .kategorie { font-style: italic; font-size: 0.9rem; color: #666; }
     .produkt-info { display: flex; align-items: center; gap: 0.6rem; }
     .produkt-info i { font-size: 1.4rem; color: #333; }
+    .meldung { background: #fff3cd; color: #856404; padding: 0.5rem; border: 1px solid #ffeeba; margin-top: 0.5rem; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -29,7 +30,7 @@
   <input type="text" id="pinInput" placeholder="PIN eingeben oder generieren">
   <button onclick="starteHost()">Start (als Host)</button>
   <button onclick="verbindeMitHost()">Beitreten (mit PIN)</button>
-  <div id="status"></div>  <script>
+  <div id="status" class="meldung"></div>  <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
     let peer, conn;
 
@@ -112,13 +113,14 @@
 
     function starteHost() {
       const pin = pinInput.value.trim();
-      peer = new Peer(pin, { host: 'peerjs.com', port: 443, secure: true });
+      if (!pin) return status.innerText = "Bitte einen PIN eingeben.";
+      peer = new Peer(pin, { host: '0.peerjs.com', port: 443, path: '/' });
       peer.on('open', () => {
         status.innerText = "Warte auf Verbindung… PIN: " + pin;
       });
       peer.on('connection', c => {
         conn = c;
-        status.innerText = "Verbunden (Client)!";
+        status.innerText = "Client verbunden.";
         conn.on('data', d => {
           produkte = d;
           speichereProdukte();
@@ -127,20 +129,27 @@
         });
         sendeDaten();
       });
+      peer.on('error', err => {
+        status.innerText = "Fehler: " + err;
+      });
     }
 
     function verbindeMitHost() {
       const pin = pinInput.value.trim();
+      if (!pin) return status.innerText = "Bitte einen PIN eingeben.";
       peer = new Peer();
       conn = peer.connect(pin);
       conn.on('open', () => {
-        status.innerText = "Verbunden (Host)!";
+        status.innerText = "Verbindung hergestellt!";
         conn.on('data', d => {
           produkte = d;
           speichereProdukte();
           aktualisiereKategorienDropdown();
           renderListe();
         });
+      });
+      conn.on('error', err => {
+        status.innerText = "Verbindungsfehler: " + err;
       });
     }
 
