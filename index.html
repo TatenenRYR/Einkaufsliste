@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
   <title>Intelligente Einkaufsliste</title>
@@ -9,40 +8,51 @@
       max-width: 600px;
       margin: 2rem auto;
       padding: 1rem;
+      background-color: #f9f9f9;
+      color: #333;
     }
     h1 {
       text-align: center;
     }
-    input, button {
+    input, select, button {
       padding: 0.5rem;
       margin: 0.5rem 0;
       width: 100%;
       font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
     }
     ul {
       list-style-type: none;
       padding: 0;
     }
     li {
-      padding: 0.4rem;
+      padding: 0.6rem;
       border-bottom: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .kategorie {
       font-style: italic;
       color: #666;
+      font-size: 0.9rem;
     }
   </style>
 </head>
-<body>
+<body>  <h1>Intelligente Einkaufsliste</h1>  <input type="text" id="produktInput" placeholder="Produktname eingeben..." />
+  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück, 1 kg)" />
+  <button onclick="hinzufuegen()">Zur Liste hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="sortiereListe()"> <option value="">Keine Sortierung</option> </select>
 
-  <h1>Intelligente Einkaufsliste</h1>
-
-  <input type="text" id="produktInput" placeholder="Produktname eingeben..." />
-  <button onclick="hinzufuegen()">Zur Liste hinzufügen</button>
-
-  <ul id="liste"></ul>
-
-  <script>
+  <ul id="liste"></ul>  <script>
     const vordefinierteKategorien = {
       "cola": "Getränke",
       "fanta": "Getränke",
@@ -75,6 +85,8 @@
       "keks": "Süßwaren"
     };
 
+    let produkte = [];
+
     function ladeMapping() {
       return JSON.parse(localStorage.getItem("kategorienMapping") || "{}");
     }
@@ -96,13 +108,11 @@
     function findeBenutzerMapping(name) {
       const mapping = ladeMapping();
       const lowerName = name.toLowerCase();
-
       for (const [stichwort, kategorie] of Object.entries(mapping)) {
         if (lowerName.includes(stichwort)) {
           return kategorie;
         }
       }
-
       return null;
     }
 
@@ -112,6 +122,7 @@
         const mapping = ladeMapping();
         mapping[name.toLowerCase()] = kategorie;
         speichereMapping(mapping);
+        aktualisiereKategorieDropdown();
         return kategorie;
       }
       return "Sonstiges";
@@ -120,27 +131,56 @@
     function kategorisiereProdukt(name) {
       let kategorie = findeKategorieAutomatisch(name);
       if (kategorie) return kategorie;
-
       kategorie = findeBenutzerMapping(name);
       if (kategorie) return kategorie;
-
       return frageNachKategorie(name);
     }
 
     function hinzufuegen() {
-      const eingabe = document.getElementById("produktInput");
-      const name = eingabe.value.trim();
+      const nameInput = document.getElementById("produktInput");
+      const mengeInput = document.getElementById("mengeInput");
+      const name = nameInput.value.trim();
+      const menge = mengeInput.value.trim();
       if (!name) return;
-
       const kategorie = kategorisiereProdukt(name);
-
-      const eintrag = document.createElement("li");
-      eintrag.innerHTML = `<strong>${name}</strong> <span class="kategorie">(${kategorie})</span>`;
-      document.getElementById("liste").appendChild(eintrag);
-
-      eingabe.value = "";
+      produkte.push({ name, menge, kategorie });
+      nameInput.value = "";
+      mengeInput.value = "";
+      renderListe();
+      aktualisiereKategorieDropdown();
     }
-  </script>
 
-</body>
+    function renderListe() {
+      const ul = document.getElementById("liste");
+      ul.innerHTML = "";
+      const sort = document.getElementById("sortKategorie").value;
+      let gefiltert = produkte;
+      if (sort) {
+        gefiltert = produkte.filter(p => p.kategorie === sort);
+      }
+      gefiltert.forEach(({ name, menge, kategorie }) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span><strong>${name}</strong> ${menge ? '(' + menge + ')' : ''}</span><span class="kategorie">${kategorie}</span>`;
+        ul.appendChild(li);
+      });
+    }
+
+    function aktualisiereKategorieDropdown() {
+      const dropdown = document.getElementById("sortKategorie");
+      const kategorien = [...new Set(produkte.map(p => p.kategorie))];
+      const aktuelleAuswahl = dropdown.value;
+      dropdown.innerHTML = '<option value="">Keine Sortierung</option>';
+      kategorien.forEach(k => {
+        const option = document.createElement("option");
+        option.value = k;
+        option.textContent = k;
+        dropdown.appendChild(option);
+      });
+      dropdown.value = aktuelleAuswahl;
+    }
+
+    function sortiereListe() {
+      renderListe();
+    }
+  </script></body>
 </html>
