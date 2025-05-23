@@ -1,237 +1,251 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meine Einkaufsliste</title>
-  <style>
-    /* Basis-Reset */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f4f8;
-      color: #333;
-      display: flex;
-      justify-content: center;
-      padding: 20px;
-    }
-    .container {
-      width: 100%; max-width: 600px;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    header {
-      background: #2E8B57;
-      color: #fff;
-      padding: 20px;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding: 20px;
-    }
-    .controls input[type="text"], .controls input[list], .controls button {
-      flex: 1 1 45%;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 1rem;
-    }
-    .controls input:focus, .controls button:focus {
-      outline: none;
-      border-color: #2E8B57;
-      box-shadow: 0 0 0 2px rgba(46,139,87,0.3);
-    }
-    .controls button {
-      background: #2E8B57;
-      color: #fff;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    .controls button:hover {
-      background: #276c47;
-    }
-    #list {
-      padding: 0 20px 20px;
-    }
-    .item {
-      background: #fafafa;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    }
-    .item .info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-      cursor: pointer;
-    }
-    .item .item-icon {
-      font-size: 1.4rem;
-      user-select: none;
-    }
-    .item .item-name {
-      font-size: 1rem;
-    }
-    .item .checked .item-name {
-      text-decoration: line-through;
-      color: #888;
-    }
-    .item .quantity {
-      font-size: 0.9rem;
-      color: #555;
-      margin-left: 8px;
-    }
-    .item .actions button {
-      background: transparent;
-      border: none;
-      font-size: 1.2rem;
-      color: #2E8B57;
-      cursor: pointer;
-      transition: color 0.2s;
-    }
-    .item .actions button:hover {
-      color: #145a3c;
-    }
-    .footer {
-      padding: 20px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .footer button {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    .footer .share {
-      background: #2E8B57;
-      color: #fff;
-      margin-right: 10px;
-    }
-    .footer .clear {
-      background: #e74c3c;
-      color: #fff;
-    }
-    .footer button:hover.share {
-      background: #276c47;
-    }
-    .footer button:hover.clear {
-      background: #c0392b;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Einkaufsliste</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 0 20px 40px;
+    background: #f4fff7;
+    color: #0b3d0b;
+  }
+  h1 {
+    text-align: center;
+    color: #196619;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+  input, select, button {
+    padding: 12px;
+    margin: 6px 0;
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #1f7a1f;
+    border-radius: 6px;
+    font-size: 1rem;
+    outline-offset: 2px;
+    transition: border-color 0.3s ease;
+  }
+  input:focus, select:focus {
+    border-color: #3fc23f;
+  }
+  button {
+    background-color: #3fc23f;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 8px rgb(63 194 63 / 0.4);
+    transition: background-color 0.25s ease;
+  }
+  button:hover {
+    background-color: #1f7a1f;
+  }
+  #list {
+    margin-top: 20px;
+  }
+  .item {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgb(27 98 27 / 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .item span.name {
+    flex-grow: 1;
+    font-size: 1.1rem;
+    user-select: none;
+    cursor: pointer;
+  }
+  .item span.name.checked {
+    text-decoration: line-through;
+    color: #7db57d;
+  }
+  .item span.category {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #145214;
+    margin-left: 14px;
+    min-width: 110px;
+    text-align: right;
+    user-select: none;
+  }
+  .controls button {
+    margin-left: 8px;
+    background: transparent;
+    border: none;
+    font-size: 1.3rem;
+    color: #196619;
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+  }
+  .controls button:hover {
+    background-color: #a1d6a1;
+  }
+  .checkbox {
+    cursor: pointer;
+    font-size: 1.8rem;
+    color: #3fc23f;
+    margin-right: 16px;
+    user-select: none;
+    border: 2px solid #3fc23f;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  .checkbox:hover {
+    background-color: #3fc23f;
+    color: white;
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <header>Meine Einkaufsliste</header>
-    <div class="controls">
-      <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
-      <datalist id="suggestions"></datalist>
-      <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (optional)" />
-      <button id="addBtn">Hinzufügen</button>
-    </div>
-    <div id="list"></div>
-    <div class="footer">
-      <button class="share" id="shareBtn">Liste teilen</button>
-      <button class="clear" id="clearBtn">Liste löschen</button>
-    </div>
-  </div>  <script>
-    let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
-    let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+<h1>Meine Einkaufsliste</h1>
+<input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
+<datalist id="suggestions"></datalist>
+<input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
+<button onclick="addItem()">Hinzufügen</button>
+<div id="list"></div>
+<button onclick="shareList()">Liste teilen (WhatsApp)</button>
+<button onclick="clearList()">Komplett löschen</button>
 
-    function saveList() {
-      localStorage.setItem('einkaufsliste', JSON.stringify(list));
+<script>
+  let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
+  let categoryMap = {
+    'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
+    'brot': 'Backwaren', 'butter': 'Backwaren', 'käse': 'Allgemein',
+    'eier': 'Allgemein', 'zucker': 'Allgemein', 'mehl': 'Backwaren',
+    'äpfel': 'Obst & Gemüse', 'bananen': 'Obst & Gemüse', 'tomaten': 'Obst & Gemüse',
+    'reis': 'Allgemein', 'nudeln': 'Allgemein'
+  };
+
+  function updateSuggestions() {
+    const dataList = document.getElementById('suggestions');
+    dataList.innerHTML = '';
+    suggestions.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item;
+      dataList.appendChild(option);
+    });
+  }
+
+  let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+
+  function saveList() {
+    localStorage.setItem('einkaufsliste', JSON.stringify(list));
+  }
+
+  function renderList() {
+    const listEl = document.getElementById('list');
+    listEl.innerHTML = '';
+    list.sort((a, b) => {
+      if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
+      return a.category.localeCompare(b.category, 'de');
+    });
+    list.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <span class="checkbox" onclick="toggleItem(${index})" title="Abhaken">&#x21bb;</span>
+        <span class="name ${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
+          ${item.name} x${item.qty}
+        </span>
+        <span class="category">${item.category}</span>
+        <span class="controls">
+          <button title="Menge reduzieren" onclick="changeQty(${index}, -1)">−</button>
+          <button title="Menge erhöhen" onclick="changeQty(${index}, 1)">+</button>
+        </span>
+      `;
+      listEl.appendChild(div);
+    });
+  }
+
+  function addItem() {
+    const nameEl = document.getElementById('itemInput');
+    const categoryEl = document.getElementById('categoryInput');
+    const name = nameEl.value.trim();
+    let category = categoryEl.value.trim();
+    if (!name) return;
+
+    if (!category) {
+      category = categoryMap[name.toLowerCase()] || 'Allgemein';
+    } else {
+      categoryMap[name.toLowerCase()] = category;
     }
 
-    function updateSuggestions() {
-      const dataList = document.getElementById('suggestions'); dataList.innerHTML = '';
-      suggestions.forEach(item => {
-        const option = document.createElement('option'); option.value = item; dataList.appendChild(option);
-      });
+    if (!suggestions.includes(name)) {
+      suggestions.push(name);
+      updateSuggestions();
     }
 
-    function detectCategory(name) {
-      const n = name.toLowerCase();
-      if (/(milch|wasser|kaffee|tee|saft|bier|wein|cola|drink)/.test(n)) return 'Getränke';
-      if (/(brot|keks|kuchen|croissant|brötchen|baguette|torte|backwaren|mehl|zucker)/.test(n)) return 'Backwaren';
-      if (/(apfel|banane|tomate|salat|karotte|obst|gemüse)/.test(n)) return 'Obst & Gemüse';
-      if (/(fleisch|wurst|schinken|hähnchen|steak|pork|beef|chicken|fisch)/.test(n)) return 'Fleisch & Fisch';
-      if (/(käse|butter|joghurt|quark|sahne)/.test(n)) return 'Milchprodukte';
-      if (/(reis|nudeln|pasta|salz|gewürz)/.test(n)) return 'Vorrat';
-      if (/(seife|shampoo|zahnpasta|pflege|kosmetik)/.test(n)) return 'Hygiene';
-      if (/(reiniger|putz|papier|tücher|waschmittel)/.test(n)) return 'Haushalt';
-      if (/(eier)/.test(n)) return 'Sonstiges';
-      return 'Allgemein';
+    const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      existing.qty++;
+    } else {
+      list.push({ name, category, checked: false, qty: 1 });
     }
 
-    const iconMap = [
-      { keywords: ['getränk','milch','wasser','saft','cola','bier','wein','kaffee','tee'], icon:'🥤' },
-      { keywords: ['obst','gemüse','apfel','banane','tomate'], icon:'🍎' },
-      { keywords: ['fleisch','wurst','schinken','hähnchen','steak','fisch'], icon:'🥩' },
-      { keywords: ['brot','keks','kuchen','backwaren'], icon:'🥐' },
-      { keywords: ['käse','butter','joghurt'], icon:'🧀' },
-      { keywords: ['reis','nudeln'], icon:'🍚' },
-      { keywords: ['hygiene','seife','shampoo'], icon:'🧴' },
-      { keywords: ['haushalt','putz','reiniger'], icon:'🧹' },
-      { keywords: ['eier'], icon:'🥚' }
-    ];
+    saveList();
+    renderList();
 
-    function getCategoryIcon(category, name) {
-      const c = category.toLowerCase(); const n = name.toLowerCase();
-      for (const e of iconMap) if (e.keywords.some(k=>c.includes(k))) return e.icon;
-      for (const e of iconMap) if (e.keywords.some(k=>n.includes(k))) return e.icon;
-      return '🛒';
+    nameEl.value = '';
+    categoryEl.value = '';
+  }
+
+  function toggleItem(index) {
+    list[index].checked = !list[index].checked;
+    saveList();
+    renderList();
+  }
+
+  function changeQty(index, delta) {
+    list[index].qty += delta;
+    if (list[index].qty <= 0) {
+      list.splice(index, 1);
     }
+    saveList();
+    renderList();
+  }
 
-    function renderList() {
-      const listEl = document.getElementById('list'); listEl.innerHTML = '';
-      list.forEach((item, idx) => {
-        const div = document.createElement('div'); div.className='item';
-        const icon = getCategoryIcon(item.category,item.name);
-        div.innerHTML = `<div class="info"><span class="item-icon">${icon}</span>
-          <span class="item-name${item.checked?' checked':''}">${item.name} <span class="quantity">x${item.qty}</span></span></div>
-          <div class="actions">
-            <button onclick="toggleItem(${idx})">${item.checked?'↺':'✔'}</button>
-            <button onclick="changeQty(${idx},-1)">−</button>
-            <button onclick="changeQty(${idx},1)">+</button>
-          </div>`;
-        div.querySelector('.info').addEventListener('click',()=>toggleItem(idx));
-        listEl.appendChild(div);
-      });
+  function shareList() {
+    let text = 'Meine Einkaufsliste:%0A';
+    list.forEach(item => {
+      text += `${item.checked ? '[x]' : '[ ]'} ${item.name} (${item.category}) x${item.qty}%0A`;
+    });
+    const url = `https://wa.me/?text=${text}`;
+    window.open(url, '_blank');
+  }
+
+  function clearList() {
+    const a = Math.floor(Math.random()*10) + 1;
+    const b = Math.floor(Math.random()*10) + 1;
+    const answer = prompt(`Willst du die komplette Liste löschen?\nBitte rechne: ${a} + ${b} = ?`);
+    if (parseInt(answer) === a + b) {
+      list = [];
+      saveList();
+      renderList();
+      alert('Liste gelöscht.');
+    } else {
+      alert('Falsche Antwort. Die Liste wurde nicht gelöscht.');
     }
+  }
 
-    async function addItem() {
-      const nameEl=document.getElementById('itemInput'), catEl=document.getElementById('categoryInput');
-      const name=nameEl.value.trim(); if(!name)return;
-      let category=catEl.value.trim()||detectCategory(name);
-      if(!suggestions.includes(name)){suggestions.push(name);updateSuggestions();}
-      const existing=list.find(i=>i.name.toLowerCase()===name.toLowerCase());
-      existing?existing.qty++:list.push({name,category,checked:!1,qty:1});
-      saveList(); location.reload();
-    }
-
-    function toggleItem(i){list[i].checked=!list[i].checked;saveList();renderList();}
-    function changeQty(i,d){list[i].qty+=d;list[i].qty<=0&&list.splice(i,1);saveList();renderList();}
-    function shareList(){let t='Meine Einkaufsliste:%0A';list.forEach(i=>t+=`${i.checked?'[x]':'[ ]'} ${i.name} (${i.category}) x${i.qty}%0A`);window.open(`https://wa.me/?text=${encodeURIComponent(t)}`,'_blank');}
-    function clearList(){const a=Math.ceil(Math.random()*10),b=Math.ceil(Math.random()*10),r=prompt(`Löschen bestätigen: ${a}+${b} = ?`);if(parseInt(r)===a+b){list=[];saveList();location.reload();}else alert('Falsche Antwort.');}
-
-    document.getElementById('addBtn').addEventListener('click',addItem);
-    document.getElementById('shareBtn').addEventListener('click',shareList);
-    document.getElementById('clearBtn').addEventListener('click',clearList);
-
-    updateSuggestions();renderList();
-  </script></body>
+  updateSuggestions();
+  renderList();
+</script>
+</body>
 </html>
