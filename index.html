@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Einkaufsliste</title>
+  <title>Lokale Einkaufsliste</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -52,40 +52,32 @@
   </style>
 </head>
 <body>
-  <h1>Serverseitige Einkaufsliste</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
+  <h1>Lokale Einkaufsliste</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
   <ul id="liste"></ul>  <script>
-    let produkte = [];
-    const API = 'http://localhost:3000/api/produkte';
+    let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
 
-    async function ladeProdukte() {
-      const res = await fetch(API);
-      produkte = await res.json();
-      renderListe();
-      aktualisiereKategorieDropdown();
+    function speichereProdukte() {
+      localStorage.setItem("produkte", JSON.stringify(produkte));
     }
 
-    async function hinzufuegen() {
+    function hinzufuegen() {
       const name = document.getElementById('produktInput').value.trim();
       const menge = document.getElementById('mengeInput').value.trim();
-      if (!name) return;
+      if (!name || !menge) return;
       const kategorie = prompt(`Kategorie für "${name}":`) || 'Sonstiges';
-      const res = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, menge, kategorie })
-      });
-      const produkt = await res.json();
-      produkte.push(produkt);
+      const id = Date.now();
+      produkte.push({ id, name, menge, kategorie });
+      speichereProdukte();
       document.getElementById('produktInput').value = '';
       document.getElementById('mengeInput').value = '';
       renderListe();
       aktualisiereKategorieDropdown();
     }
 
-    async function aendereMenge(id, delta) {
+    function aendereMenge(id, delta) {
       const produkt = produkte.find(p => p.id === id);
       const match = produkt.menge.match(/(\d+)(\s*[^\d]*)/);
       if (match) {
@@ -93,17 +85,11 @@
         const einheit = match[2];
         zahl += delta;
         if (zahl <= 0) {
-          await fetch(`${API}/${id}`, { method: 'DELETE' });
           produkte = produkte.filter(p => p.id !== id);
         } else {
-          const neueMenge = `${zahl}${einheit}`.trim();
-          await fetch(`${API}/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ menge: neueMenge })
-          });
-          produkt.menge = neueMenge;
+          produkt.menge = `${zahl}${einheit}`.trim();
         }
+        speichereProdukte();
         renderListe();
       }
     }
@@ -138,6 +124,7 @@
       dropdown.value = aktuelleAuswahl;
     }
 
-    ladeProdukte();
+    renderListe();
+    aktualisiereKategorieDropdown();
   </script></body>
 </html>
