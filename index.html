@@ -58,6 +58,10 @@
       display: flex;
       align-items: center;
     }
+    video {
+      width: 100%;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -69,9 +73,11 @@
 
 <label for="sortMarkt">Nach Markt sortieren:</label> <select id="sortMarkt" onchange="renderListe()"> <option value="">Alle Märkte</option> </select>
 
-<button onclick="exportiereQR()">Liste per QR-Code teilen</button>
+<button onclick="exportiereQR()">Liste per QR-Code teilen</button> <button onclick="starteScanner()">Liste per QR-Code laden</button>
 
-  <ul id="liste"></ul>  <div id="qrCode"></div>  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>  <script>
+  <ul id="liste"></ul>
+  <div id="qrCode"></div>
+  <video id="qr-video" autoplay hidden></video>  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest"></script>  <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
     const iconMap = {
       "Cola": "🥤", "Wasser": "💧", "Milch": "🥛", "Brot": "🍞", "Käse": "🧀",
@@ -199,6 +205,30 @@
         size: 250
       });
       qrContainer.appendChild(qr.image);
+    }
+
+    async function starteScanner() {
+      const codeReader = new ZXing.BrowserQRCodeReader();
+      const videoElement = document.getElementById("qr-video");
+      videoElement.hidden = false;
+      try {
+        const result = await codeReader.decodeOnceFromVideoDevice(undefined, "qr-video");
+        const geleseneProdukte = JSON.parse(result.text);
+        if (Array.isArray(geleseneProdukte)) {
+          produkte = geleseneProdukte;
+          speichereProdukte();
+          renderListe();
+          aktualisiereKategorieDropdown();
+          aktualisiereMarktDropdown();
+          aktualisiereVorschlaege();
+          alert("Liste erfolgreich geladen!");
+        }
+      } catch (err) {
+        alert("Fehler beim Scannen: " + err);
+      } finally {
+        videoElement.hidden = true;
+        codeReader.reset();
+      }
     }
 
     renderListe();
