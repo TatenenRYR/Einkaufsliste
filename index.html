@@ -1,101 +1,91 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Einkaufsliste</title>
-<style>
-  body {
-    font-family: sans-serif;
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-    background: #f4fff7;
-    color: #0b3d0b;
-  }
-  h1 {
-    text-align: center;
-    color: #196619;
-  }
-  input, select, button {
-    padding: 10px;
-    margin: 5px 0;
-    width: 100%;
-    box-sizing: border-box;
-    border-radius: 4px;
-    border: 1px solid #3fc23f;
-    font-size: 1rem;
-  }
-  button {
-    background-color: #3fc23f;
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.3s ease;
-  }
-  button:hover {
-    background-color: #1f7a1f;
-  }
-  #list {
-    margin-top: 20px;
-  }
-  .item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #ccc;
-  }
-  .checked {
-    text-decoration: line-through;
-    color: gray;
-  }
-  .checkbox {
-    cursor: pointer;
-    font-size: 1.6rem;
-    color: #3fc23f;
-    margin-right: 12px;
-    user-select: none;
-    border: 2px solid #3fc23f;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s ease, color 0.3s ease;
-  }
-  .checkbox:hover {
-    background-color: #3fc23f;
-    color: white;
-  }
-  .controls button {
-    margin-left: 5px;
-    background: transparent;
-    border: none;
-    color: #196619;
-    font-size: 1.3rem;
-    cursor: pointer;
-  }
-  .controls button:hover {
-    color: #1f7a1f;
-  }
-  .category {
-    margin-left: 10px;
-    font-weight: bold;
-    min-width: 100px;
-    color: #2e7d32;
-  }
-  .item-name {
-    flex-grow: 1;
-    user-select: none;
-    cursor: pointer;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Einkaufsliste</title>
+  <!-- Font Awesome CDN für Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f4fff7;
+      color: #0b3d0b;
+    }
+    h1 {
+      text-align: center;
+      color: #196619;
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 4px;
+      border: 1px solid #3fc23f;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #3fc23f;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #1f7a1f;
+    }
+    #list {
+      margin-top: 20px;
+    }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+    .checked {
+      text-decoration: line-through;
+      color: gray;
+    }
+    .checkbox {
+      cursor: pointer;
+      font-size: 1.4rem;
+      color: #3fc23f;
+      margin-right: 10px;
+      user-select: none;
+    }
+    .controls button {
+      margin-left: 5px;
+      background: transparent;
+      border: none;
+      color: #196619;
+      font-size: 1.3rem;
+      cursor: pointer;
+    }
+    .controls button:hover {
+      color: #1f7a1f;
+    }
+    .category {
+      margin-left: 10px;
+      font-weight: bold;
+      min-width: 100px;
+      color: #2e7d32;
+    }
+    .item-name {
+      flex-grow: 1;
+      user-select: none;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-<h1>Meine Einkaufsliste!</h1>
+<h1>Meine Einkaufsliste</h1>
 <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
 <datalist id="suggestions"></datalist>
 <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
@@ -141,14 +131,20 @@
       const div = document.createElement('div');
       div.className = 'item';
       div.innerHTML = `
-        <span class="checkbox" onclick="toggleItem(${index})" title="Abhaken">&#x21bb;</span>
+        <span class="checkbox" onclick="toggleItem(${index})">
+          <i class="${item.checked ? 'fas fa-check-circle' : 'far fa-circle'}"></i>
+        </span>
         <span class="item-name ${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
           ${item.name} x${item.qty}
         </span>
         <span class="category">${item.category}</span>
         <span class="controls">
-          <button title="Menge reduzieren" onclick="changeQty(${index}, -1)">−</button>
-          <button title="Menge erhöhen" onclick="changeQty(${index}, 1)">+</button>
+          <button onclick="changeQty(${index}, -1)" title="−">
+            <i class="fas fa-minus-circle"></i>
+          </button>
+          <button onclick="changeQty(${index}, 1)" title="+">
+            <i class="fas fa-plus-circle"></i>
+          </button>
         </span>
       `;
       listEl.appendChild(div);
