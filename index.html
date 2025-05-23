@@ -2,21 +2,14 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Einkaufsliste</title>
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
     input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
     .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ccc; }
     .checked { text-decoration: line-through; color: gray; }
-    .category-icon { margin-right: 8px; vertical-align: middle; }
-
-    .category-Getränke { background-color: #cce5ff; }
-    .category-Obst_Gemüse { background-color: #d4edda; }
-    .category-Backwaren { background-color: #fff3cd; }
-    .category-Fleisch { background-color: #f8d7da; }
-    .category-Hygiene { background-color: #e2e3e5; }
-    .category-Allgemein { background-color: #fefefe; }
+    .controls button { margin-left: 5px; }
   </style>
 </head>
 <body>
@@ -24,16 +17,18 @@
 
   <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
   <datalist id="suggestions"></datalist>
+
   <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
   <button id="addBtn">Hinzufügen</button>
 
   <label for="filter">Kategorie filtern:</label>
-  <select id="filter" onchange="renderList()">
+  <select id="filter">
     <option value="">Alle</option>
   </select>
 
   <div id="list"></div>
-  <button onclick="shareList()">Liste teilen (WhatsApp)</button>
+
+  <button id="shareBtn">Liste teilen (WhatsApp)</button>
 
   <script>
     let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
@@ -61,7 +56,7 @@
         const tag = product?.categories_tags?.find(t => t.startsWith('de:') || t.startsWith('en:'));
         if (tag) {
           const clean = tag.replace(/^de:|^en:/, '').replace(/-/g, ' ');
-          if (clean.match(/(obst|gemüse)/i)) return 'Obst_Gemüse';
+          if (clean.match(/(obst|gemüse)/i)) return 'Obst & Gemüse';
           if (clean.match(/(brot|keks|back)/i)) return 'Backwaren';
           if (clean.match(/(milch|saft|wasser|cola|tee|kaffee)/i)) return 'Getränke';
           if (clean.match(/(fleisch|wurst|schinken)/i)) return 'Fleisch';
@@ -86,8 +81,24 @@
       return '🛒';
     }
 
+    // Eventlistener für den Hinzufügen-Button: async korrekt handhaben
     document.getElementById('addBtn').addEventListener('click', async () => {
       await addItem();
+    });
+
+    // Eventlistener für Filterauswahl
+    document.getElementById('filter').addEventListener('change', () => {
+      renderList();
+    });
+
+    // Automatische Kategorievervollständigung, wenn ItemInput verlassen wird
+    document.getElementById('itemInput').addEventListener('blur', async () => {
+      const name = document.getElementById('itemInput').value.trim();
+      const catInput = document.getElementById('categoryInput');
+      if (!catInput.value && name.length > 1) {
+        const cat = await guessCategory(name);
+        catInput.value = cat;
+      }
     });
 
     async function addItem() {
@@ -95,17 +106,20 @@
       const categoryEl = document.getElementById('categoryInput');
       const name = nameEl.value.trim();
       let category = categoryEl.value.trim();
+
       if (!name) return;
 
       if (!category) {
         category = await guessCategory(name);
       }
 
+      // Vorschläge updaten
       if (!suggestions.includes(name)) {
         suggestions.push(name);
         updateSuggestions();
       }
 
+      // Prüfen, ob Artikel schon drin ist
       const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
       if (existing) {
         existing.qty++;
@@ -122,7 +136,8 @@
 
     function toggleItem(index) {
       list[index].checked = !list[index].checked;
-      saveList(); renderList();
+      saveList();
+      renderList();
     }
 
     function changeQty(index, delta) {
@@ -130,38 +145,47 @@
       if (list[index].qty <= 0) {
         list.splice(index, 1);
       }
-      saveList(); renderList();
+      saveList();
+      renderList();
     }
 
     function renderList() {
       const listEl = document.getElementById('list');
-      const filter = document.getElementById('filter').value;
+      const filterVal = document.getElementById('filter').value;
+
       listEl.innerHTML = '';
 
-      // Kategorien sammeln und Dropdown aktualisieren
+      // Kategorien für Filter aus Liste neu ermitteln
       const categories = [...new Set(list.map(i => i.category))].sort();
+
+      // Filter-Dropdown aktualisieren, Auswahl merken
       const filterEl = document.getElementById('filter');
-      const selected = filter;
-      filterEl.innerHTML = `<option value="">Alle</option>` +
+      const selected = filterVal;
+      filterEl.innerHTML = '<option value="">Alle</option>' +
         categories.map(c => `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
 
-      list
-        .filter(item => !filter || item.category === filter)
-        .sort((a, b) => a.category.localeCompare(b.category, 'de') || a.name.localeCompare(b.name, 'de'))
-        .forEach((item, index) => {
-          const div = document.createElement('div');
-          div.className = 'item category-' + item.category.replace(/\s+/g, '_');
-          div.innerHTML = `
-            <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
-              ${getCategoryIcon(item.category)} ${item.name} (${item.category}) x${item.qty}
-            </span>
-            <span class="controls">
-              <button onclick="changeQty(${index}, -1)">−</button>
-              <button onclick="changeQty(${index}, 1)">+</button>
-            </span>
-          `;
-          listEl.appendChild(div);
-        });
+      // Items filtern und sortieren
+      const filtered = filterVal ? list.filter(i => i.category === filterVal) : list;
+
+      filtered.sort((a, b) => {
+        if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
+        return a.category.localeCompare(b.category, 'de');
+      });
+
+      filtered.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})" style="cursor:pointer;">
+            ${getCategoryIcon(item.category)} ${item.name} (${item.category}) x${item.qty}
+          </span>
+          <span class="controls">
+            <button onclick="changeQty(${index}, -1)">−</button>
+            <button onclick="changeQty(${index}, 1)">+</button>
+          </span>
+        `;
+        listEl.appendChild(div);
+      });
     }
 
     function shareList() {
@@ -173,17 +197,12 @@
       window.open(url, '_blank');
     }
 
-    document.getElementById('itemInput').addEventListener('blur', async function () {
-      const name = this.value.trim();
-      const catInput = document.getElementById('categoryInput');
-      if (!catInput.value && name.length > 1) {
-        const guessed = await guessCategory(name);
-        catInput.value = guessed;
-      }
-    });
+    document.getElementById('shareBtn').addEventListener('click', shareList);
 
+    // Initialisierung
     updateSuggestions();
     renderList();
+
   </script>
 </body>
 </html>
