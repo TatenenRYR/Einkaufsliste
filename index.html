@@ -19,7 +19,7 @@
   <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
   <datalist id="suggestions"></datalist>
 
-  <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
+  <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (optional)" />
   <button id="addBtn">Hinzufügen</button>
 
   <label for="filter">Kategorie filtern:</label>
@@ -74,7 +74,6 @@
       const c = category.toLowerCase();
       const n = name.toLowerCase();
 
-      // Prüfe Kategorien
       if (c.includes('getränk')) return '🥤';
       if (c.includes('obst') || c.includes('gemüse')) return '🍎';
       if (c.includes('fisch')) return '🐟';
@@ -83,7 +82,6 @@
       if (c.includes('pflege') || c.includes('hygiene')) return '🧴';
       if (c.includes('milch')) return '🥛';
 
-      // Prüfe Namen als Backup
       if (n.includes('milch')) return '🥛';
       if (n.includes('brot') || n.includes('keks') || n.includes('cake')) return '🥐';
       if (n.includes('kaffee') || n.includes('tee') || n.includes('cola') || n.includes('wasser')) return '🥤';
@@ -93,36 +91,19 @@
       return '🛒';
     }
 
-    // Helfer: find Index im Original-list Array basierend auf gefilterten Index
+    // Hilfsfunktion um realen Index zu finden (für gefilterte Liste)
     function findRealIndex(filteredList, filteredIndex) {
       const item = filteredList[filteredIndex];
       return list.findIndex(i => i.name === item.name && i.category === item.category);
     }
 
     document.getElementById('addBtn').addEventListener('click', async () => {
-      await addItem();
-    });
-
-    document.getElementById('filter').addEventListener('change', () => {
-      renderList();
-    });
-
-    document.getElementById('itemInput').addEventListener('blur', async () => {
-      const name = document.getElementById('itemInput').value.trim();
-      const catInput = document.getElementById('categoryInput');
-      if (!catInput.value && name.length > 1) {
-        const cat = await guessCategory(name);
-        catInput.value = cat;
-      }
-    });
-
-    async function addItem() {
       const nameEl = document.getElementById('itemInput');
       const categoryEl = document.getElementById('categoryInput');
       const name = nameEl.value.trim();
       let category = categoryEl.value.trim();
 
-      if (!name) return;
+      if (!name) return alert('Bitte ein Produkt eingeben!');
 
       if (!category) {
         category = await guessCategory(name);
@@ -141,11 +122,10 @@
       }
 
       saveList();
-      renderList();
 
-      nameEl.value = '';
-      categoryEl.value = '';
-    }
+      // Seite neu laden, um alles frisch zu rendern (dein Wunsch)
+      location.reload();
+    });
 
     function toggleItem(filteredIndex) {
       const filterVal = document.getElementById('filter').value;
@@ -180,10 +160,10 @@
 
       listEl.innerHTML = '';
 
-      // Kategorien für Filter aus Liste neu ermitteln
+      // Kategorien ermitteln
       const categories = [...new Set(list.map(i => i.category))].sort();
 
-      // Filter-Dropdown aktualisieren, Auswahl merken
+      // Filter Dropdown aktualisieren und Auswahl merken
       const filterEl = document.getElementById('filter');
       const selected = filterVal;
       filterEl.innerHTML = '<option value="">Alle</option>' +
