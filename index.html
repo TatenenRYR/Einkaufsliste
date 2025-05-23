@@ -132,6 +132,10 @@
     .footer button:hover.clear {
       background: #c0392b;
     }
+    /* Zusätzliche Styles für Drag & Drop */
+    .dragging {
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
@@ -202,19 +206,107 @@
       return '🛒';
     }
 
+    // --- Funktion 2: Kategorie filtern ---
+    let currentFilter = 'Alle';
+
+    function renderFilterButtons() {
+      const container = document.createElement('div');
+      container.style.padding = '10px 20px';
+      container.style.display = 'flex';
+      container.style.flexWrap = 'wrap';
+      container.style.gap = '10px';
+      container.style.borderBottom = '1px solid #ddd';
+
+      const categories = [...new Set(list.map(i => i.category))].sort();
+      categories.unshift('Alle');
+
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.textContent = cat;
+        btn.style.padding = '6px 12px';
+        btn.style.border = '1px solid #2E8B57';
+        btn.style.background = (cat === currentFilter) ? '#2E8B57' : 'transparent';
+        btn.style.color = (cat === currentFilter) ? '#fff' : '#2E8B57';
+        btn.style.borderRadius = '6px';
+        btn.style.cursor = 'pointer';
+        btn.addEventListener('click', () => {
+          currentFilter = cat;
+          renderFilterButtons();
+          renderList();
+        });
+        container.appendChild(btn);
+      });
+
+      const old = document.querySelector('.filter-buttons');
+      if (old) old.remove();
+      container.classList.add('filter-buttons');
+      document.querySelector('.container').insertBefore(container, document.getElementById('list'));
+    }
+
+    // --- Funktion 3: Drag & Drop sortieren ---
+    let dragSrcIndex = null;
+
+    function handleDragStart(e) {
+      dragSrcIndex = +this.getAttribute('data-index');
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      return false;
+    }
+
+    function handleDrop(e) {
+      e.stopPropagation();
+      const dropIndex = +this.getAttribute('data-index');
+      if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
+        // Items tauschen
+        const temp = list[dragSrcIndex];
+        list.splice(dragSrcIndex, 1);
+        list.splice(dropIndex, 0, temp);
+        saveList();
+        renderList();
+      }
+      return false;
+    }
+
+    function handleDragEnd(e) {
+      this.classList.remove('dragging');
+      dragSrcIndex = null;
+    }
+
+    // --- Funktion 4: Favoriten markieren ---
+    function toggleFavorite(i) {
+      list[i].favorite = !list[i].favorite;
+      saveList();
+      renderList();
+    }
+
     function renderList() {
       const listEl = document.getElementById('list');
       listEl.innerHTML = '';
 
-      const sortedList = [...list].sort((a, b) =>
-        a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
-      );
+      // Sortieren nach Favorit zuerst, dann nach Filter, dann nach Kategorie und Name
+      let filteredList = list;
+      if (currentFilter !== 'Alle') {
+        filteredList = list.filter(i => i.category === currentFilter);
+      }
+      const sortedList = [...filteredList].sort((a, b) => {
+        if ((b.favorite ? 1 : 0) !== (a.favorite ? 1 : 0)) return (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0);
+        return a.category.localeCompare(b.category) || a.name.localeCompare(b.name);
+      });
 
       sortedList.forEach((item, idx) => {
+        const realIndex = list.findIndex(i => i.name === item.name && i.category === item.category);
+
         const div = document.createElement('div');
         div.className = 'item';
+        div.setAttribute('draggable', true);
+        div.setAttribute('data-index', realIndex);
+
         const icon = getCategoryIcon(item.category, item.name);
-        const realIndex = list.findIndex(i => i.name === item.name && i.category === item.category);
 
         div.innerHTML = `
           <div class="info"><span class="item-icon">${icon}</span>
@@ -228,8 +320,18 @@
             <button onclick="changeQty(${realIndex}, 1)">+</button>
             <button onclick="editItem(${realIndex})">✎</button>
             <button onclick="deleteItem(${realIndex})">✖</button>
+            <button title="Favorit" onclick="toggleFavorite(${realIndex})" style="color: ${item.favorite ? '#e67e22' : '#2E8B57'};">★</button>
           </div>`;
+
+        // Klick auf Info toggelt checked
         div.querySelector('.info').addEventListener('click', () => toggleItem(realIndex));
+
+        // Drag & Drop Events
+        div.addEventListener('dragstart', handleDragStart);
+        div.addEventListener('dragover', handleDragOver);
+        div.addEventListener('drop', handleDrop);
+        div.addEventListener('dragend', handleDragEnd);
+
         listEl.appendChild(div);
       });
     }
@@ -245,9 +347,12 @@
         updateSuggestions();
       }
       const existing = list.find(i => i.name.toLowerCase() === name.toLowerCase());
-      existing ? existing.qty++ : list.push({ name, category, checked: false, qty: 1 });
+      existing ? existing.qty++ : list.push({ name, category, checked: false, qty: 1, favorite: false });
       saveList();
-      location.reload();
+      nameEl.value = '';
+      catEl.value = '';
+      renderFilterButtons();
+      renderList();
     }
 
     function toggleItem(i) {
@@ -260,6 +365,7 @@
       list[i].qty += d;
       if (list[i].qty <= 0) list.splice(i, 1);
       saveList();
+      renderFilterButtons();
       renderList();
     }
 
@@ -267,6 +373,7 @@
       if (confirm(`"${list[i].name}" wirklich löschen?`)) {
         list.splice(i, 1);
         saveList();
+        renderFilterButtons();
         renderList();
       }
     }
@@ -278,13 +385,14 @@
         list[i].name = newName.trim();
         list[i].category = newCategory.trim();
         saveList();
+        renderFilterButtons();
         renderList();
       }
     }
 
     function shareList() {
       let t = 'Meine Einkaufsliste:%0A';
-      list.forEach(i => t += `${i.checked ? '[x]' : '[ ]'} ${i.name} (${i.category}) x${i.qty}%0A`);
+      list.forEach(i => t += `${i.checked ? '[x]' : '[ ]'} ${i.name} (${i.category}) x${i.qty}${i.favorite ? ' ★' : ''}%0A`);
       window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
     }
 
@@ -294,7 +402,8 @@
       if (parseInt(r) === a + b) {
         list = [];
         saveList();
-        location.reload();
+        renderFilterButtons();
+        renderList();
       } else alert('Falsche Antwort.');
     }
 
@@ -303,6 +412,7 @@
     document.getElementById('clearBtn').addEventListener('click', clearList);
 
     updateSuggestions();
+    renderFilterButtons();
     renderList();
   </script>
 </body>
