@@ -114,24 +114,30 @@
     function starteHost() {
       const pin = pinInput.value.trim();
       if (!pin) return status.innerText = "Bitte einen PIN eingeben.";
-      peer = new Peer(pin, { host: '0.peerjs.com', port: 443, path: '/' });
-      peer.on('open', () => {
-        status.innerText = "Warte auf Verbindung… PIN: " + pin;
-      });
-      peer.on('connection', c => {
-        conn = c;
-        status.innerText = "Client verbunden.";
-        conn.on('data', d => {
-          produkte = d;
-          speichereProdukte();
-          aktualisiereKategorienDropdown();
-          renderListe();
+      try {
+        peer = new Peer(pin, { debug: 2 });
+        peer.on('open', () => {
+          status.innerText = `Host gestartet. PIN: ${pin}`;
         });
-        sendeDaten();
-      });
-      peer.on('error', err => {
-        status.innerText = "Fehler: " + err;
-      });
+        peer.on('connection', c => {
+          conn = c;
+          status.innerText = "Client verbunden.";
+          conn.on('open', () => sendeDaten());
+          conn.on('data', d => {
+            produkte = d;
+            speichereProdukte();
+            aktualisiereKategorienDropdown();
+            renderListe();
+          });
+        });
+        peer.on('error', err => {
+          console.error(err);
+          status.innerText = "Fehler beim Host: " + err;
+        });
+      } catch (e) {
+        console.error(e);
+        status.innerText = "Host-Initialisierung fehlgeschlagen.";
+      }
     }
 
     function verbindeMitHost() {
@@ -140,7 +146,8 @@
       peer = new Peer();
       conn = peer.connect(pin);
       conn.on('open', () => {
-        status.innerText = "Verbindung hergestellt!";
+        status.innerText = "Mit Host verbunden.";
+        conn.send(produkte);
         conn.on('data', d => {
           produkte = d;
           speichereProdukte();
@@ -149,6 +156,7 @@
         });
       });
       conn.on('error', err => {
+        console.error(err);
         status.innerText = "Verbindungsfehler: " + err;
       });
     }
