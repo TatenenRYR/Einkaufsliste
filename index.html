@@ -49,15 +49,33 @@
     .aktionen button {
       margin-left: 0.3rem;
     }
+    .produkt-icon {
+      width: 24px;
+      height: 24px;
+      margin-right: 0.5rem;
+    }
+    .produkt-name {
+      display: flex;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
-  <h1>Lokale Einkaufsliste</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
+  <h1>Lokale Einkaufsliste</h1>  <input type="text" id="produktInput" list="vorschlaege" placeholder="Produktname...">
+  <datalist id="vorschlaege"></datalist>
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
   <ul id="liste"></ul>  <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
+    const iconMap = {
+      "Cola": "🥤", "Wasser": "💧", "Milch": "🥛", "Brot": "🍞", "Käse": "🧀",
+      "Äpfel": "🍎", "Bananen": "🍌", "Eier": "🥚", "Fleisch": "🥩",
+      "Getränk": "🥤", "Obst": "🍎", "Gemüse": "🥦", "Milchprodukte": "🥛", "Backwaren": "🍞",
+      "Sonstiges": "🛒"
+    };
+
+    const produktVorschlaege = ["Cola", "Wasser", "Milch", "Brot", "Käse", "Äpfel", "Bananen", "Eier", "Fleisch"];
 
     function speichereProdukte() {
       localStorage.setItem("produkte", JSON.stringify(produkte));
@@ -67,14 +85,26 @@
       const name = document.getElementById('produktInput').value.trim();
       const menge = document.getElementById('mengeInput').value.trim();
       if (!name || !menge) return;
-      const kategorie = prompt(`Kategorie für "${name}":`) || 'Sonstiges';
+      const kategorie = erkenneKategorie(name);
       const id = Date.now();
       produkte.push({ id, name, menge, kategorie });
+      if (!produktVorschlaege.includes(name)) produktVorschlaege.push(name);
       speichereProdukte();
       document.getElementById('produktInput').value = '';
       document.getElementById('mengeInput').value = '';
       renderListe();
       aktualisiereKategorieDropdown();
+      aktualisiereVorschlaege();
+    }
+
+    function erkenneKategorie(name) {
+      name = name.toLowerCase();
+      if (name.includes("cola") || name.includes("wasser") || name.includes("saft")) return "Getränk";
+      if (name.includes("apfel") || name.includes("banane") || name.includes("obst")) return "Obst";
+      if (name.includes("salat") || name.includes("tomate") || name.includes("gemüse")) return "Gemüse";
+      if (name.includes("milch") || name.includes("joghurt")) return "Milchprodukte";
+      if (name.includes("brot") || name.includes("brötchen")) return "Backwaren";
+      return "Sonstiges";
     }
 
     function aendereMenge(id, delta) {
@@ -100,8 +130,9 @@
       ul.innerHTML = '';
       const gefiltert = sort ? produkte.filter(p => p.kategorie === sort) : produkte;
       gefiltert.forEach(p => {
+        const icon = iconMap[p.name] || iconMap[p.kategorie] || "🛒";
         const li = document.createElement('li');
-        li.innerHTML = `<span><strong>${p.name}</strong> (${p.menge})</span><span class="kategorie">${p.kategorie}</span>
+        li.innerHTML = `<span class="produkt-name">${icon} <strong>${p.name}</strong> (${p.menge})</span><span class="kategorie">${p.kategorie}</span>
           <span class="aktionen">
             <button onclick="aendereMenge(${p.id}, 1)">+</button>
             <button onclick="aendereMenge(${p.id}, -1)">-</button>
@@ -124,7 +155,18 @@
       dropdown.value = aktuelleAuswahl;
     }
 
+    function aktualisiereVorschlaege() {
+      const vorschlaege = document.getElementById("vorschlaege");
+      vorschlaege.innerHTML = '';
+      produktVorschlaege.forEach(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        vorschlaege.appendChild(option);
+      });
+    }
+
     renderListe();
     aktualisiereKategorieDropdown();
+    aktualisiereVorschlaege();
   </script></body>
 </html>
