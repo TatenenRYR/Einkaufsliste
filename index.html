@@ -1,38 +1,20 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einkaufsliste</title>
   <style>
-    body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    input, select, button {
-      padding: 10px;
-      margin: 5px 0;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    .item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid #ccc;
-    }
-    .checked {
-      text-decoration: line-through;
-      color: gray;
-    }
+    body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+    input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+    .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ccc; }
+    .checked { text-decoration: line-through; color: gray; }
   </style>
 </head>
 <body>
   <h1>Meine Einkaufsliste</h1>
-  <input type="text" id="itemInput" placeholder="Produkt eingeben..." />
+  <!-- Autocomplete Input -->
+  <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
+  <datalist id="suggestions"></datalist>
   <select id="categoryInput">
     <option>Allgemein</option>
     <option>Obst & Gemüse</option>
@@ -41,9 +23,20 @@
   </select>
   <button onclick="addItem()">Hinzufügen</button>
   <div id="list"></div>
-  <button onclick="shareList()">Liste teilen (WhatsApp)</button>
+  <button onclick="shareList()">Liste teilen (WhatsApp)</button>  <script>
+    // Vorschlagsliste für Autocomplete
+    const suggestions = [
+      'Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'
+    ];
 
-  <script>
+    // Populate datalist
+    const dataList = document.getElementById('suggestions');
+    suggestions.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item;
+      dataList.appendChild(option);
+    });
+
     let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
 
     function saveList() {
@@ -53,6 +46,11 @@
     function renderList() {
       const listEl = document.getElementById('list');
       listEl.innerHTML = '';
+      // Sort list by category then name
+      list.sort((a, b) => {
+        if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
+        return a.category.localeCompare(b.category, 'de');
+      });
       list.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'item';
@@ -67,30 +65,29 @@
     }
 
     function addItem() {
-      const name = document.getElementById('itemInput').value.trim();
+      const nameEl = document.getElementById('itemInput');
+      const name = nameEl.value.trim();
       const category = document.getElementById('categoryInput').value;
       if (name) {
         list.push({ name, category, checked: false });
-        saveList();
-        renderList();
-        document.getElementById('itemInput').value = '';
+        saveList(); renderList();
+        nameEl.value = '';
       }
     }
 
     function toggleItem(index) {
       list[index].checked = !list[index].checked;
-      saveList();
-      renderList();
+      saveList(); renderList();
     }
 
     function removeItem(index) {
       list.splice(index, 1);
-      saveList();
-      renderList();
+      saveList(); renderList();
     }
 
     function shareList() {
       let text = 'Meine Einkaufsliste:%0A';
+      // Already sorted in renderList
       list.forEach(item => {
         text += `${item.checked ? '[x]' : '[ ]'} ${item.name} (${item.category})%0A`;
       });
@@ -99,6 +96,5 @@
     }
 
     renderList();
-  </script>
-</body>
+  </script></body>
 </html>
