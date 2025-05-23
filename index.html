@@ -10,6 +10,7 @@
     .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ccc; }
     .checked { text-decoration: line-through; color: gray; }
     .controls button { margin-left: 5px; }
+    span.item-name { cursor: pointer; flex-grow: 1; }
   </style>
 </head>
 <body>
@@ -56,11 +57,11 @@
         const tag = product?.categories_tags?.find(t => t.startsWith('de:') || t.startsWith('en:'));
         if (tag) {
           const clean = tag.replace(/^de:|^en:/, '').replace(/-/g, ' ');
-          if (clean.match(/(obst|gemüse)/i)) return 'Obst & Gemüse';
-          if (clean.match(/(brot|keks|back)/i)) return 'Backwaren';
-          if (clean.match(/(milch|saft|wasser|cola|tee|kaffee)/i)) return 'Getränke';
-          if (clean.match(/(fleisch|wurst|schinken)/i)) return 'Fleisch';
-          if (clean.match(/(seife|shampoo|pflege)/i)) return 'Hygiene';
+          if (clean.match(/(obst|gemüse|fruit|vegetable)/i)) return 'Obst & Gemüse';
+          if (clean.match(/(brot|keks|back|bread|bake)/i)) return 'Backwaren';
+          if (clean.match(/(milch|saft|wasser|cola|tee|kaffee|drink|beverage)/i)) return 'Getränke';
+          if (clean.match(/(fleisch|wurst|schinken|meat|sausage|ham)/i)) return 'Fleisch';
+          if (clean.match(/(seife|shampoo|pflege|soap|shampoo|care)/i)) return 'Hygiene';
           return clean.charAt(0).toUpperCase() + clean.slice(1);
         }
       } catch (e) {
@@ -69,8 +70,11 @@
       return 'Allgemein';
     }
 
-    function getCategoryIcon(cat) {
-      const c = cat.toLowerCase();
+    function getCategoryIcon(category, name) {
+      const c = category.toLowerCase();
+      const n = name.toLowerCase();
+
+      // Prüfe Kategorien
       if (c.includes('getränk')) return '🥤';
       if (c.includes('obst') || c.includes('gemüse')) return '🍎';
       if (c.includes('fisch')) return '🐟';
@@ -78,20 +82,31 @@
       if (c.includes('back')) return '🥐';
       if (c.includes('pflege') || c.includes('hygiene')) return '🧴';
       if (c.includes('milch')) return '🥛';
+
+      // Prüfe Namen als Backup
+      if (n.includes('milch')) return '🥛';
+      if (n.includes('brot') || n.includes('keks') || n.includes('cake')) return '🥐';
+      if (n.includes('kaffee') || n.includes('tee') || n.includes('cola') || n.includes('wasser')) return '🥤';
+      if (n.includes('apfel') || n.includes('banane') || n.includes('tomate')) return '🍎';
+      if (n.includes('fleisch') || n.includes('wurst') || n.includes('schinken')) return '🥩';
+
       return '🛒';
     }
 
-    // Eventlistener für den Hinzufügen-Button: async korrekt handhaben
+    // Helfer: find Index im Original-list Array basierend auf gefilterten Index
+    function findRealIndex(filteredList, filteredIndex) {
+      const item = filteredList[filteredIndex];
+      return list.findIndex(i => i.name === item.name && i.category === item.category);
+    }
+
     document.getElementById('addBtn').addEventListener('click', async () => {
       await addItem();
     });
 
-    // Eventlistener für Filterauswahl
     document.getElementById('filter').addEventListener('change', () => {
       renderList();
     });
 
-    // Automatische Kategorievervollständigung, wenn ItemInput verlassen wird
     document.getElementById('itemInput').addEventListener('blur', async () => {
       const name = document.getElementById('itemInput').value.trim();
       const catInput = document.getElementById('categoryInput');
@@ -113,13 +128,11 @@
         category = await guessCategory(name);
       }
 
-      // Vorschläge updaten
       if (!suggestions.includes(name)) {
         suggestions.push(name);
         updateSuggestions();
       }
 
-      // Prüfen, ob Artikel schon drin ist
       const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
       if (existing) {
         existing.qty++;
@@ -134,19 +147,31 @@
       categoryEl.value = '';
     }
 
-    function toggleItem(index) {
-      list[index].checked = !list[index].checked;
-      saveList();
-      renderList();
+    function toggleItem(filteredIndex) {
+      const filterVal = document.getElementById('filter').value;
+      let filtered = filterVal ? list.filter(i => i.category === filterVal) : list;
+      const realIndex = findRealIndex(filtered, filteredIndex);
+
+      if (realIndex >= 0) {
+        list[realIndex].checked = !list[realIndex].checked;
+        saveList();
+        renderList();
+      }
     }
 
-    function changeQty(index, delta) {
-      list[index].qty += delta;
-      if (list[index].qty <= 0) {
-        list.splice(index, 1);
+    function changeQty(filteredIndex, delta) {
+      const filterVal = document.getElementById('filter').value;
+      let filtered = filterVal ? list.filter(i => i.category === filterVal) : list;
+      const realIndex = findRealIndex(filtered, filteredIndex);
+
+      if (realIndex >= 0) {
+        list[realIndex].qty += delta;
+        if (list[realIndex].qty <= 0) {
+          list.splice(realIndex, 1);
+        }
+        saveList();
+        renderList();
       }
-      saveList();
-      renderList();
     }
 
     function renderList() {
@@ -175,9 +200,10 @@
       filtered.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'item';
+
         div.innerHTML = `
-          <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})" style="cursor:pointer;">
-            ${getCategoryIcon(item.category)} ${item.name} (${item.category}) x${item.qty}
+          <span class="item-name ${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})" title="Status umschalten">
+            ${getCategoryIcon(item.category, item.name)} ${item.name} (${item.category}) x${item.qty}
           </span>
           <span class="controls">
             <button onclick="changeQty(${index}, -1)">−</button>
@@ -203,6 +229,9 @@
     updateSuggestions();
     renderList();
 
+    // Globale Funktionen für onclick im HTML
+    window.toggleItem = toggleItem;
+    window.changeQty = changeQty;
   </script>
 </body>
 </html>
