@@ -22,7 +22,10 @@
   <button onclick="shareList()">Liste teilen (WhatsApp)</button>
 
   <script>
-    let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
+    let suggestions = JSON.parse(localStorage.getItem('vorschlaege')) || [
+      'Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'
+    ];
+
     let categoryMap = {
       'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
       'brot': 'Allgemein', 'butter': 'Allgemein', 'käse': 'Allgemein',
@@ -34,11 +37,12 @@
     function updateSuggestions() {
       const dataList = document.getElementById('suggestions');
       dataList.innerHTML = '';
-      suggestions.forEach(item => {
+      [...new Set(suggestions)].sort((a, b) => a.localeCompare(b, 'de')).forEach(item => {
         const option = document.createElement('option');
         option.value = item;
         dataList.appendChild(option);
       });
+      localStorage.setItem('vorschlaege', JSON.stringify(suggestions));
     }
 
     let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
@@ -81,12 +85,14 @@
       if (!name) return;
       if (!qty || qty < 1) qty = 1;
 
+      // Kategorie automatisch aus Vorschlagsmap übernehmen
       if (!category) {
         category = categoryMap[name.toLowerCase()] || 'Allgemein';
       } else {
         categoryMap[name.toLowerCase()] = category;
       }
 
+      // Neue Vorschläge hinzufügen
       if (!suggestions.includes(name)) {
         suggestions.push(name);
         updateSuggestions();
@@ -100,6 +106,8 @@
       }
 
       saveList(); renderList();
+
+      // Felder zurücksetzen
       nameEl.value = '';
       categoryEl.value = '';
       qtyEl.value = '1';
