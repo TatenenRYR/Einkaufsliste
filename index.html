@@ -1,46 +1,28 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einkaufsliste</title>
-  <!-- Font Awesome CDN für Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     body {
       font-family: sans-serif;
+      background: #f0fff0;
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
-      background: #f4fff7;
-      color: #0b3d0b;
+      color: #333;
     }
     h1 {
-      text-align: center;
-      color: #196619;
+      color: #2e7d32;
     }
-    input, select, button {
+    input, button {
       padding: 10px;
       margin: 5px 0;
       width: 100%;
       box-sizing: border-box;
-      border-radius: 4px;
-      border: 1px solid #3fc23f;
-      font-size: 1rem;
-    }
-    button {
-      background-color: #3fc23f;
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      transition: background-color 0.3s ease;
-    }
-    button:hover {
-      background-color: #1f7a1f;
-    }
-    #list {
-      margin-top: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
     }
     .item {
       display: flex;
@@ -53,176 +35,158 @@
       text-decoration: line-through;
       color: gray;
     }
-    .checkbox {
-      cursor: pointer;
-      font-size: 1.4rem;
-      color: #3fc23f;
-      margin-right: 10px;
-      user-select: none;
-    }
     .controls button {
       margin-left: 5px;
-      background: transparent;
+      padding: 5px 10px;
       border: none;
-      color: #196619;
-      font-size: 1.3rem;
+      background: #a5d6a7;
+      border-radius: 5px;
       cursor: pointer;
     }
-    .controls button:hover {
-      color: #1f7a1f;
-    }
-    .category {
-      margin-left: 10px;
-      font-weight: bold;
-      min-width: 100px;
-      color: #2e7d32;
-    }
-    .item-name {
-      flex-grow: 1;
-      user-select: none;
-      cursor: pointer;
+    i {
+      margin-right: 10px;
+      color: #4caf50;
     }
   </style>
 </head>
 <body>
-<h1>Meine Einkaufsliste</h1>
-<input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
-<datalist id="suggestions"></datalist>
-<input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
-<button onclick="addItem()">Hinzufügen</button>
-<div id="list"></div>
-<button onclick="shareList()">Liste teilen (WhatsApp)</button>
-<button onclick="clearList()">Komplett löschen</button>
+  <h1>Meine Einkaufsliste</h1>
+  <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
+  <datalist id="suggestions"></datalist>
+  <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
+  <button onclick="addItem()">Hinzufügen</button>
+  <div id="list"></div>
+  <button onclick="shareList()">Liste teilen (WhatsApp)</button>
 
-<script>
-  let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
-  let categoryMap = {
-    'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
-    'brot': 'Backwaren', 'butter': 'Backwaren', 'käse': 'Allgemein',
-    'eier': 'Allgemein', 'zucker': 'Allgemein', 'mehl': 'Backwaren',
-    'äpfel': 'Obst & Gemüse', 'bananen': 'Obst & Gemüse', 'tomaten': 'Obst & Gemüse',
-    'reis': 'Allgemein', 'nudeln': 'Allgemein'
-  };
-
-  function updateSuggestions() {
-    const dataList = document.getElementById('suggestions');
-    dataList.innerHTML = '';
-    suggestions.forEach(item => {
-      const option = document.createElement('option');
-      option.value = item;
-      dataList.appendChild(option);
-    });
-  }
-
-  let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
-
-  function saveList() {
-    localStorage.setItem('einkaufsliste', JSON.stringify(list));
-  }
-
-  function renderList() {
-    const listEl = document.getElementById('list');
-    listEl.innerHTML = '';
-    list.sort((a, b) => {
-      if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
-      return a.category.localeCompare(b.category, 'de');
-    });
-    list.forEach((item, index) => {
-      const div = document.createElement('div');
-      div.className = 'item';
-      div.innerHTML = `
-        <span class="checkbox" onclick="toggleItem(${index})">
-          <i class="${item.checked ? 'fas fa-check-circle' : 'far fa-circle'}"></i>
-        </span>
-        <span class="item-name ${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
-          ${item.name} x${item.qty}
-        </span>
-        <span class="category">${item.category}</span>
-        <span class="controls">
-          <button onclick="changeQty(${index}, -1)" title="−">
-            <i class="fas fa-minus-circle"></i>
-          </button>
-          <button onclick="changeQty(${index}, 1)" title="+">
-            <i class="fas fa-plus-circle"></i>
-          </button>
-        </span>
-      `;
-      listEl.appendChild(div);
-    });
-  }
-
-  function addItem() {
-    const nameEl = document.getElementById('itemInput');
-    const categoryEl = document.getElementById('categoryInput');
-    const name = nameEl.value.trim();
-    let category = categoryEl.value.trim();
-    if (!name) return;
-
-    if (!category) {
-      category = categoryMap[name.toLowerCase()] || 'Allgemein';
-    } else {
-      categoryMap[name.toLowerCase()] = category;
+  <script>
+    let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
+    let categoryMap = {
+      milch: 'Getränke', wasser: 'Getränke', kaffee: 'Getränke', tee: 'Getränke',
+      brot: 'Backwaren', butter: 'Kühlregal', käse: 'Kühlregal',
+      eier: 'Kühlregal', zucker: 'Backen', mehl: 'Backen',
+      äpfel: 'Obst & Gemüse', bananen: 'Obst & Gemüse', tomaten: 'Obst & Gemüse',
+      reis: 'Trockenware', nudeln: 'Trockenware'
+    };
+    const productIcons = {
+      milch: 'fa-solid fa-cow',
+      wasser: 'fa-solid fa-water',
+      kaffee: 'fa-solid fa-mug-hot',
+      tee: 'fa-solid fa-leaf',
+      brot: 'fa-solid fa-bread-slice',
+      butter: 'fa-solid fa-cheese',
+      käse: 'fa-solid fa-cheese',
+      eier: 'fa-solid fa-egg',
+      zucker: 'fa-solid fa-cube',
+      mehl: 'fa-solid fa-sack-xmark',
+      äpfel: 'fa-solid fa-apple-whole',
+      bananen: 'fa-solid fa-lemon',
+      tomaten: 'fa-solid fa-pepper-hot',
+      reis: 'fa-solid fa-bowl-rice',
+      nudeln: 'fa-solid fa-utensils'
+    };
+    function getIconForItem(name) {
+      const key = name.toLowerCase();
+      return productIcons[key] || 'fa-solid fa-cart-shopping';
     }
 
-    if (!suggestions.includes(name)) {
-      suggestions.push(name);
-      updateSuggestions();
+    function updateSuggestions() {
+      const dataList = document.getElementById('suggestions');
+      dataList.innerHTML = '';
+      suggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        dataList.appendChild(option);
+      });
     }
 
-    const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
-    if (existing) {
-      existing.qty++;
-    } else {
-      list.push({ name, category, checked: false, qty: 1 });
+    let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+
+    function saveList() {
+      localStorage.setItem('einkaufsliste', JSON.stringify(list));
     }
 
-    saveList();
-    renderList();
-
-    nameEl.value = '';
-    categoryEl.value = '';
-  }
-
-  function toggleItem(index) {
-    list[index].checked = !list[index].checked;
-    saveList();
-    renderList();
-  }
-
-  function changeQty(index, delta) {
-    list[index].qty += delta;
-    if (list[index].qty <= 0) {
-      list.splice(index, 1);
+    function renderList() {
+      const listEl = document.getElementById('list');
+      listEl.innerHTML = '';
+      list.sort((a, b) => {
+        if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
+        return a.category.localeCompare(b.category, 'de');
+      });
+      list.forEach((item, index) => {
+        const iconClass = getIconForItem(item.name);
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
+            <i class="${iconClass}"></i>
+            ${item.name} (${item.category}) x${item.qty}
+          </span>
+          <span class="controls">
+            <button onclick="changeQty(${index}, -1)">−</button>
+            <button onclick="changeQty(${index}, 1)">+</button>
+          </span>
+        `;
+        listEl.appendChild(div);
+      });
     }
-    saveList();
-    renderList();
-  }
 
-  function shareList() {
-    let text = 'Meine Einkaufsliste:%0A';
-    list.forEach(item => {
-      text += `${item.checked ? '[x]' : '[ ]'} ${item.name} (${item.category}) x${item.qty}%0A`;
-    });
-    const url = `https://wa.me/?text=${text}`;
-    window.open(url, '_blank');
-  }
+    function addItem() {
+      const nameEl = document.getElementById('itemInput');
+      const categoryEl = document.getElementById('categoryInput');
+      const name = nameEl.value.trim();
+      let category = categoryEl.value.trim();
+      if (!name) return;
 
-  function clearList() {
-    const a = Math.floor(Math.random()*10) + 1;
-    const b = Math.floor(Math.random()*10) + 1;
-    const answer = prompt(`Willst du die komplette Liste löschen?\nBitte rechne: ${a} + ${b} = ?`);
-    if (parseInt(answer) === a + b) {
-      list = [];
+      if (!category) {
+        category = categoryMap[name.toLowerCase()] || 'Allgemein';
+      } else {
+        categoryMap[name.toLowerCase()] = category;
+      }
+
+      if (!suggestions.includes(name)) {
+        suggestions.push(name);
+        updateSuggestions();
+      }
+
+      const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        existing.qty++;
+      } else {
+        list.push({ name, category, checked: false, qty: 1 });
+      }
+
       saveList();
       renderList();
-      alert('Liste gelöscht.');
-    } else {
-      alert('Falsche Antwort. Die Liste wurde nicht gelöscht.');
+      nameEl.value = '';
+      categoryEl.value = '';
     }
-  }
 
-  updateSuggestions();
-  renderList();
-</script>
+    function toggleItem(index) {
+      list[index].checked = !list[index].checked;
+      saveList();
+      renderList();
+    }
+
+    function changeQty(index, delta) {
+      list[index].qty += delta;
+      if (list[index].qty <= 0) {
+        list.splice(index, 1);
+      }
+      saveList();
+      renderList();
+    }
+
+    function shareList() {
+      let text = 'Meine Einkaufsliste:%0A';
+      list.forEach(item => {
+        text += `${item.checked ? '[x]' : '[ ]'} ${item.name} (${item.category}) x${item.qty}%0A`;
+      });
+      const url = `https://wa.me/?text=${text}`;
+      window.open(url, '_blank');
+    }
+
+    updateSuggestions();
+    renderList();
+  </script>
 </body>
 </html>
