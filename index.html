@@ -64,9 +64,14 @@
   <h1>Lokale Einkaufsliste</h1>  <input type="text" id="produktInput" list="vorschlaege" placeholder="Produktname...">
   <datalist id="vorschlaege"></datalist>
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
+  <input type="text" id="marktInput" placeholder="Markt / Laden (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
-  <ul id="liste"></ul>  <script>
+<label for="sortMarkt">Nach Markt sortieren:</label> <select id="sortMarkt" onchange="renderListe()"> <option value="">Alle Märkte</option> </select>
+
+<button onclick="exportiereQR()">Liste per QR-Code teilen</button>
+
+  <ul id="liste"></ul>  <div id="qrCode"></div>  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>  <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
     const iconMap = {
       "Cola": "🥤", "Wasser": "💧", "Milch": "🥛", "Brot": "🍞", "Käse": "🧀",
@@ -74,7 +79,6 @@
       "Getränk": "🥤", "Obst": "🍎", "Gemüse": "🥦", "Milchprodukte": "🥛", "Backwaren": "🍞",
       "Sonstiges": "🛒"
     };
-
     const produktVorschlaege = ["Cola", "Wasser", "Milch", "Brot", "Käse", "Äpfel", "Bananen", "Eier", "Fleisch"];
 
     function speichereProdukte() {
@@ -84,16 +88,19 @@
     function hinzufuegen() {
       const name = document.getElementById('produktInput').value.trim();
       const menge = document.getElementById('mengeInput').value.trim();
+      const markt = document.getElementById('marktInput').value.trim();
       if (!name || !menge) return;
       const kategorie = erkenneKategorie(name);
       const id = Date.now();
-      produkte.push({ id, name, menge, kategorie });
+      produkte.push({ id, name, menge, kategorie, markt });
       if (!produktVorschlaege.includes(name)) produktVorschlaege.push(name);
       speichereProdukte();
       document.getElementById('produktInput').value = '';
       document.getElementById('mengeInput').value = '';
+      document.getElementById('marktInput').value = '';
       renderListe();
       aktualisiereKategorieDropdown();
+      aktualisiereMarktDropdown();
       aktualisiereVorschlaege();
     }
 
@@ -125,14 +132,19 @@
     }
 
     function renderListe() {
-      const sort = document.getElementById("sortKategorie").value;
+      const kategorieFilter = document.getElementById("sortKategorie").value;
+      const marktFilter = document.getElementById("sortMarkt").value;
       const ul = document.getElementById("liste");
       ul.innerHTML = '';
-      const gefiltert = sort ? produkte.filter(p => p.kategorie === sort) : produkte;
+      const gefiltert = produkte.filter(p =>
+        (!kategorieFilter || p.kategorie === kategorieFilter) &&
+        (!marktFilter || p.markt === marktFilter)
+      );
       gefiltert.forEach(p => {
         const icon = iconMap[p.name] || iconMap[p.kategorie] || "🛒";
         const li = document.createElement('li');
-        li.innerHTML = `<span class="produkt-name">${icon} <strong>${p.name}</strong> (${p.menge})</span><span class="kategorie">${p.kategorie}</span>
+        li.innerHTML = `<span class="produkt-name">${icon} <strong>${p.name}</strong> (${p.menge})</span>
+          <span class="kategorie">${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span>
           <span class="aktionen">
             <button onclick="aendereMenge(${p.id}, 1)">+</button>
             <button onclick="aendereMenge(${p.id}, -1)">-</button>
@@ -155,6 +167,20 @@
       dropdown.value = aktuelleAuswahl;
     }
 
+    function aktualisiereMarktDropdown() {
+      const dropdown = document.getElementById("sortMarkt");
+      const maerkte = [...new Set(produkte.map(p => p.markt).filter(Boolean))];
+      const aktuelleAuswahl = dropdown.value;
+      dropdown.innerHTML = '<option value="">Alle Märkte</option>';
+      maerkte.forEach(k => {
+        const option = document.createElement("option");
+        option.value = k;
+        option.textContent = k;
+        dropdown.appendChild(option);
+      });
+      dropdown.value = aktuelleAuswahl;
+    }
+
     function aktualisiereVorschlaege() {
       const vorschlaege = document.getElementById("vorschlaege");
       vorschlaege.innerHTML = '';
@@ -165,8 +191,19 @@
       });
     }
 
+    function exportiereQR() {
+      const qrContainer = document.getElementById("qrCode");
+      qrContainer.innerHTML = '';
+      const qr = new QRious({
+        value: JSON.stringify(produkte),
+        size: 250
+      });
+      qrContainer.appendChild(qr.image);
+    }
+
     renderListe();
     aktualisiereKategorieDropdown();
+    aktualisiereMarktDropdown();
     aktualisiereVorschlaege();
   </script></body>
 </html>
