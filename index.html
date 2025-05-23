@@ -2,11 +2,136 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meine Einkaufsliste</title>
   <style>
-    /* ... Hier dein CSS von oben einfügen ... */
-    /* Für Kürze lasse ich den CSS-Code weg, bitte aus deinem bisherigen Code übernehmen */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      width: 100%; max-width: 600px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    header {
+      background: #2E8B57;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 20px;
+    }
+    .controls input[type="text"], .controls input[list], .controls button {
+      flex: 1 1 45%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .controls input:focus, .controls button:focus {
+      outline: none;
+      border-color: #2E8B57;
+      box-shadow: 0 0 0 2px rgba(46,139,87,0.3);
+    }
+    .controls button {
+      background: #2E8B57;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .controls button:hover {
+      background: #276c47;
+    }
+    #list {
+      padding: 0 20px 20px;
+    }
+    .item {
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .item .info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      cursor: pointer;
+    }
+    .item .item-icon {
+      font-size: 1.4rem;
+      user-select: none;
+    }
+    .item .item-name {
+      font-size: 1rem;
+    }
+    .item .checked .item-name {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .item .quantity {
+      font-size: 0.9rem;
+      color: #555;
+      margin-left: 8px;
+    }
+    .item .actions button {
+      background: transparent;
+      border: none;
+      font-size: 1.2rem;
+      color: #2E8B57;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .item .actions button:hover {
+      color: #145a3c;
+    }
+    .footer {
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .footer button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .footer .share {
+      background: #2E8B57;
+      color: #fff;
+      margin-right: 10px;
+    }
+    .footer .clear {
+      background: #e74c3c;
+      color: #fff;
+    }
+    .footer button:hover.share {
+      background: #276c47;
+    }
+    .footer button:hover.clear {
+      background: #c0392b;
+    }
   </style>
 </head>
 <body>
@@ -27,84 +152,11 @@
 
   <script>
     let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
-    let list = [];
+    let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
 
-    // Hilfsfunktionen wie detectCategory und iconMap kannst du aus deinem bisherigen Code übernehmen
-
-    // --- API-Funktionen ---
-    async function fetchList() {
-      const res = await fetch('/api/list');
-      list = await res.json();
-      updateSuggestions();
-      renderList();
+    function saveList() {
+      localStorage.setItem('einkaufsliste', JSON.stringify(list));
     }
-
-    async function saveList() {
-      // Wird nur genutzt bei Add/Delete/Update API-Calls
-    }
-
-    async function addItem() {
-      const nameEl = document.getElementById('itemInput');
-      const catEl = document.getElementById('categoryInput');
-      const name = nameEl.value.trim();
-      if (!name) return alert('Bitte Produkt eingeben');
-      let category = catEl.value.trim();
-      if (!category) category = detectCategory(name);
-
-      if (!suggestions.includes(name)) {
-        suggestions.push(name);
-        updateSuggestions();
-      }
-
-      const existing = list.find(i => i.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        await updateItem(existing.name, { qty: existing.qty + 1 });
-      } else {
-        await fetch('/api/list', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, category, checked: false, qty: 1 }),
-        });
-      }
-      nameEl.value = '';
-      catEl.value = '';
-      await fetchList();
-    }
-
-    async function updateItem(name, changes) {
-      await fetch(`/api/list/${encodeURIComponent(name)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(changes),
-      });
-    }
-
-    async function deleteItem(name) {
-      await fetch(`/api/list/${encodeURIComponent(name)}`, {
-        method: 'DELETE',
-      });
-    }
-
-    async function toggleItem(idx) {
-      const item = list[idx];
-      await updateItem(item.name, { checked: !item.checked });
-      await fetchList();
-    }
-
-    async function changeQty(idx, delta) {
-      const item = list[idx];
-      const newQty = item.qty + delta;
-      if (newQty <= 0) {
-        if (confirm(`Möchtest du "${item.name}" wirklich löschen?`)) {
-          await deleteItem(item.name);
-        }
-      } else {
-        await updateItem(item.name, { qty: newQty });
-      }
-      await fetchList();
-    }
-
-    // Rendering und UI-Funktionen (aus deinem Code)
 
     function updateSuggestions() {
       const dataList = document.getElementById('suggestions');
@@ -116,72 +168,142 @@
       });
     }
 
+    function detectCategory(name) {
+      const n = name.toLowerCase();
+      if (/(milch|wasser|kaffee|tee|saft|bier|wein|cola|drink)/.test(n)) return 'Getränke';
+      if (/(brot|keks|kuchen|croissant|brötchen|baguette|torte|backwaren|mehl|zucker)/.test(n)) return 'Backwaren';
+      if (/(apfel|banane|tomate|salat|karotte|obst|gemüse)/.test(n)) return 'Obst & Gemüse';
+      if (/(fleisch|wurst|schinken|hähnchen|steak|pork|beef|chicken|fisch)/.test(n)) return 'Fleisch & Fisch';
+      if (/(käse|butter|joghurt|quark|sahne)/.test(n)) return 'Milchprodukte';
+      if (/(reis|nudeln|pasta|salz|gewürz)/.test(n)) return 'Vorrat';
+      if (/(seife|shampoo|zahnpasta|pflege|kosmetik)/.test(n)) return 'Hygiene';
+      if (/(reiniger|putz|papier|tücher|waschmittel)/.test(n)) return 'Haushalt';
+      if (/(eier)/.test(n)) return 'Sonstiges';
+      return 'Allgemein';
+    }
+
+    const iconMap = [
+      { keywords: ['getränk','milch','wasser','saft','cola','bier','wein','kaffee','tee'], icon:'🥤' },
+      { keywords: ['obst','gemüse','apfel','banane','tomate'], icon:'🍎' },
+      { keywords: ['fleisch','wurst','schinken','hähnchen','steak','fisch'], icon:'🥩' },
+      { keywords: ['brot','keks','kuchen','backwaren'], icon:'🥐' },
+      { keywords: ['käse','butter','joghurt'], icon:'🧀' },
+      { keywords: ['reis','nudeln'], icon:'🍚' },
+      { keywords: ['hygiene','seife','shampoo'], icon:'🧴' },
+      { keywords: ['haushalt','putz','reiniger'], icon:'🧹' },
+      { keywords: ['eier'], icon:'🥚' }
+    ];
+
     function getCategoryIcon(category, name) {
-      // Deine Icon-Logik hier einfügen (wie bisher)
-      // Beispiel:
-      const iconMap = [
-        { keywords: ['getränk','milch','wasser','saft','cola','bier','wein','kaffee','tee'], icon:'🥤' },
-        { keywords: ['obst','gemüse','apfel','banane','tomate'], icon:'🍎' },
-        { keywords: ['fleisch','wurst','schinken','hähnchen','steak','fisch'], icon:'🥩' },
-        { keywords: ['brot','keks','kuchen','backwaren'], icon:'🥐' },
-        { keywords: ['käse','butter','joghurt'], icon:'🧀' },
-        { keywords: ['reis','nudeln'], icon:'🍚' },
-        { keywords: ['hygiene','seife','shampoo'], icon:'🧴' },
-        { keywords: ['haushalt','putz','reiniger'], icon:'🧹' },
-        { keywords: ['eier'], icon:'🥚' }
-      ];
-      const c = category.toLowerCase(); const n = name.toLowerCase();
-      for (const e of iconMap) if (e.keywords.some(k => c.includes(k))) return e.icon;
-      for (const e of iconMap) if (e.keywords.some(k => n.includes(k))) return e.icon;
+      const c = category.toLowerCase();
+      const n = name.toLowerCase();
+      for (const e of iconMap) if (e.keywords.some(k=>c.includes(k))) return e.icon;
+      for (const e of iconMap) if (e.keywords.some(k=>n.includes(k))) return e.icon;
       return '🛒';
     }
 
     function renderList() {
       const listEl = document.getElementById('list');
       listEl.innerHTML = '';
-      list.forEach((item, idx) => {
+
+      const sortedList = [...list].sort((a, b) =>
+        a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+      );
+
+      sortedList.forEach((item, idx) => {
         const div = document.createElement('div');
         div.className = 'item';
         const icon = getCategoryIcon(item.category, item.name);
+        const realIndex = list.findIndex(i => i.name === item.name && i.category === item.category);
+
         div.innerHTML = `
-          <div class="info">
-            <span class="item-icon">${icon}</span>
+          <div class="info"><span class="item-icon">${icon}</span>
             <span class="item-name${item.checked ? ' checked' : ''}">
               ${item.name} <span class="quantity">x${item.qty}</span>
             </span>
           </div>
           <div class="actions">
-            <button onclick="toggleItem(${idx})">${item.checked ? '↺' : '✔'}</button>
-            <button onclick="changeQty(${idx},-1)">−</button>
-            <button onclick="changeQty(${idx},1)">+</button>
-          </div>
-        `;
-        div.querySelector('.info').addEventListener('click', () => toggleItem(idx));
+            <button onclick="toggleItem(${realIndex})">${item.checked ? '↺' : '✔'}</button>
+            <button onclick="changeQty(${realIndex}, -1)">−</button>
+            <button onclick="changeQty(${realIndex}, 1)">+</button>
+            <button onclick="editItem(${realIndex})">✎</button>
+            <button onclick="deleteItem(${realIndex})">✖</button>
+          </div>`;
+        div.querySelector('.info').addEventListener('click', () => toggleItem(realIndex));
         listEl.appendChild(div);
       });
     }
 
+    async function addItem() {
+      const nameEl = document.getElementById('itemInput');
+      const catEl = document.getElementById('categoryInput');
+      const name = nameEl.value.trim();
+      if (!name) return;
+      let category = catEl.value.trim() || detectCategory(name);
+      if (!suggestions.includes(name)) {
+        suggestions.push(name);
+        updateSuggestions();
+      }
+      const existing = list.find(i => i.name.toLowerCase() === name.toLowerCase());
+      existing ? existing.qty++ : list.push({ name, category, checked: false, qty: 1 });
+      saveList();
+      location.reload();
+    }
+
+    function toggleItem(i) {
+      list[i].checked = !list[i].checked;
+      saveList();
+      renderList();
+    }
+
+    function changeQty(i, d) {
+      list[i].qty += d;
+      if (list[i].qty <= 0) list.splice(i, 1);
+      saveList();
+      renderList();
+    }
+
+    function deleteItem(i) {
+      if (confirm(`"${list[i].name}" wirklich löschen?`)) {
+        list.splice(i, 1);
+        saveList();
+        renderList();
+      }
+    }
+
+    function editItem(i) {
+      const newName = prompt('Neuer Produktname:', list[i].name);
+      if (newName && newName.trim() !== '') {
+        const newCategory = prompt('Neue Kategorie:', list[i].category) || detectCategory(newName);
+        list[i].name = newName.trim();
+        list[i].category = newCategory.trim();
+        saveList();
+        renderList();
+      }
+    }
+
     function shareList() {
       let t = 'Meine Einkaufsliste:%0A';
-      list.forEach(i => {
-        t += `${i.checked ? '[x]' : '[ ]'} ${i.name} (${i.category}) x${i.qty}%0A`;
-      });
+      list.forEach(i => t += `${i.checked ? '[x]' : '[ ]'} ${i.name} (${i.category}) x${i.qty}%0A`);
       window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
     }
 
-    async function clearList() {
-      if (!confirm('Möchtest du die gesamte Liste löschen?')) return;
-      for (const item of list) {
-        await deleteItem(item.name);
-      }
-      await fetchList();
+    function clearList() {
+      const a = Math.ceil(Math.random() * 10), b = Math.ceil(Math.random() * 10);
+      const r = prompt(`Löschen bestätigen: ${a}+${b} = ?`);
+      if (parseInt(r) === a + b) {
+        list = [];
+        saveList();
+        location.reload();
+      } else alert('Falsche Antwort.');
     }
 
     document.getElementById('addBtn').addEventListener('click', addItem);
     document.getElementById('shareBtn').addEventListener('click', shareList);
     document.getElementById('clearBtn').addEventListener('click', clearList);
 
-    fetchList();
+    updateSuggestions();
+    renderList();
   </script>
 </body>
 </html>
