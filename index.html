@@ -37,6 +37,18 @@
       localStorage.setItem("produkte", JSON.stringify(produkte));
     }
 
+    function aktualisiereKategorienDropdown() {
+      const katSet = new Set(produkte.map(p => p.kategorie));
+      const sortKategorie = document.getElementById("sortKategorie");
+      sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
+      katSet.forEach(k => {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = k;
+        sortKategorie.appendChild(opt);
+      });
+    }
+
     function hinzufuegen() {
       const name = produktInput.value.trim();
       const menge = mengeInput.value.trim();
@@ -47,18 +59,20 @@
       produkte.push({ id, name, menge, markt, kategorie, icon });
       speichereProdukte();
       produktInput.value = mengeInput.value = marktInput.value = '';
+      aktualisiereKategorienDropdown();
       renderListe();
       sendeDaten();
     }
 
     function erkenneKategorieUndIcon(name) {
       const n = name.toLowerCase();
-      if (n.includes("cola") || n.includes("wasser")) return { kategorie: "Getränk", icon: "bi-cup-straw" };
-      if (n.includes("apfel") || n.includes("banane")) return { kategorie: "Obst", icon: "bi-apple" };
-      if (n.includes("brot")) return { kategorie: "Backwaren", icon: "bi-basket" };
-      if (n.includes("milch")) return { kategorie: "Milchprodukte", icon: "bi-box" };
+      if (n.includes("cola") || n.includes("wasser") || n.includes("saft")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
+      if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
+      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
+      if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
       if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
       if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
+      if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
       return { kategorie: "Sonstiges", icon: "bi-bag" };
     }
 
@@ -66,7 +80,8 @@
       const kat = sortKategorie.value;
       const ul = document.getElementById("liste");
       ul.innerHTML = '';
-      (kat ? produkte.filter(p => p.kategorie === kat) : produkte).forEach(p => {
+      const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
+      gefiltert.forEach(p => {
         const li = document.createElement("li");
         li.innerHTML = `<span class="produkt-info">
             <i class="bi ${p.icon}"></i>
@@ -97,7 +112,7 @@
 
     function starteHost() {
       const pin = pinInput.value.trim();
-      peer = new Peer(pin);
+      peer = new Peer(pin, { host: 'peerjs.com', port: 443, secure: true });
       peer.on('open', () => {
         status.innerText = "Warte auf Verbindung… PIN: " + pin;
       });
@@ -107,6 +122,7 @@
         conn.on('data', d => {
           produkte = d;
           speichereProdukte();
+          aktualisiereKategorienDropdown();
           renderListe();
         });
         sendeDaten();
@@ -122,6 +138,7 @@
         conn.on('data', d => {
           produkte = d;
           speichereProdukte();
+          aktualisiereKategorienDropdown();
           renderListe();
         });
       });
@@ -131,6 +148,7 @@
       if (conn && conn.open) conn.send(produkte);
     }
 
+    aktualisiereKategorienDropdown();
     renderListe();
   </script></body>
 </html>
