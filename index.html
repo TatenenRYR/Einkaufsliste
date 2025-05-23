@@ -8,34 +8,35 @@
     input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
     .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ccc; }
     .checked { text-decoration: line-through; color: gray; }
+    .controls button { margin-left: 5px; }
   </style>
 </head>
 <body>
   <h1>Meine Einkaufsliste</h1>
-  <!-- Autocomplete Input -->
   <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
   <datalist id="suggestions"></datalist>
-  <select id="categoryInput">
-    <option>Allgemein</option>
-    <option>Obst & Gemüse</option>
-    <option>Getränke</option>
-    <option>Haushalt</option>
-  </select>
+  <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
   <button onclick="addItem()">Hinzufügen</button>
   <div id="list"></div>
   <button onclick="shareList()">Liste teilen (WhatsApp)</button>  <script>
-    // Vorschlagsliste für Autocomplete
-    const suggestions = [
-      'Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'
-    ];
+    let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
+    let categoryMap = {
+      'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
+      'brot': 'Allgemein', 'butter': 'Allgemein', 'käse': 'Allgemein',
+      'eier': 'Allgemein', 'zucker': 'Allgemein', 'mehl': 'Allgemein',
+      'äpfel': 'Obst & Gemüse', 'bananen': 'Obst & Gemüse', 'tomaten': 'Obst & Gemüse',
+      'reis': 'Allgemein', 'nudeln': 'Allgemein'
+    };
 
-    // Populate datalist
-    const dataList = document.getElementById('suggestions');
-    suggestions.forEach(item => {
-      const option = document.createElement('option');
-      option.value = item;
-      dataList.appendChild(option);
-    });
+    function updateSuggestions() {
+      const dataList = document.getElementById('suggestions');
+      dataList.innerHTML = '';
+      suggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        dataList.appendChild(option);
+      });
+    }
 
     let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
 
@@ -46,7 +47,6 @@
     function renderList() {
       const listEl = document.getElementById('list');
       listEl.innerHTML = '';
-      // Sort list by category then name
       list.sort((a, b) => {
         if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
         return a.category.localeCompare(b.category, 'de');
@@ -56,9 +56,13 @@
         div.className = 'item';
         div.innerHTML = `
           <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
-            [${item.checked ? 'x' : ' '}] ${item.name} (${item.category})
+            [${item.checked ? 'x' : ' '}] ${item.name} (${item.category}) x${item.qty}
           </span>
-          <button onclick="removeItem(${index})">Entfernen</button>
+          <span class="controls">
+            <button onclick="changeQty(${index}, -1)">−</button>
+            <button onclick="changeQty(${index}, 1)">+</button>
+            <button onclick="removeItem(${index})">Entfernen</button>
+          </span>
         `;
         listEl.appendChild(div);
       });
@@ -66,13 +70,34 @@
 
     function addItem() {
       const nameEl = document.getElementById('itemInput');
+      const categoryEl = document.getElementById('categoryInput');
       const name = nameEl.value.trim();
-      const category = document.getElementById('categoryInput').value;
-      if (name) {
-        list.push({ name, category, checked: false });
-        saveList(); renderList();
-        nameEl.value = '';
+      let category = categoryEl.value.trim();
+      if (!name) return;
+
+      if (!category) {
+        category = categoryMap[name.toLowerCase()] || 'Allgemein';
+      } else {
+        // Neue Kategorie hinzufügen zur Map
+        categoryMap[name.toLowerCase()] = category;
       }
+
+      // Neue Vorschläge ergänzen
+      if (!suggestions.includes(name)) {
+        suggestions.push(name);
+        updateSuggestions();
+      }
+
+      const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        existing.qty++;
+      } else {
+        list.push({ name, category, checked: false, qty: 1 });
+      }
+
+      saveList(); renderList();
+      nameEl.value = '';
+      categoryEl.value = '';
     }
 
     function toggleItem(index) {
@@ -85,16 +110,22 @@
       saveList(); renderList();
     }
 
+    function changeQty(index, delta) {
+      list[index].qty += delta;
+      if (list[index].qty < 1) list[index].qty = 1;
+      saveList(); renderList();
+    }
+
     function shareList() {
       let text = 'Meine Einkaufsliste:%0A';
-      // Already sorted in renderList
       list.forEach(item => {
-        text += `${item.checked ? '[x]' : '[ ]'} ${item.name} (${item.category})%0A`;
+        text += `${item.checked ? '[x]' : '[ ]'} ${item.name} (${item.category}) x${item.qty}%0A`;
       });
       const url = `https://wa.me/?text=${text}`;
       window.open(url, '_blank');
     }
 
+    updateSuggestions();
     renderList();
   </script></body>
 </html>
