@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -29,32 +28,30 @@
       font-size: 1.5rem;
       font-weight: bold;
     }
-    .controls {
+    .controls, .filter-controls {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
       padding: 20px;
     }
-    .controls input[type="text"], .controls input[list], .controls button {
+    .controls input[type="text"], .controls button {
       flex: 1 1 45%;
       padding: 12px;
       border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 1rem;
     }
-    .controls input:focus, .controls button:focus {
-      outline: none;
-      border-color: #2E8B57;
-      box-shadow: 0 0 0 2px rgba(46,139,87,0.3);
-    }
     .controls button {
       background: #2E8B57;
       color: #fff;
       cursor: pointer;
-      transition: background 0.3s;
     }
     .controls button:hover {
       background: #276c47;
+    }
+    .filter-controls {
+      padding-top: 0;
+      padding-bottom: 0;
     }
     #list {
       padding: 0 20px 20px;
@@ -69,6 +66,9 @@
       justify-content: space-between;
       box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
+    .item.dragging {
+      opacity: 0.5;
+    }
     .item .info {
       display: flex;
       align-items: center;
@@ -76,14 +76,7 @@
       flex: 1;
       cursor: pointer;
     }
-    .item .item-icon {
-      font-size: 1.4rem;
-      user-select: none;
-    }
-    .item .item-name {
-      font-size: 1rem;
-    }
-    .item .checked .item-name {
+    .item .item-name.checked {
       text-decoration: line-through;
       color: #888;
     }
@@ -98,10 +91,6 @@
       font-size: 1.2rem;
       color: #2E8B57;
       cursor: pointer;
-      transition: color 0.2s;
-    }
-    .item .actions button:hover {
-      color: #145a3c;
     }
     .footer {
       padding: 20px;
@@ -115,7 +104,6 @@
       border-radius: 8px;
       font-size: 1rem;
       cursor: pointer;
-      transition: background 0.3s;
     }
     .footer .share {
       background: #2E8B57;
@@ -125,15 +113,6 @@
     .footer .clear {
       background: #e74c3c;
       color: #fff;
-    }
-    .footer button:hover.share {
-      background: #276c47;
-    }
-    .footer button:hover.clear {
-      background: #c0392b;
-    }
-    .dragging {
-      opacity: 0.5;
     }
   </style>
 </head>
@@ -146,92 +125,157 @@
       <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (optional)" />
       <button id="addBtn">Hinzufügen</button>
     </div>
-    <div id="filters"></div>
-    <div id="list"></div>
+    <div class="filter-controls">
+      <label><input type="checkbox" id="showFavorites"> Nur Favoriten anzeigen</label>
+    </div>
+    <div id="list" class="droppable"></div>
     <div class="footer">
       <button class="share" id="shareBtn">Liste teilen</button>
       <button class="clear" id="clearBtn">Liste löschen</button>
     </div>
-  </div>
-  <script>
-    // Drag & Drop, Favoritenfilter und Filterbuttons verbessert
+  </div>  <script>
+    let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
     let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
-    let currentFilter = 'Alle';
 
     function saveList() {
       localStorage.setItem('einkaufsliste', JSON.stringify(list));
     }
 
-    function renderFilterButtons() {
-      const filters = document.getElementById('filters');
-      filters.innerHTML = '';
-      const allCats = ['Alle', 'Favoriten', ...new Set(list.map(i => i.category))];
-      allCats.forEach(cat => {
-        const btn = document.createElement('button');
-        btn.textContent = cat;
-        btn.style.margin = '5px';
-        btn.style.padding = '6px 12px';
-        btn.style.borderRadius = '6px';
-        btn.style.border = '1px solid #2E8B57';
-        btn.style.background = (cat === currentFilter) ? '#2E8B57' : 'transparent';
-        btn.style.color = (cat === currentFilter) ? '#fff' : '#2E8B57';
-        btn.onclick = () => { currentFilter = cat; renderFilterButtons(); renderList(); };
-        filters.appendChild(btn);
+    function updateSuggestions() {
+      const dataList = document.getElementById('suggestions');
+      dataList.innerHTML = '';
+      suggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        dataList.appendChild(option);
       });
+    }
+
+    function getCategoryIcon(name) {
+      const lower = name.toLowerCase();
+      if (/milch|wasser|saft|kaffee|tee/.test(lower)) return '🥤';
+      if (/apfel|banane|tomate|salat/.test(lower)) return '🍎';
+      if (/brot|kuchen|keks/.test(lower)) return '🥐';
+      if (/fleisch|wurst/.test(lower)) return '🥩';
+      if (/käse|butter/.test(lower)) return '🧀';
+      if (/reis|nudel/.test(lower)) return '🍚';
+      return '🛒';
     }
 
     function renderList() {
-      const container = document.getElementById('list');
-      container.innerHTML = '';
-      let filtered = [...list];
-      if (currentFilter === 'Favoriten') {
-        filtered = filtered.filter(i => i.favorite);
-      } else if (currentFilter !== 'Alle') {
-        filtered = filtered.filter(i => i.category === currentFilter);
-      }
+      const showFavs = document.getElementById('showFavorites').checked;
+      const listEl = document.getElementById('list');
+      listEl.innerHTML = '';
 
-      filtered.forEach((item, index) => {
+      list.forEach((item, index) => {
+        if (showFavs && !item.favorite) return;
+
         const div = document.createElement('div');
         div.className = 'item';
-        div.setAttribute('draggable', true);
-        div.ondragstart = e => {
-          e.dataTransfer.setData('text/plain', index);
-          div.classList.add('dragging');
-        };
-        div.ondragend = () => div.classList.remove('dragging');
-        div.ondragover = e => e.preventDefault();
-        div.ondrop = e => {
-          e.preventDefault();
-          const draggedIndex = +e.dataTransfer.getData('text');
-          const draggedItem = filtered[draggedIndex];
-          const dropIndex = index;
-          const fullIndexFrom = list.findIndex(x => x.name === draggedItem.name);
-          const fullIndexTo = list.findIndex(x => x.name === item.name);
-          list.splice(fullIndexTo, 0, list.splice(fullIndexFrom, 1)[0]);
-          saveList();
-          renderList();
-        };
+        div.setAttribute('draggable', 'true');
+        div.dataset.index = index;
 
         div.innerHTML = `
           <div class="info">
-            <span>${item.name} (${item.category}) x${item.qty}</span>
+            <span class="item-icon">${getCategoryIcon(item.name)}</span>
+            <span class="item-name${item.checked ? ' checked' : ''}">${item.name} <span class="quantity">x${item.qty}</span></span>
           </div>
           <div class="actions">
-            <button onclick="toggleFavorite(${list.indexOf(item)})">★</button>
-          </div>
-        `;
-        container.appendChild(div);
+            <button onclick="toggleItem(${index})">${item.checked ? '↺' : '✔'}</button>
+            <button onclick="changeQty(${index}, -1)">−</button>
+            <button onclick="changeQty(${index}, 1)">+</button>
+            <button onclick="toggleFavorite(${index})">${item.favorite ? '★' : '☆'}</button>
+            <button onclick="deleteItem(${index})">✖</button>
+          </div>`;
+
+        div.addEventListener('dragstart', e => {
+          div.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', index);
+        });
+        div.addEventListener('dragend', () => div.classList.remove('dragging'));
+
+        div.addEventListener('dragover', e => e.preventDefault());
+        div.addEventListener('drop', e => {
+          e.preventDefault();
+          const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+          const toIndex = index;
+          if (fromIndex !== toIndex) {
+            const [movedItem] = list.splice(fromIndex, 1);
+            list.splice(toIndex, 0, movedItem);
+            saveList();
+            renderList();
+          }
+        });
+
+        listEl.appendChild(div);
       });
     }
 
-    function toggleFavorite(index) {
-      list[index].favorite = !list[index].favorite;
+    function addItem() {
+      const nameEl = document.getElementById('itemInput');
+      const catEl = document.getElementById('categoryInput');
+      const name = nameEl.value.trim();
+      if (!name) return;
+      const category = catEl.value.trim() || 'Allgemein';
+      const existing = list.find(i => i.name.toLowerCase() === name.toLowerCase());
+      if (existing) existing.qty++;
+      else list.push({ name, category, qty: 1, checked: false, favorite: false });
+      if (!suggestions.includes(name)) suggestions.push(name);
+      saveList();
+      nameEl.value = '';
+      catEl.value = '';
+      renderList();
+    }
+
+    function toggleItem(i) {
+      list[i].checked = !list[i].checked;
       saveList();
       renderList();
     }
 
-    renderFilterButtons();
+    function changeQty(i, delta) {
+      list[i].qty += delta;
+      if (list[i].qty <= 0) list.splice(i, 1);
+      saveList();
+      renderList();
+    }
+
+    function deleteItem(i) {
+      if (confirm(`"${list[i].name}" wirklich löschen?`)) {
+        list.splice(i, 1);
+        saveList();
+        renderList();
+      }
+    }
+
+    function toggleFavorite(i) {
+      list[i].favorite = !list[i].favorite;
+      saveList();
+      renderList();
+    }
+
+    function shareList() {
+      let t = 'Meine Einkaufsliste:%0A';
+      list.forEach(i => t += `${i.checked ? '[x]' : '[ ]'} ${i.name} x${i.qty}%0A`);
+      window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
+    }
+
+    function clearList() {
+      const a = Math.ceil(Math.random() * 10), b = Math.ceil(Math.random() * 10);
+      const r = prompt(`Löschen bestätigen: ${a}+${b} = ?`);
+      if (parseInt(r) === a + b) {
+        list = [];
+        saveList();
+        renderList();
+      } else alert('Falsche Antwort.');
+    }
+
+    document.getElementById('addBtn').addEventListener('click', addItem);
+    document.getElementById('shareBtn').addEventListener('click', shareList);
+    document.getElementById('clearBtn').addEventListener('click', clearList);
+    document.getElementById('showFavorites').addEventListener('change', renderList);
+
+    updateSuggestions();
     renderList();
-  </script>
-</body>
+  </script></body>
 </html>
