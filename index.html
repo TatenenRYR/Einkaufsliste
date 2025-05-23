@@ -103,7 +103,10 @@
       const name = nameEl.value.trim();
       let category = categoryEl.value.trim();
 
-      if (!name) return alert('Bitte ein Produkt eingeben!');
+      if (!name) {
+        alert('Bitte ein Produkt eingeben!');
+        return;
+      }
 
       if (!category) {
         category = await guessCategory(name);
@@ -123,7 +126,7 @@
 
       saveList();
 
-      // Seite neu laden, um alles frisch zu rendern (dein Wunsch)
+      // Seite neu laden, damit das neue Produkt sofort sichtbar wird
       location.reload();
     });
 
@@ -204,6 +207,8 @@
     }
 
     document.getElementById('shareBtn').addEventListener('click', shareList);
+
+    document.getElementById('filter').addEventListener('change', renderList);
 
     // Initialisierung
     updateSuggestions();
