@@ -2,167 +2,176 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Einkaufsliste</title>
+  <title>Meine Einkaufsliste</title>
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 0; background: #f6f6f6; }
-    header { background: #333; color: white; padding: 1rem; text-align: center; }
-    .controls { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 20px; background: #fff; }
-    .controls input, .controls select { flex: 1; padding: 0.5rem; font-size: 1rem; }
-    .controls button { padding: 0.5rem 1rem; font-size: 1rem; }
-    #list { margin: 20px; display: flex; flex-direction: column; gap: 10px; }
-    .item { background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-    .item-icon { font-size: 1.2rem; margin-right: 0.5rem; }
-    .item-name.checked { text-decoration: line-through; color: gray; }
-    .quantity { font-weight: bold; margin-left: 5px; }
-    .actions button { margin-left: 5px; }
-    footer { text-align: center; padding: 1rem; background: #eee; font-size: 0.9rem; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark {
+      background: #1e1e1e;
+      color: #ccc;
+    }
+    .container {
+      width: 100%; max-width: 600px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+    body.dark .container {
+      background: #2c2c2c;
+    }
+    header {
+      background: #2E8B57;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .controls, .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 20px;
+    }
+    .controls input, .controls select, .controls button, .filters select {
+      flex: 1 1 45%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .controls button, .footer button {
+      background: #2E8B57;
+      color: #fff;
+      cursor: pointer;
+    }
+    .controls button:hover, .footer button:hover {
+      background: #276c47;
+    }
+    .filters select {
+      flex: 1;
+    }
+    #list {
+      padding: 0 20px 20px;
+    }
+    .item {
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    body.dark .item {
+      background: #3a3a3a;
+    }
+    .item .info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      cursor: pointer;
+    }
+    .item .item-name.checked {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .item .actions button {
+      background: transparent;
+      border: none;
+      font-size: 1.2rem;
+      color: #2E8B57;
+      cursor: pointer;
+    }
+    .footer {
+      padding: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .footer button.clear {
+      background: #e74c3c;
+    }
+    .footer button.export {
+      background: #3498db;
+    }
+    .footer button.darkmode {
+      background: #444;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Einkaufsliste</h1>
-  </header>
-  <div style="padding: 0 20px; margin-top: 10px;">
-    <label for="locationFilter">Filtern nach Ort:</label>
-    <select id="locationFilter">
-      <option value="">Alle Orte</option>
-    </select>
+  <div class="container">
+    <header>Meine Einkaufsliste</header>
+    <div class="controls">
+      <input type="text" id="itemInput" placeholder="Produkt eingeben..." />
+      <input type="text" id="categoryInput" placeholder="Kategorie... (optional)" />
+      <button onclick="addItem()">Hinzufügen</button>
+    </div>
+    <div class="filters">
+      <select id="filterFav" onchange="renderList()">
+        <option value="alle">Alle</option>
+        <option value="favoriten">Nur Favoriten</option>
+      </select>
+      <select id="filterCategory" onchange="renderList()">
+        <option value="alle">Alle Kategorien</option>
+      </select>
+    </div>
+    <div id="list"></div>
+    <div class="footer">
+      <button class="share" onclick="shareList()">Teilen</button>
+      <button class="clear" onclick="clearList()">Löschen</button>
+      <button class="darkmode" onclick="toggleDarkMode()">Dark Mode</button>
+      <button class="export" onclick="exportList()">Exportieren</button>
+    </div>
   </div>
-  <div class="controls">
-    <input type="text" id="itemInput" placeholder="Artikel" />
-    <input type="text" id="categoryInput" placeholder="Kategorie" />
-    <input type="text" id="locationInput" placeholder="Ort (z. B. Aldi, Rewe, etc.)" />
-    <button onclick="addItem()">Hinzufügen</button>
-    <button onclick="exportList()">Exportieren</button>
-    <button onclick="toggleDarkMode()">Dark Mode</button>
-  </div>
-  <div id="list"></div>
-  <footer>
-    Einkaufsliste App – mit Kategorien, Favoriten, Orten, Vorlagen, Statistik, Export & Dark Mode
-  </footer>
-  <script>
-    let list = JSON.parse(localStorage.getItem('einkaufsliste') || '[]');
-    let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-    let history = JSON.parse(localStorage.getItem('history') || '[]');function save() {
-  localStorage.setItem('einkaufsliste', JSON.stringify(list));
-  localStorage.setItem('favorites', JSON.stringify(favorites));
-  localStorage.setItem('history', JSON.stringify(history));
-}
+<script>
+let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+let favs = JSON.parse(localStorage.getItem('favoriten')) || [];
+let categories = new Set();function save() { localStorage.setItem('einkaufsliste', JSON.stringify(list)); localStorage.setItem('favoriten', JSON.stringify(favs)); }
 
-function addItem() {
-  const name = document.getElementById('itemInput').value.trim();
-  const category = document.getElementById('categoryInput').value.trim();
-  const location = document.getElementById('locationInput').value.trim();
-  if (!name) return;
-  const existing = list.find(i => i.name.toLowerCase() === name.toLowerCase() && i.category === category && i.location === location);
-  if (existing) existing.qty++;
-  else list.push({ name, category, location, checked: false, qty: 1 });
-  document.getElementById('itemInput').value = '';
-  renderList();
-  save();
-}
+function detectCategory(name) { const n = name.toLowerCase(); if (/(milch|wasser|kaffee|tee|saft|bier|wein|cola)/.test(n)) return 'Getränke'; if (/(brot|keks|kuchen|mehl|zucker)/.test(n)) return 'Backwaren'; if (/(apfel|banane|tomate|salat)/.test(n)) return 'Obst & Gemüse'; if (/(fleisch|wurst|schinken|hähnchen|fisch)/.test(n)) return 'Fleisch & Fisch'; if (/(käse|butter|joghurt)/.test(n)) return 'Milchprodukte'; if (/(reis|nudeln|gewürz)/.test(n)) return 'Vorrat'; return 'Allgemein'; }
 
-function toggleItem(i) {
-  list[i].checked = !list[i].checked;
-  renderList();
-  save();
-}
+function renderList() { const listEl = document.getElementById('list'); listEl.innerHTML = ''; categories.clear();
 
-function changeQty(i, diff) {
-  list[i].qty += diff;
-  if (list[i].qty <= 0) list.splice(i, 1);
-  renderList();
-  save();
-}
+const filterFav = document.getElementById('filterFav').value; const filterCat = document.getElementById('filterCategory').value; const shown = list.filter(item => (filterFav !== 'favoriten' || favs.includes(item.name)) && (filterCat === 'alle' || item.category === filterCat) );
 
-function deleteItem(i) {
-  list.splice(i, 1);
-  renderList();
-  save();
-}
+shown.sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
 
-function editItem(i) {
-  const newName = prompt('Neuer Name:', list[i].name) || list[i].name;
-  const newCat = prompt('Neue Kategorie:', list[i].category || '') || '';
-  const newLocation = prompt('Neuer Ort:', list[i].location || '') || '';
-  list[i].name = newName.trim();
-  list[i].category = newCat.trim();
-  list[i].location = newLocation.trim();
-  renderList();
-  save();
-}
+shown.forEach((item, i) => { categories.add(item.category); const div = document.createElement('div'); div.className = 'item'; div.innerHTML =  <div class="info" onclick="toggle(${i})"> <span class="item-name${item.checked ? ' checked' : ''}">${item.name} (${item.category}) x${item.qty}</span> </div> <div class="actions"> <button onclick="changeQty(${i}, -1)">−</button> <button onclick="changeQty(${i}, 1)">+</button> <button onclick="fav('${item.name}')">★</button> <button onclick="del(${i})">✖</button> </div>; listEl.appendChild(div); }); updateCategoryFilter(); }
 
-function getCategoryIcon(cat, name) {
-  const icons = { Obst: '🍎', Gemüse: '🥦', Fleisch: '🥩', Milch: '🥛', Getränke: '🥤', Brot: '🍞', Drogerie: '🧼' };
-  return icons[cat] || '🛒';
-}
+function updateCategoryFilter() { const select = document.getElementById('filterCategory'); select.innerHTML = '<option value="alle">Alle Kategorien</option>'; [...categories].sort().forEach(cat => { const o = document.createElement('option'); o.value = o.textContent = cat; select.appendChild(o); }); }
 
-function updateLocationFilter() {
-  const select = document.getElementById('locationFilter');
-  const locations = [...new Set(list.map(i => i.location).filter(Boolean))];
-  select.innerHTML = '<option value="">Alle Orte</option>';
-  locations.forEach(loc => {
-    const option = document.createElement('option');
-    option.value = loc;
-    option.textContent = loc;
-    select.appendChild(option);
-  });
-  select.addEventListener('change', renderList);
-}
+function addItem() { const name = document.getElementById('itemInput').value.trim(); const cat = document.getElementById('categoryInput').value.trim() || detectCategory(name); if (!name) return; const existing = list.find(i => i.name === name); if (existing) existing.qty++; else list.push({ name, category: cat, qty: 1, checked: false }); save(); renderList(); }
 
-function renderList() {
-  updateLocationFilter();
-  const selectedLocation = document.getElementById('locationFilter').value;
-  const listEl = document.getElementById('list');
-  listEl.innerHTML = '';
+function toggle(i) { list[i].checked = !list[i].checked; save(); renderList(); }
 
-  const sortedList = list
-    .filter(item => !selectedLocation || item.location === selectedLocation)
-    .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
+function changeQty(i, d) { list[i].qty += d; if (list[i].qty <= 0) list.splice(i, 1); save(); renderList(); }
 
-  sortedList.forEach((item, idx) => {
-    const div = document.createElement('div');
-    div.className = 'item';
-    const icon = getCategoryIcon(item.category, item.name);
-    const realIndex = list.findIndex(i => i.name === item.name && i.category === item.category && i.location === item.location);
+function del(i) { if (confirm(${list[i].name} löschen?)) { list.splice(i, 1); save(); renderList(); } }
 
-    div.innerHTML = `
-      <div class="info"><span class="item-icon">${icon}</span>
-        <span class="item-name${item.checked ? ' checked' : ''}">
-          ${item.name} <span class="quantity">x${item.qty}</span>
-          <small style="display:block;font-size:0.75rem;color:#666;">${item.location || '–'}</small>
-        </span>
-      </div>
-      <div class="actions">
-        <button onclick="toggleItem(${realIndex})">${item.checked ? '↺' : '✔'}</button>
-        <button onclick="changeQty(${realIndex}, -1)">−</button>
-        <button onclick="changeQty(${realIndex}, 1)">+</button>
-        <button onclick="editItem(${realIndex})">✎</button>
-        <button onclick="deleteItem(${realIndex})">✖</button>
-      </div>`;
+function fav(name) { if (!favs.includes(name)) favs.push(name); else favs = favs.filter(f => f !== name); save(); renderList(); }
 
-    div.querySelector('.info').addEventListener('click', () => toggleItem(realIndex));
-    listEl.appendChild(div);
-  });
-}
+function shareList() { const txt = list.map(i => ${i.checked ? '[x]' : '[ ]'} ${i.name} x${i.qty}).join('%0A'); window.open(https://wa.me/?text=Meine Einkaufsliste:%0A${encodeURIComponent(txt)}); }
 
-function exportList() {
-  const csv = list.map(i => `${i.name},${i.qty},${i.category},${i.location}`).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'einkaufsliste.csv';
-  a.click();
-}
+function clearList() { if (confirm('Liste wirklich löschen?')) { list = []; save(); renderList(); } }
 
-function toggleDarkMode() {
-  document.body.classList.toggle('dark');
-  document.querySelector('header').classList.toggle('dark');
-}
+function exportList() { const blob = new Blob([JSON.stringify(list, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'einkaufsliste.json'; a.click(); URL.revokeObjectURL(url); }
 
-renderList();
+function toggleDarkMode() { document.body.classList.toggle('dark'); }
 
-  </script>
+renderList(); </script>
+
 </body>
 </html>
