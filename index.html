@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,11 +13,6 @@
       display: flex;
       justify-content: center;
       padding: 20px;
-      transition: background 0.3s, color 0.3s;
-    }
-    body.dark {
-      background: #1e1e1e;
-      color: #ccc;
     }
     .container {
       width: 100%; max-width: 600px;
@@ -24,10 +20,6 @@
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       overflow: hidden;
-      transition: background 0.3s;
-    }
-    body.dark .container {
-      background: #2c2c2c;
     }
     header {
       background: #2E8B57;
@@ -43,23 +35,26 @@
       gap: 10px;
       padding: 20px;
     }
-    .controls input, .controls select, .controls button, .filters select {
+    .controls input[type="text"], .controls input[list], .controls button, .filters select {
       flex: 1 1 45%;
       padding: 12px;
       border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 1rem;
     }
-    .controls button, .footer button {
+    .controls input:focus, .controls button:focus, .filters select:focus {
+      outline: none;
+      border-color: #2E8B57;
+      box-shadow: 0 0 0 2px rgba(46,139,87,0.3);
+    }
+    .controls button {
       background: #2E8B57;
       color: #fff;
       cursor: pointer;
+      transition: background 0.3s;
     }
-    .controls button:hover, .footer button:hover {
+    .controls button:hover {
       background: #276c47;
-    }
-    .filters select {
-      flex: 1;
     }
     #list {
       padding: 0 20px 20px;
@@ -72,9 +67,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-    body.dark .item {
-      background: #3a3a3a;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
     .item .info {
       display: flex;
@@ -83,9 +76,21 @@
       flex: 1;
       cursor: pointer;
     }
-    .item .item-name.checked {
+    .item .item-icon {
+      font-size: 1.4rem;
+      user-select: none;
+    }
+    .item .item-name {
+      font-size: 1rem;
+    }
+    .item.checked .item-name {
       text-decoration: line-through;
       color: #888;
+    }
+    .item .quantity {
+      font-size: 0.9rem;
+      color: #555;
+      margin-left: 8px;
     }
     .item .actions button {
       background: transparent;
@@ -93,21 +98,39 @@
       font-size: 1.2rem;
       color: #2E8B57;
       cursor: pointer;
+      transition: color 0.2s;
+    }
+    .item .actions button:hover {
+      color: #145a3c;
     }
     .footer {
       padding: 20px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
+      justify-content: space-between;
     }
-    .footer button.clear {
+    .footer button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .footer .share {
+      background: #2E8B57;
+      color: #fff;
+      margin-right: 10px;
+    }
+    .footer .clear {
       background: #e74c3c;
+      color: #fff;
     }
-    .footer button.export {
-      background: #3498db;
+    .footer button:hover.share {
+      background: #276c47;
     }
-    .footer button.darkmode {
-      background: #444;
+    .footer button:hover.clear {
+      background: #c0392b;
     }
   </style>
 </head>
@@ -115,63 +138,182 @@
   <div class="container">
     <header>Meine Einkaufsliste</header>
     <div class="controls">
-      <input type="text" id="itemInput" placeholder="Produkt eingeben..." />
-      <input type="text" id="categoryInput" placeholder="Kategorie... (optional)" />
-      <button onclick="addItem()">Hinzufügen</button>
+      <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
+      <datalist id="suggestions"></datalist>
+      <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (optional)" />
+      <button id="addBtn">Hinzufügen</button>
     </div>
     <div class="filters">
-      <select id="filterFav" onchange="renderList()">
-        <option value="alle">Alle</option>
-        <option value="favoriten">Nur Favoriten</option>
+      <select id="filterCategory">
+        <option value="">Alle Kategorien</option>
       </select>
-      <select id="filterCategory" onchange="renderList()">
-        <option value="alle">Alle Kategorien</option>
+      <select id="filterFavorites">
+        <option value="">Alle</option>
+        <option value="fav">Nur Favoriten</option>
       </select>
     </div>
     <div id="list"></div>
     <div class="footer">
-      <button class="share" onclick="shareList()">Teilen</button>
-      <button class="clear" onclick="clearList()">Löschen</button>
-      <button class="darkmode" onclick="toggleDarkMode()">Dark Mode</button>
-      <button class="export" onclick="exportList()">Exportieren</button>
+      <button class="share" id="shareBtn">Liste teilen</button>
+      <button class="clear" id="clearBtn">Liste löschen</button>
     </div>
   </div>
-<script>
-let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
-let favs = JSON.parse(localStorage.getItem('favoriten')) || [];
-let categories = new Set();function save() { localStorage.setItem('einkaufsliste', JSON.stringify(list)); localStorage.setItem('favoriten', JSON.stringify(favs)); }
 
-function detectCategory(name) { const n = name.toLowerCase(); if (/(milch|wasser|kaffee|tee|saft|bier|wein|cola)/.test(n)) return 'Getränke'; if (/(brot|keks|kuchen|mehl|zucker)/.test(n)) return 'Backwaren'; if (/(apfel|banane|tomate|salat)/.test(n)) return 'Obst & Gemüse'; if (/(fleisch|wurst|schinken|hähnchen|fisch)/.test(n)) return 'Fleisch & Fisch'; if (/(käse|butter|joghurt)/.test(n)) return 'Milchprodukte'; if (/(reis|nudeln|gewürz)/.test(n)) return 'Vorrat'; return 'Allgemein'; }
+  <script>
+    let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+    let suggestions = JSON.parse(localStorage.getItem('vorschlaege')) || ['Milch','Brot','Eier'];
 
-function renderList() { const listEl = document.getElementById('list'); listEl.innerHTML = ''; categories.clear();
+    function saveList() {
+      localStorage.setItem('einkaufsliste', JSON.stringify(list));
+    }
 
-const filterFav = document.getElementById('filterFav').value; const filterCat = document.getElementById('filterCategory').value; const shown = list.filter(item => (filterFav !== 'favoriten' || favs.includes(item.name)) && (filterCat === 'alle' || item.category === filterCat) );
+    function saveSuggestions() {
+      localStorage.setItem('vorschlaege', JSON.stringify(suggestions));
+    }
 
-shown.sort((a,b)=>a.category.localeCompare(b.category)||a.name.localeCompare(b.name));
+    function updateSuggestions() {
+      const dataList = document.getElementById('suggestions');
+      dataList.innerHTML = '';
+      suggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        dataList.appendChild(option);
+      });
+    }
 
-shown.forEach((item, i) => { categories.add(item.category); const div = document.createElement('div'); div.className = 'item'; div.innerHTML =  <div class="info" onclick="toggle(${i})"> <span class="item-name${item.checked ? ' checked' : ''}">${item.name} (${item.category}) x${item.qty}</span> </div> <div class="actions"> <button onclick="changeQty(${i}, -1)">−</button> <button onclick="changeQty(${i}, 1)">+</button> <button onclick="fav('${item.name}')">★</button> <button onclick="del(${i})">✖</button> </div>; listEl.appendChild(div); }); updateCategoryFilter(); }
+    function detectCategory(name) {
+      const n = name.toLowerCase();
+      if (/(milch|wasser|kaffee|tee|saft|bier|wein|cola)/.test(n)) return 'Getränke';
+      if (/(brot|keks|kuchen|mehl|zucker)/.test(n)) return 'Backwaren';
+      if (/(apfel|banane|tomate|salat|gemüse)/.test(n)) return 'Obst & Gemüse';
+      if (/(fleisch|wurst|hähnchen|fisch)/.test(n)) return 'Fleisch & Fisch';
+      if (/(käse|butter|joghurt)/.test(n)) return 'Milchprodukte';
+      if (/(reis|nudeln|pasta)/.test(n)) return 'Vorrat';
+      if (/(seife|shampoo|zahnpasta)/.test(n)) return 'Hygiene';
+      return 'Allgemein';
+    }
 
-function updateCategoryFilter() { const select = document.getElementById('filterCategory'); select.innerHTML = '<option value="alle">Alle Kategorien</option>'; [...categories].sort().forEach(cat => { const o = document.createElement('option'); o.value = o.textContent = cat; select.appendChild(o); }); }
+    function renderList() {
+      const listEl = document.getElementById('list');
+      const catFilter = document.getElementById('filterCategory').value;
+      const favFilter = document.getElementById('filterFavorites').value;
 
-function addItem() { const name = document.getElementById('itemInput').value.trim(); const cat = document.getElementById('categoryInput').value.trim() || detectCategory(name); if (!name) return; const existing = list.find(i => i.name === name); if (existing) existing.qty++; else list.push({ name, category: cat, qty: 1, checked: false }); save(); renderList(); }
+      listEl.innerHTML = '';
+      const cats = new Set();
+      let filtered = list;
+      if (catFilter) filtered = filtered.filter(i => i.category === catFilter);
+      if (favFilter === 'fav') filtered = filtered.filter(i => i.favorite);
 
-function toggle(i) { list[i].checked = !list[i].checked; save(); renderList(); }
+      filtered.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
 
-function changeQty(i, d) { list[i].qty += d; if (list[i].qty <= 0) list.splice(i, 1); save(); renderList(); }
+      filtered.forEach((item, idx) => {
+        cats.add(item.category);
+        const div = document.createElement('div');
+        div.className = 'item' + (item.checked ? ' checked' : '');
+        div.innerHTML = `
+          <div class="info" onclick="toggleItem(${idx})">
+            <span class="item-icon">🛒</span>
+            <span class="item-name">${item.name} <span class="quantity">x${item.qty}</span></span>
+          </div>
+          <div class="actions">
+            <button onclick="toggleItem(${idx})">${item.checked ? '↺' : '✔'}</button>
+            <button onclick="changeQty(${idx}, -1)">−</button>
+            <button onclick="changeQty(${idx}, 1)">+</button>
+            <button onclick="editItem(${idx})">✎</button>
+            <button onclick="deleteItem(${idx})">✖</button>
+            <button onclick="toggleFavorite(${idx})">★</button>
+          </div>`;
+        listEl.appendChild(div);
+      });
 
-function del(i) { if (confirm(${list[i].name} löschen?)) { list.splice(i, 1); save(); renderList(); } }
+      const select = document.getElementById('filterCategory');
+      select.innerHTML = '<option value="">Alle Kategorien</option>';
+      cats.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        select.appendChild(opt);
+      });
+    }
 
-function fav(name) { if (!favs.includes(name)) favs.push(name); else favs = favs.filter(f => f !== name); save(); renderList(); }
+    function addItem() {
+      const nameEl = document.getElementById('itemInput');
+      const catEl = document.getElementById('categoryInput');
+      const name = nameEl.value.trim();
+      const category = catEl.value.trim() || detectCategory(name);
+      if (!name) return;
+      const existing = list.find(i => i.name.toLowerCase() === name.toLowerCase());
+      if (existing) existing.qty++;
+      else list.push({ name, category, qty: 1, checked: false, favorite: false });
+      if (!suggestions.includes(name)) suggestions.push(name);
+      saveList();
+      saveSuggestions();
+      nameEl.value = '';
+      catEl.value = '';
+      renderList();
+    }
 
-function shareList() { const txt = list.map(i => ${i.checked ? '[x]' : '[ ]'} ${i.name} x${i.qty}).join('%0A'); window.open(https://wa.me/?text=Meine Einkaufsliste:%0A${encodeURIComponent(txt)}); }
+    function toggleItem(i) {
+      list[i].checked = !list[i].checked;
+      saveList();
+      renderList();
+    }
 
-function clearList() { if (confirm('Liste wirklich löschen?')) { list = []; save(); renderList(); } }
+    function changeQty(i, d) {
+      list[i].qty += d;
+      if (list[i].qty <= 0) list.splice(i, 1);
+      saveList();
+      renderList();
+    }
 
-function exportList() { const blob = new Blob([JSON.stringify(list, null, 2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'einkaufsliste.json'; a.click(); URL.revokeObjectURL(url); }
+    function deleteItem(i) {
+      if (confirm(`"${list[i].name}" wirklich löschen?`)) {
+        list.splice(i, 1);
+        saveList();
+        renderList();
+      }
+    }
 
-function toggleDarkMode() { document.body.classList.toggle('dark'); }
+    function editItem(i) {
+      const newName = prompt('Neuer Produktname:', list[i].name);
+      if (!newName) return;
+      const newCat = prompt('Neue Kategorie:', list[i].category) || detectCategory(newName);
+      list[i].name = newName;
+      list[i].category = newCat;
+      saveList();
+      renderList();
+    }
 
-renderList(); </script>
+    function toggleFavorite(i) {
+      list[i].favorite = !list[i].favorite;
+      saveList();
+      renderList();
+    }
 
+    function shareList() {
+      let text = 'Meine Einkaufsliste:\n';
+      list.forEach(i => {
+        text += `${i.checked ? '[x]' : '[ ]'} ${i.name} (${i.category}) x${i.qty}\n`;
+      });
+      navigator.clipboard.writeText(text).then(() => alert('Liste kopiert!'));
+    }
+
+    function clearList() {
+      const a = Math.ceil(Math.random() * 10), b = Math.ceil(Math.random() * 10);
+      const r = prompt(`Löschen bestätigen: ${a}+${b} = ?`);
+      if (parseInt(r) === a + b) {
+        list = [];
+        saveList();
+        renderList();
+      } else alert('Falsche Antwort.');
+    }
+
+    document.getElementById('addBtn').addEventListener('click', addItem);
+    document.getElementById('shareBtn').addEventListener('click', shareList);
+    document.getElementById('clearBtn').addEventListener('click', clearList);
+
+    updateSuggestions();
+    renderList();
+  </script>
 </body>
 </html>
