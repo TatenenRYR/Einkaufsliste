@@ -15,10 +15,13 @@
   <h1>Meine Einkaufsliste</h1>
   <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
   <datalist id="suggestions"></datalist>
+  <input type="number" id="qtyInput" placeholder="Menge eingeben..." min="1" value="1" />
   <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
   <button onclick="addItem()">Hinzufügen</button>
   <div id="list"></div>
-  <button onclick="shareList()">Liste teilen (WhatsApp)</button>  <script>
+  <button onclick="shareList()">Liste teilen (WhatsApp)</button>
+
+  <script>
     let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
     let categoryMap = {
       'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
@@ -70,9 +73,13 @@
     function addItem() {
       const nameEl = document.getElementById('itemInput');
       const categoryEl = document.getElementById('categoryInput');
+      const qtyEl = document.getElementById('qtyInput');
+
       const name = nameEl.value.trim();
       let category = categoryEl.value.trim();
+      let qty = parseInt(qtyEl.value);
       if (!name) return;
+      if (!qty || qty < 1) qty = 1;
 
       if (!category) {
         category = categoryMap[name.toLowerCase()] || 'Allgemein';
@@ -87,14 +94,15 @@
 
       const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
       if (existing) {
-        existing.qty++;
+        existing.qty += qty;
       } else {
-        list.push({ name, category, checked: false, qty: 1 });
+        list.push({ name, category, checked: false, qty: qty });
       }
 
       saveList(); renderList();
       nameEl.value = '';
       categoryEl.value = '';
+      qtyEl.value = '1';
     }
 
     function toggleItem(index) {
@@ -119,7 +127,15 @@
       window.open(url, '_blank');
     }
 
+    document.getElementById('itemInput').addEventListener('input', function() {
+      const name = this.value.trim().toLowerCase();
+      if (categoryMap[name]) {
+        document.getElementById('categoryInput').value = categoryMap[name];
+      }
+    });
+
     updateSuggestions();
     renderList();
-  </script></body>
+  </script>
+</body>
 </html>
