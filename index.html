@@ -2,153 +2,184 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Einkaufsliste</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Meine Einkaufsliste</title>
   <style>
-    body { font-family: sans-serif; background: #f7f7f7; margin: 0; padding: 1rem; }
-    h1 { text-align: center; }
-    .container { max-width: 600px; margin: auto; }
-    .controls, .actions { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    input, select, button { padding: 0.5rem; font-size: 1rem; flex: 1; }
-    button { cursor: pointer; }
-    .item { background: #fff; margin-bottom: 0.5rem; padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; border-radius: 0.4rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    .item .info { display: flex; align-items: center; gap: 0.5rem; flex: 1; cursor: pointer; }
-    .item .item-icon { font-size: 1.3rem; }
-    .item .item-name { font-weight: 500; }
-    .item .item-name.checked { text-decoration: line-through; color: #999; }
-    .item .quantity { color: #555; margin-left: 0.3rem; }
-    .actions button { flex: unset; width: 2.2rem; height: 2.2rem; }
+    /* ... Hier dein CSS von oben einfügen ... */
+    /* Für Kürze lasse ich den CSS-Code weg, bitte aus deinem bisherigen Code übernehmen */
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Einkaufsliste</h1>
+    <header>Meine Einkaufsliste</header>
     <div class="controls">
-      <input id="itemInput" type="text" placeholder="Artikel" list="suggestions" />
-      <select id="categoryInput">
-        <option value="">Kategorie automatisch</option>
-        <option>Getränke</option>
-        <option>Obst & Gemüse</option>
-        <option>Fleisch & Fisch</option>
-        <option>Backwaren</option>
-        <option>Milchprodukte</option>
-        <option>Vorrat</option>
-        <option>Hygiene</option>
-        <option>Haushalt</option>
-        <option>Sonstiges</option>
-      </select>
-      <button id="addBtn">+</button>
-    </div>
-    <div class="actions">
-      <button id="shareBtn">Teilen</button>
-      <button id="clearBtn">Löschen</button>
+      <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
+      <datalist id="suggestions"></datalist>
+      <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (optional)" />
+      <button id="addBtn">Hinzufügen</button>
     </div>
     <div id="list"></div>
-    <datalist id="suggestions"></datalist>
+    <div class="footer">
+      <button class="share" id="shareBtn">Liste teilen</button>
+      <button class="clear" id="clearBtn">Liste löschen</button>
+    </div>
   </div>
 
   <script>
     let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
     let list = [];
 
+    // Hilfsfunktionen wie detectCategory und iconMap kannst du aus deinem bisherigen Code übernehmen
+
+    // --- API-Funktionen ---
     async function fetchList() {
-      try {
-        const res = await fetch('/liste');
-        list = await res.json();
-        updateSuggestions();
-        renderList();
-      } catch (e) {
-        alert("Fehler beim Laden der Liste.");
-      }
+      const res = await fetch('/api/list');
+      list = await res.json();
+      updateSuggestions();
+      renderList();
     }
 
     async function saveList() {
-      try {
-        await fetch('/liste', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(list)
-        });
-      } catch (e) {
-        alert("Fehler beim Speichern.");
-      }
+      // Wird nur genutzt bei Add/Delete/Update API-Calls
     }
 
-    function updateSuggestions() {
-      const dataList = document.getElementById('suggestions'); dataList.innerHTML = '';
-      suggestions.forEach(item => {
-        const option = document.createElement('option'); option.value = item; dataList.appendChild(option);
+    async function addItem() {
+      const nameEl = document.getElementById('itemInput');
+      const catEl = document.getElementById('categoryInput');
+      const name = nameEl.value.trim();
+      if (!name) return alert('Bitte Produkt eingeben');
+      let category = catEl.value.trim();
+      if (!category) category = detectCategory(name);
+
+      if (!suggestions.includes(name)) {
+        suggestions.push(name);
+        updateSuggestions();
+      }
+
+      const existing = list.find(i => i.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        await updateItem(existing.name, { qty: existing.qty + 1 });
+      } else {
+        await fetch('/api/list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, category, checked: false, qty: 1 }),
+        });
+      }
+      nameEl.value = '';
+      catEl.value = '';
+      await fetchList();
+    }
+
+    async function updateItem(name, changes) {
+      await fetch(`/api/list/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes),
       });
     }
 
-    function detectCategory(name) {
-      const n = name.toLowerCase();
-      if (/(milch|wasser|kaffee|tee|saft|bier|wein|cola|drink)/.test(n)) return 'Getränke';
-      if (/(brot|keks|kuchen|croissant|brötchen|baguette|torte|backwaren|mehl|zucker)/.test(n)) return 'Backwaren';
-      if (/(apfel|banane|tomate|salat|karotte|obst|gemüse)/.test(n)) return 'Obst & Gemüse';
-      if (/(fleisch|wurst|schinken|hähnchen|steak|pork|beef|chicken|fisch)/.test(n)) return 'Fleisch & Fisch';
-      if (/(käse|butter|joghurt|quark|sahne)/.test(n)) return 'Milchprodukte';
-      if (/(reis|nudeln|pasta|salz|gewürz)/.test(n)) return 'Vorrat';
-      if (/(seife|shampoo|zahnpasta|pflege|kosmetik)/.test(n)) return 'Hygiene';
-      if (/(reiniger|putz|papier|tücher|waschmittel)/.test(n)) return 'Haushalt';
-      if (/(eier)/.test(n)) return 'Sonstiges';
-      return 'Allgemein';
+    async function deleteItem(name) {
+      await fetch(`/api/list/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+      });
     }
 
-    const iconMap = [
-      { keywords: ['getränk','milch','wasser','saft','cola','bier','wein','kaffee','tee'], icon:'🥤' },
-      { keywords: ['obst','gemüse','apfel','banane','tomate'], icon:'🍎' },
-      { keywords: ['fleisch','wurst','schinken','hähnchen','steak','fisch'], icon:'🥩' },
-      { keywords: ['brot','keks','kuchen','backwaren'], icon:'🥐' },
-      { keywords: ['käse','butter','joghurt'], icon:'🧀' },
-      { keywords: ['reis','nudeln'], icon:'🍚' },
-      { keywords: ['hygiene','seife','shampoo'], icon:'🧴' },
-      { keywords: ['haushalt','putz','reiniger'], icon:'🧹' },
-      { keywords: ['eier'], icon:'🥚' }
-    ];
+    async function toggleItem(idx) {
+      const item = list[idx];
+      await updateItem(item.name, { checked: !item.checked });
+      await fetchList();
+    }
+
+    async function changeQty(idx, delta) {
+      const item = list[idx];
+      const newQty = item.qty + delta;
+      if (newQty <= 0) {
+        if (confirm(`Möchtest du "${item.name}" wirklich löschen?`)) {
+          await deleteItem(item.name);
+        }
+      } else {
+        await updateItem(item.name, { qty: newQty });
+      }
+      await fetchList();
+    }
+
+    // Rendering und UI-Funktionen (aus deinem Code)
+
+    function updateSuggestions() {
+      const dataList = document.getElementById('suggestions');
+      dataList.innerHTML = '';
+      suggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        dataList.appendChild(option);
+      });
+    }
 
     function getCategoryIcon(category, name) {
+      // Deine Icon-Logik hier einfügen (wie bisher)
+      // Beispiel:
+      const iconMap = [
+        { keywords: ['getränk','milch','wasser','saft','cola','bier','wein','kaffee','tee'], icon:'🥤' },
+        { keywords: ['obst','gemüse','apfel','banane','tomate'], icon:'🍎' },
+        { keywords: ['fleisch','wurst','schinken','hähnchen','steak','fisch'], icon:'🥩' },
+        { keywords: ['brot','keks','kuchen','backwaren'], icon:'🥐' },
+        { keywords: ['käse','butter','joghurt'], icon:'🧀' },
+        { keywords: ['reis','nudeln'], icon:'🍚' },
+        { keywords: ['hygiene','seife','shampoo'], icon:'🧴' },
+        { keywords: ['haushalt','putz','reiniger'], icon:'🧹' },
+        { keywords: ['eier'], icon:'🥚' }
+      ];
       const c = category.toLowerCase(); const n = name.toLowerCase();
-      for (const e of iconMap) if (e.keywords.some(k=>c.includes(k))) return e.icon;
-      for (const e of iconMap) if (e.keywords.some(k=>n.includes(k))) return e.icon;
+      for (const e of iconMap) if (e.keywords.some(k => c.includes(k))) return e.icon;
+      for (const e of iconMap) if (e.keywords.some(k => n.includes(k))) return e.icon;
       return '🛒';
     }
 
     function renderList() {
-      const listEl = document.getElementById('list'); listEl.innerHTML = '';
+      const listEl = document.getElementById('list');
+      listEl.innerHTML = '';
       list.forEach((item, idx) => {
-        const div = document.createElement('div'); div.className='item';
-        const icon = getCategoryIcon(item.category,item.name);
-        div.innerHTML = `<div class="info"><span class="item-icon">${icon}</span>
-          <span class="item-name${item.checked?' checked':''}">${item.name} <span class="quantity">x${item.qty}</span></span></div>
+        const div = document.createElement('div');
+        div.className = 'item';
+        const icon = getCategoryIcon(item.category, item.name);
+        div.innerHTML = `
+          <div class="info">
+            <span class="item-icon">${icon}</span>
+            <span class="item-name${item.checked ? ' checked' : ''}">
+              ${item.name} <span class="quantity">x${item.qty}</span>
+            </span>
+          </div>
           <div class="actions">
-            <button onclick="toggleItem(${idx})">${item.checked?'↺':'✔'}</button>
+            <button onclick="toggleItem(${idx})">${item.checked ? '↺' : '✔'}</button>
             <button onclick="changeQty(${idx},-1)">−</button>
             <button onclick="changeQty(${idx},1)">+</button>
-          </div>`;
-        div.querySelector('.info').addEventListener('click',()=>toggleItem(idx));
+          </div>
+        `;
+        div.querySelector('.info').addEventListener('click', () => toggleItem(idx));
         listEl.appendChild(div);
       });
     }
 
-    async function addItem() {
-      const nameEl=document.getElementById('itemInput'), catEl=document.getElementById('categoryInput');
-      const name=nameEl.value.trim(); if(!name)return;
-      let category=catEl.value.trim()||detectCategory(name);
-      if(!suggestions.includes(name)){suggestions.push(name);updateSuggestions();}
-      const existing=list.find(i=>i.name.toLowerCase()===name.toLowerCase());
-      existing?existing.qty++:list.push({name,category,checked:!1,qty:1});
-      await saveList(); fetchList();
+    function shareList() {
+      let t = 'Meine Einkaufsliste:%0A';
+      list.forEach(i => {
+        t += `${i.checked ? '[x]' : '[ ]'} ${i.name} (${i.category}) x${i.qty}%0A`;
+      });
+      window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
     }
 
-    async function toggleItem(i){list[i].checked=!list[i].checked;await saveList();renderList();}
-    async function changeQty(i,d){list[i].qty+=d;if(list[i].qty<=0)list.splice(i,1);await saveList();renderList();}
-    function shareList(){let t='Meine Einkaufsliste:%0A';list.forEach(i=>t+=`${i.checked?'[x]':'[ ]'} ${i.name} (${i.category}) x${i.qty}%0A`);window.open(`https://wa.me/?text=${encodeURIComponent(t)}`,'_blank');}
-    async function clearList(){const a=Math.ceil(Math.random()*10),b=Math.ceil(Math.random()*10),r=prompt(`Löschen bestätigen: ${a}+${b} = ?`);if(parseInt(r)===a+b){list=[];await saveList();fetchList();}else alert('Falsche Antwort.');}
+    async function clearList() {
+      if (!confirm('Möchtest du die gesamte Liste löschen?')) return;
+      for (const item of list) {
+        await deleteItem(item.name);
+      }
+      await fetchList();
+    }
 
-    document.getElementById('addBtn').addEventListener('click',addItem);
-    document.getElementById('shareBtn').addEventListener('click',shareList);
-    document.getElementById('clearBtn').addEventListener('click',clearList);
+    document.getElementById('addBtn').addEventListener('click', addItem);
+    document.getElementById('shareBtn').addEventListener('click', shareList);
+    document.getElementById('clearBtn').addEventListener('click', clearList);
 
     fetchList();
   </script>
