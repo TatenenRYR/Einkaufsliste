@@ -43,6 +43,38 @@
   <ul id="liste"></ul>
 
   <script>
+    const vordefinierteKategorien = {
+      "cola": "Getränke",
+      "fanta": "Getränke",
+      "wasser": "Getränke",
+      "saft": "Getränke",
+      "milch": "Milchprodukte",
+      "joghurt": "Milchprodukte",
+      "käse": "Milchprodukte",
+      "butter": "Milchprodukte",
+      "apfel": "Obst",
+      "äpfel": "Obst",
+      "banane": "Obst",
+      "orange": "Obst",
+      "brot": "Backwaren",
+      "brötchen": "Backwaren",
+      "nudel": "Teigwaren",
+      "pasta": "Teigwaren",
+      "reis": "Teigwaren",
+      "fleisch": "Fleisch",
+      "hähnchen": "Fleisch",
+      "rind": "Fleisch",
+      "salz": "Grundnahrungsmittel",
+      "zucker": "Grundnahrungsmittel",
+      "mehl": "Grundnahrungsmittel",
+      "tomate": "Gemüse",
+      "gurke": "Gemüse",
+      "paprika": "Gemüse",
+      "zwiebel": "Gemüse",
+      "schokolade": "Süßwaren",
+      "keks": "Süßwaren"
+    };
+
     function ladeMapping() {
       return JSON.parse(localStorage.getItem("kategorienMapping") || "{}");
     }
@@ -51,7 +83,17 @@
       localStorage.setItem("kategorienMapping", JSON.stringify(mapping));
     }
 
-    function findeKategorie(name) {
+    function findeKategorieAutomatisch(name) {
+      const lowerName = name.toLowerCase();
+      for (const [stichwort, kategorie] of Object.entries(vordefinierteKategorien)) {
+        if (lowerName.includes(stichwort)) {
+          return kategorie;
+        }
+      }
+      return null;
+    }
+
+    function findeBenutzerMapping(name) {
       const mapping = ladeMapping();
       const lowerName = name.toLowerCase();
 
@@ -76,11 +118,13 @@
     }
 
     function kategorisiereProdukt(name) {
-      let kategorie = findeKategorie(name);
-      if (!kategorie) {
-        kategorie = frageNachKategorie(name);
-      }
-      return kategorie;
+      let kategorie = findeKategorieAutomatisch(name);
+      if (kategorie) return kategorie;
+
+      kategorie = findeBenutzerMapping(name);
+      if (kategorie) return kategorie;
+
+      return frageNachKategorie(name);
     }
 
     function hinzufuegen() {
