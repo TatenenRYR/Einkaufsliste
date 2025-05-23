@@ -25,7 +25,7 @@
   <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
   <datalist id="suggestions"></datalist>
   <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
-  <button onclick="addItem()">Hinzufügen</button>
+  <button id="addBtn">Hinzufügen</button>
 
   <label for="filter">Kategorie filtern:</label>
   <select id="filter" onchange="renderList()">
@@ -86,6 +86,10 @@
       return '🛒';
     }
 
+    document.getElementById('addBtn').addEventListener('click', async () => {
+      await addItem();
+    });
+
     async function addItem() {
       const nameEl = document.getElementById('itemInput');
       const categoryEl = document.getElementById('categoryInput');
@@ -109,7 +113,9 @@
         list.push({ name, category, checked: false, qty: 1 });
       }
 
-      saveList(); renderList();
+      saveList();
+      renderList();
+
       nameEl.value = '';
       categoryEl.value = '';
     }
@@ -132,9 +138,12 @@
       const filter = document.getElementById('filter').value;
       listEl.innerHTML = '';
 
+      // Kategorien sammeln und Dropdown aktualisieren
       const categories = [...new Set(list.map(i => i.category))].sort();
       const filterEl = document.getElementById('filter');
-      filterEl.innerHTML = `<option value="">Alle</option>` + categories.map(c => `<option value="${c}"${c === filter ? ' selected' : ''}>${c}</option>`).join('');
+      const selected = filter;
+      filterEl.innerHTML = `<option value="">Alle</option>` +
+        categories.map(c => `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
 
       list
         .filter(item => !filter || item.category === filter)
