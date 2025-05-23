@@ -21,16 +21,10 @@
   <button onclick="addItem()">Hinzufügen</button>
   <div id="list"></div>
   <button onclick="shareList()">Liste teilen (WhatsApp)</button>
+  <button onclick="clearList()" style="background:#d33;color:#fff;">Liste komplett löschen</button>
   
   <script>
     let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
-    let categoryMap = {
-      'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
-      'brot': 'Backwaren', 'butter': 'Backwaren', 'käse': 'Allgemein',
-      'eier': 'Allgemein', 'zucker': 'Backwaren', 'mehl': 'Backwaren',
-      'äpfel': 'Obst & Gemüse', 'bananen': 'Obst & Gemüse', 'tomaten': 'Obst & Gemüse',
-      'reis': 'Allgemein', 'nudeln': 'Allgemein'
-    };
 
     function updateSuggestions() {
       const dataList = document.getElementById('suggestions');
@@ -48,22 +42,37 @@
       localStorage.setItem('einkaufsliste', JSON.stringify(list));
     }
 
+    function detectCategory(name) {
+      const n = name.toLowerCase();
+
+      if (/(milch|wasser|kaffee|tee|saft|bier|wein|cola|drink)/.test(n)) return 'Getränke';
+      if (/(brot|keks|kuchen|croissant|brötchen|baguette|torte|backwaren|mehl|zucker)/.test(n)) return 'Backwaren';
+      if (/(apfel|banane|tomate|salat|karotte|obst|gemüse|fruit|vegetable)/.test(n)) return 'Obst & Gemüse';
+      if (/(fleisch|wurst|schinken|hähnchen|steak|pork|beef|chicken)/.test(n)) return 'Fleisch & Fisch';
+      if (/(fisch|meer|krabbe|garnelen|tuna|salmon)/.test(n)) return 'Fleisch & Fisch';
+      if (/(käse|butter|joghurt|quark|sahne)/.test(n)) return 'Milchprodukte';
+      if (/(reis|nudeln|pasta|salz|gewürz)/.test(n)) return 'Vorrat';
+      if (/(seife|shampoo|zahnpasta|pflege|kosmetik)/.test(n)) return 'Hygiene';
+      if (/(reiniger|putz|papier|tücher|waschmittel)/.test(n)) return 'Haushalt';
+      if (/(eier)/.test(n)) return 'Sonstiges';
+
+      return 'Allgemein';
+    }
+
     function getCategoryIcon(category, name) {
       const c = category.toLowerCase();
       const n = name.toLowerCase();
 
       const iconMap = [
-        { keywords: ['getränk', 'milch', 'wasser', 'saft', 'cola', 'bier', 'wein', 'kaffee', 'tee', 'drink', 'beverage'], icon: '🥤' },
-        { keywords: ['obst', 'gemüse', 'fruit', 'vegetable', 'apfel', 'banane', 'tomate', 'salat', 'karotte'], icon: '🍎' },
-        { keywords: ['fleisch', 'wurst', 'schinken', 'hähnchen', 'steak', 'pork', 'beef', 'chicken'], icon: '🥩' },
-        { keywords: ['fisch', 'meer', 'krabbe', 'garnelen', 'tuna', 'salmon'], icon: '🐟' },
-        { keywords: ['brot', 'keks', 'kuchen', 'backwaren', 'croissant', 'brötchen', 'baguette', 'torte'], icon: '🥐' },
+        { keywords: ['getränk', 'milch', 'wasser', 'saft', 'cola', 'bier', 'wein', 'kaffee', 'tee', 'drink'], icon: '🥤' },
+        { keywords: ['obst', 'gemüse', 'apfel', 'banane', 'tomate', 'salat', 'karotte'], icon: '🍎' },
+        { keywords: ['fleisch', 'wurst', 'schinken', 'hähnchen', 'steak', 'pork', 'beef', 'chicken', 'fisch', 'meer', 'krabbe', 'garnelen'], icon: '🥩' },
+        { keywords: ['brot', 'keks', 'kuchen', 'backwaren', 'croissant', 'brötchen', 'baguette', 'torte', 'mehl', 'zucker'], icon: '🥐' },
         { keywords: ['käse', 'butter', 'joghurt', 'quark', 'sahne'], icon: '🧀' },
-        { keywords: ['reis', 'nudeln', 'pasta', 'mehl', 'zucker', 'salz', 'gewürz'], icon: '🍚' },
+        { keywords: ['reis', 'nudeln', 'pasta', 'salz', 'gewürz'], icon: '🍚' },
         { keywords: ['hygiene', 'seife', 'shampoo', 'zahnpasta', 'pflege', 'kosmetik'], icon: '🧴' },
         { keywords: ['haushalt', 'reiniger', 'putz', 'papier', 'tücher', 'waschmittel'], icon: '🧹' },
         { keywords: ['eier'], icon: '🥚' },
-        { keywords: ['süßigkeiten', 'schokolade', 'bonbon', 'keks'], icon: '🍬' },
       ];
 
       for (const entry of iconMap) {
@@ -105,12 +114,11 @@
       const categoryEl = document.getElementById('categoryInput');
       const name = nameEl.value.trim();
       let category = categoryEl.value.trim();
+
       if (!name) return;
 
       if (!category) {
-        category = categoryMap[name.toLowerCase()] || 'Allgemein';
-      } else {
-        categoryMap[name.toLowerCase()] = category;
+        category = detectCategory(name);
       }
 
       if (!suggestions.includes(name)) {
@@ -126,7 +134,7 @@
       }
 
       saveList();
-      location.reload(); // Seite neu laden, um Änderungen sichtbar zu machen
+      location.reload();  // Seite neu laden damit Liste frisch gerendert wird
     }
 
     function toggleItem(index) {
@@ -151,6 +159,22 @@
       });
       const url = `https://wa.me/?text=${text}`;
       window.open(url, '_blank');
+    }
+
+    function clearList() {
+      // Einfache Mathefrage
+      const a = Math.floor(Math.random() * 10) + 1;
+      const b = Math.floor(Math.random() * 10) + 1;
+      const answer = prompt(`Willst du die Liste wirklich löschen? Bitte rechne: ${a} + ${b} = ?`);
+
+      if (parseInt(answer) === (a + b)) {
+        list = [];
+        saveList();
+        alert('Die Einkaufsliste wurde gelöscht.');
+        location.reload();
+      } else {
+        alert('Falsche Antwort. Die Liste bleibt erhalten.');
+      }
     }
 
     updateSuggestions();
