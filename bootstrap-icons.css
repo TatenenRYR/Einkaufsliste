@@ -1,0 +1,3 @@
+/* Beispielhafte CSS-Datei */
+@font-face { font-family: 'bootstrap-icons'; src: url('bootstrap-icons.woff2'); }
+.bi { font-family: 'bootstrap-icons'; }
