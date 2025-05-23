@@ -1,186 +1,251 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Einkaufsliste</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <style>
-    body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f2fff2;
-      color: #003300;
-    }
-    input, select, button {
-      padding: 10px;
-      margin: 5px 0;
-      width: 100%;
-      box-sizing: border-box;
-      border: 1px solid #66cc66;
-      border-radius: 5px;
-    }
-    .item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid #ccc;
-    }
-    .checked {
-      text-decoration: line-through;
-      color: gray;
-    }
-    .controls button {
-      margin-left: 5px;
-      background-color: #66cc66;
-      border: none;
-      color: white;
-      padding: 5px 10px;
-      border-radius: 3px;
-      cursor: pointer;
-    }
-    .controls button:hover {
-      background-color: #55aa55;
-    }
-    .icon {
-      margin-right: 8px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Einkaufsliste</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 0 20px 40px;
+    background: #f4fff7;
+    color: #0b3d0b;
+  }
+  h1 {
+    text-align: center;
+    color: #196619;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+  input, select, button {
+    padding: 12px;
+    margin: 6px 0;
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #1f7a1f;
+    border-radius: 6px;
+    font-size: 1rem;
+    outline-offset: 2px;
+    transition: border-color 0.3s ease;
+  }
+  input:focus, select:focus {
+    border-color: #3fc23f;
+  }
+  button {
+    background-color: #3fc23f;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 8px rgb(63 194 63 / 0.4);
+    transition: background-color 0.25s ease;
+  }
+  button:hover {
+    background-color: #1f7a1f;
+  }
+  #list {
+    margin-top: 20px;
+  }
+  .item {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgb(27 98 27 / 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .item span.name {
+    flex-grow: 1;
+    font-size: 1.1rem;
+    user-select: none;
+    cursor: pointer;
+  }
+  .item span.name.checked {
+    text-decoration: line-through;
+    color: #7db57d;
+  }
+  .item span.category {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #145214;
+    margin-left: 14px;
+    min-width: 110px;
+    text-align: right;
+    user-select: none;
+  }
+  .controls button {
+    margin-left: 8px;
+    background: transparent;
+    border: none;
+    font-size: 1.3rem;
+    color: #196619;
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+  }
+  .controls button:hover {
+    background-color: #a1d6a1;
+  }
+  .checkbox {
+    cursor: pointer;
+    font-size: 1.8rem;
+    color: #3fc23f;
+    margin-right: 16px;
+    user-select: none;
+    border: 2px solid #3fc23f;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  .checkbox:hover {
+    background-color: #3fc23f;
+    color: white;
+  }
+</style>
 </head>
 <body>
-  <h1>Meine Einkaufsliste</h1>
-  <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
-  <datalist id="suggestions"></datalist>
-  <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
-  <button onclick="addItem()">Hinzufügen</button>
-  <div id="list"></div>
-  <button onclick="shareList()">Liste teilen (WhatsApp)</button>
-  <button onclick="clearList()">Liste löschen</button>
+<h1>Meine Einkaufsliste</h1>
+<input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
+<datalist id="suggestions"></datalist>
+<input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
+<button onclick="addItem()">Hinzufügen</button>
+<div id="list"></div>
+<button onclick="shareList()">Liste teilen (WhatsApp)</button>
+<button onclick="clearList()">Komplett löschen</button>
 
 <script>
-let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
-let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+  let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
+  let categoryMap = {
+    'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
+    'brot': 'Backwaren', 'butter': 'Backwaren', 'käse': 'Allgemein',
+    'eier': 'Allgemein', 'zucker': 'Allgemein', 'mehl': 'Backwaren',
+    'äpfel': 'Obst & Gemüse', 'bananen': 'Obst & Gemüse', 'tomaten': 'Obst & Gemüse',
+    'reis': 'Allgemein', 'nudeln': 'Allgemein'
+  };
 
-function getCategory(name) {
-  const lower = name.toLowerCase();
-  const keywords = [
-    { match: ['milch', 'wasser', 'saft', 'tee', 'kaffee'], category: 'Getränke' },
-    { match: ['brot', 'brötchen', 'toast', 'kuchen', 'keks'], category: 'Backwaren' },
-    { match: ['butter', 'käse', 'eier', 'joghurt', 'quark'], category: 'Kühlregal' },
-    { match: ['apfel', 'banane', 'birne', 'tomate', 'salat', 'gemüse', 'karotte'], category: 'Obst & Gemüse' },
-    { match: ['reis', 'nudel', 'pasta', 'linsen', 'getreide'], category: 'Trockenware' },
-    { match: ['zucker', 'mehl', 'vanille', 'backpulver'], category: 'Backen' },
-    { match: ['fleisch', 'wurst', 'schinken', 'hähnchen'], category: 'Fleisch & Wurst' },
-    { match: ['fisch', 'lachs', 'thunfisch'], category: 'Fisch' }
-  ];
-  for (let group of keywords) {
-    if (group.match.some(keyword => lower.includes(keyword))) {
-      return group.category;
+  function updateSuggestions() {
+    const dataList = document.getElementById('suggestions');
+    dataList.innerHTML = '';
+    suggestions.forEach(item => {
+      const option = document.createElement('option');
+      option.value = item;
+      dataList.appendChild(option);
+    });
+  }
+
+  let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+
+  function saveList() {
+    localStorage.setItem('einkaufsliste', JSON.stringify(list));
+  }
+
+  function renderList() {
+    const listEl = document.getElementById('list');
+    listEl.innerHTML = '';
+    list.sort((a, b) => {
+      if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
+      return a.category.localeCompare(b.category, 'de');
+    });
+    list.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <span class="checkbox" onclick="toggleItem(${index})" title="Abhaken">&#x21bb;</span>
+        <span class="name ${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
+          ${item.name} x${item.qty}
+        </span>
+        <span class="category">${item.category}</span>
+        <span class="controls">
+          <button title="Menge reduzieren" onclick="changeQty(${index}, -1)">−</button>
+          <button title="Menge erhöhen" onclick="changeQty(${index}, 1)">+</button>
+        </span>
+      `;
+      listEl.appendChild(div);
+    });
+  }
+
+  function addItem() {
+    const nameEl = document.getElementById('itemInput');
+    const categoryEl = document.getElementById('categoryInput');
+    const name = nameEl.value.trim();
+    let category = categoryEl.value.trim();
+    if (!name) return;
+
+    if (!category) {
+      category = categoryMap[name.toLowerCase()] || 'Allgemein';
+    } else {
+      categoryMap[name.toLowerCase()] = category;
     }
-  }
-  return 'Allgemein';
-}
 
-function updateSuggestions() {
-  const dataList = document.getElementById('suggestions');
-  dataList.innerHTML = '';
-  suggestions.forEach(item => {
-    const option = document.createElement('option');
-    option.value = item;
-    dataList.appendChild(option);
-  });
-}
+    if (!suggestions.includes(name)) {
+      suggestions.push(name);
+      updateSuggestions();
+    }
 
-function saveList() {
-  localStorage.setItem('einkaufsliste', JSON.stringify(list));
-}
+    const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      existing.qty++;
+    } else {
+      list.push({ name, category, checked: false, qty: 1 });
+    }
 
-function renderList() {
-  const listEl = document.getElementById('list');
-  listEl.innerHTML = '';
-  list.sort((a, b) => {
-    if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
-    return a.category.localeCompare(b.category, 'de');
-  });
-  list.forEach((item, index) => {
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.innerHTML = `
-      <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
-        <i class="fa-solid ${item.checked ? 'fa-check-square' : 'fa-square'} icon"></i>
-        ${item.name} (${item.category}) x${item.qty}
-      </span>
-      <span class="controls">
-        <button onclick="changeQty(${index}, -1)">−</button>
-        <button onclick="changeQty(${index}, 1)">+</button>
-      </span>
-    `;
-    listEl.appendChild(div);
-  });
-}
-
-function addItem() {
-  const nameEl = document.getElementById('itemInput');
-  const categoryEl = document.getElementById('categoryInput');
-  const name = nameEl.value.trim();
-  let category = categoryEl.value.trim();
-  if (!name) return;
-
-  if (!category) category = getCategory(name);
-  if (!suggestions.includes(name)) suggestions.push(name);
-
-  const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
-  if (existing) {
-    existing.qty++;
-  } else {
-    list.push({ name, category, checked: false, qty: 1 });
-  }
-  saveList();
-  nameEl.value = '';
-  categoryEl.value = '';
-  renderList();
-}
-
-function toggleItem(index) {
-  list[index].checked = !list[index].checked;
-  saveList();
-  renderList();
-}
-
-function changeQty(index, delta) {
-  list[index].qty += delta;
-  if (list[index].qty <= 0) list.splice(index, 1);
-  saveList();
-  renderList();
-}
-
-function shareList() {
-  let text = 'Meine Einkaufsliste:%0A';
-  list.forEach(item => {
-    text += `${item.checked ? '[x]' : '[ ]'} ${item.name} (${item.category}) x${item.qty}%0A`;
-  });
-  const url = `https://wa.me/?text=${text}`;
-  window.open(url, '_blank');
-}
-
-function clearList() {
-  const num1 = Math.floor(Math.random() * 10);
-  const num2 = Math.floor(Math.random() * 10);
-  const answer = prompt(`Sicher, dass du die Liste löschen möchtest? Was ist ${num1} + ${num2}?`);
-  if (parseInt(answer) === num1 + num2) {
-    list = [];
     saveList();
     renderList();
-  } else {
-    alert('Falsche Antwort. Liste wurde nicht gelöscht.');
-  }
-}
 
-updateSuggestions();
-renderList();
+    nameEl.value = '';
+    categoryEl.value = '';
+  }
+
+  function toggleItem(index) {
+    list[index].checked = !list[index].checked;
+    saveList();
+    renderList();
+  }
+
+  function changeQty(index, delta) {
+    list[index].qty += delta;
+    if (list[index].qty <= 0) {
+      list.splice(index, 1);
+    }
+    saveList();
+    renderList();
+  }
+
+  function shareList() {
+    let text = 'Meine Einkaufsliste:%0A';
+    list.forEach(item => {
+      text += `${item.checked ? '[x]' : '[ ]'} ${item.name} (${item.category}) x${item.qty}%0A`;
+    });
+    const url = `https://wa.me/?text=${text}`;
+    window.open(url, '_blank');
+  }
+
+  function clearList() {
+    const a = Math.floor(Math.random()*10) + 1;
+    const b = Math.floor(Math.random()*10) + 1;
+    const answer = prompt(`Willst du die komplette Liste löschen?\nBitte rechne: ${a} + ${b} = ?`);
+    if (parseInt(answer) === a + b) {
+      list = [];
+      saveList();
+      renderList();
+      alert('Liste gelöscht.');
+    } else {
+      alert('Falsche Antwort. Die Liste wurde nicht gelöscht.');
+    }
+  }
+
+  updateSuggestions();
+  renderList();
 </script>
 </body>
 </html>
