@@ -46,6 +46,13 @@
       color: #666;
       font-size: 0.9rem;
     }
+    .aktionen button {
+      margin-left: 0.3rem;
+      background-color: #007BFF;
+    }
+    .aktionen button:hover {
+      background-color: #0056b3;
+    }
   </style>
 </head>
 <body>  <h1>Intelligente Einkaufsliste</h1>  <input type="text" id="produktInput" placeholder="Produktname eingeben..." />
@@ -158,9 +165,13 @@
       if (sort) {
         gefiltert = produkte.filter(p => p.kategorie === sort);
       }
-      gefiltert.forEach(({ name, menge, kategorie }) => {
+      gefiltert.forEach((eintrag, index) => {
         const li = document.createElement("li");
-        li.innerHTML = `<span><strong>${name}</strong> ${menge ? '(' + menge + ')' : ''}</span><span class="kategorie">${kategorie}</span>`;
+        li.innerHTML = `<span><strong>${eintrag.name}</strong> (${eintrag.menge})</span><span class="kategorie">${eintrag.kategorie}</span>
+          <span class="aktionen">
+            <button onclick="aendereMenge(${index}, 1)">+</button>
+            <button onclick="aendereMenge(${index}, -1)">-</button>
+          </span>`;
         ul.appendChild(li);
       });
     }
@@ -181,6 +192,25 @@
 
     function sortiereListe() {
       renderListe();
+    }
+
+    function aendereMenge(index, delta) {
+      const eintrag = produkte[index];
+      const regex = /(\d+)(\s*[^\d]*)/;
+      const match = eintrag.menge.match(regex);
+      if (match) {
+        let zahl = parseInt(match[1]);
+        const einheit = match[2];
+        zahl = Math.max(1, zahl + delta);
+        eintrag.menge = `${zahl}${einheit}`.trim();
+        renderListe();
+      } else {
+        const neueMenge = prompt("Neue Mengenangabe eingeben:", eintrag.menge);
+        if (neueMenge !== null) {
+          eintrag.menge = neueMenge;
+          renderListe();
+        }
+      }
     }
   </script></body>
 </html>
