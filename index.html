@@ -2,238 +2,127 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lokale Einkaufsliste</title>
+  <title>Lokale Einkaufsliste mit PIN-Sync</title>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 1rem;
-      padding: 0;
-      background-color: #f9f9f9;
-    }
-    h1 {
-      text-align: center;
-    }
-    input, select, button {
-      padding: 0.5rem;
-      margin: 0.3rem 0;
-      width: 100%;
-      font-size: 1rem;
-      box-sizing: border-box;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    li {
-      padding: 0.6rem;
-      border-bottom: 1px solid #ccc;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .kategorie {
-      font-style: italic;
-      color: #666;
-      font-size: 0.9rem;
-    }
-    .aktionen button {
-      margin-left: 0.3rem;
-    }
-    .produkt-icon {
-      width: 24px;
-      height: 24px;
-      margin-right: 0.5rem;
-    }
-    .produkt-name {
-      display: flex;
-      align-items: center;
-    }
-    video {
-      width: 100%;
-      margin-top: 1rem;
-    }
+    body { font-family: Arial, sans-serif; margin: 1rem; background: #f9f9f9; }
+    h1 { text-align: center; }
+    input, button, select, textarea { width: 100%; padding: 0.5rem; margin: 0.3rem 0; box-sizing: border-box; }
+    button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #45a049; }
+    ul { list-style-type: none; padding: 0; }
+    li { padding: 0.6rem; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+    .aktionen button { margin-left: 0.3rem; }
+    .kategorie { font-style: italic; font-size: 0.9rem; color: #666; }
   </style>
 </head>
 <body>
-  <h1>Lokale Einkaufsliste</h1>  <input type="text" id="produktInput" list="vorschlaege" placeholder="Produktname...">
-  <datalist id="vorschlaege"></datalist>
+  <h1>Einkaufsliste (lokal & PIN-Sync)</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
-  <input type="text" id="marktInput" placeholder="Markt / Laden (optional)">
+  <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
-<label for="sortMarkt">Nach Markt sortieren:</label> <select id="sortMarkt" onchange="renderListe()"> <option value="">Alle Märkte</option> </select>
-
-<button onclick="exportiereQR()">Liste per QR-Code teilen</button> <button onclick="starteScanner()">Liste per QR-Code laden</button>
-
-  <ul id="liste"></ul>
-  <div id="qrCode"></div>
-  <video id="qr-video" autoplay hidden></video>  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest"></script>  <script>
+  <ul id="liste"></ul>  <hr>  <h3>PIN-Verbindung</h3>
+  <input type="text" id="pinInput" placeholder="PIN eingeben oder generieren">
+  <button onclick="starteHost()">Start (als Host)</button>
+  <button onclick="verbindeMitHost()">Beitreten (mit PIN)</button>
+  <div id="status"></div>  <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
-    const iconMap = {
-      "Cola": "🥤", "Wasser": "💧", "Milch": "🥛", "Brot": "🍞", "Käse": "🧀",
-      "Äpfel": "🍎", "Bananen": "🍌", "Eier": "🥚", "Fleisch": "🥩",
-      "Getränk": "🥤", "Obst": "🍎", "Gemüse": "🥦", "Milchprodukte": "🥛", "Backwaren": "🍞",
-      "Sonstiges": "🛒"
-    };
-    const produktVorschlaege = ["Cola", "Wasser", "Milch", "Brot", "Käse", "Äpfel", "Bananen", "Eier", "Fleisch"];
+    let peer, conn;
 
     function speichereProdukte() {
       localStorage.setItem("produkte", JSON.stringify(produkte));
     }
 
     function hinzufuegen() {
-      const name = document.getElementById('produktInput').value.trim();
-      const menge = document.getElementById('mengeInput').value.trim();
-      const markt = document.getElementById('marktInput').value.trim();
+      const name = produktInput.value.trim();
+      const menge = mengeInput.value.trim();
+      const markt = marktInput.value.trim();
       if (!name || !menge) return;
       const kategorie = erkenneKategorie(name);
       const id = Date.now();
-      produkte.push({ id, name, menge, kategorie, markt });
-      if (!produktVorschlaege.includes(name)) produktVorschlaege.push(name);
+      produkte.push({ id, name, menge, markt, kategorie });
       speichereProdukte();
-      document.getElementById('produktInput').value = '';
-      document.getElementById('mengeInput').value = '';
-      document.getElementById('marktInput').value = '';
+      produktInput.value = mengeInput.value = marktInput.value = '';
       renderListe();
-      aktualisiereKategorieDropdown();
-      aktualisiereMarktDropdown();
-      aktualisiereVorschlaege();
+      sendeDaten();
     }
 
     function erkenneKategorie(name) {
       name = name.toLowerCase();
-      if (name.includes("cola") || name.includes("wasser") || name.includes("saft")) return "Getränk";
-      if (name.includes("apfel") || name.includes("banane") || name.includes("obst")) return "Obst";
-      if (name.includes("salat") || name.includes("tomate") || name.includes("gemüse")) return "Gemüse";
-      if (name.includes("milch") || name.includes("joghurt")) return "Milchprodukte";
-      if (name.includes("brot") || name.includes("brötchen")) return "Backwaren";
+      if (name.includes("cola") || name.includes("wasser")) return "Getränk";
+      if (name.includes("apfel") || name.includes("banane")) return "Obst";
+      if (name.includes("brot")) return "Backwaren";
+      if (name.includes("milch")) return "Milchprodukte";
       return "Sonstiges";
     }
 
-    function aendereMenge(id, delta) {
-      const produkt = produkte.find(p => p.id === id);
-      const match = produkt.menge.match(/(\d+)(\s*[^\d]*)/);
-      if (match) {
-        let zahl = parseInt(match[1]);
-        const einheit = match[2];
-        zahl += delta;
-        if (zahl <= 0) {
-          produkte = produkte.filter(p => p.id !== id);
-        } else {
-          produkt.menge = `${zahl}${einheit}`.trim();
-        }
-        speichereProdukte();
-        renderListe();
-      }
-    }
-
     function renderListe() {
-      const kategorieFilter = document.getElementById("sortKategorie").value;
-      const marktFilter = document.getElementById("sortMarkt").value;
+      const kat = sortKategorie.value;
       const ul = document.getElementById("liste");
       ul.innerHTML = '';
-      const gefiltert = produkte.filter(p =>
-        (!kategorieFilter || p.kategorie === kategorieFilter) &&
-        (!marktFilter || p.markt === marktFilter)
-      );
-      gefiltert.forEach(p => {
-        const icon = iconMap[p.name] || iconMap[p.kategorie] || "🛒";
-        const li = document.createElement('li');
-        li.innerHTML = `<span class="produkt-name">${icon} <strong>${p.name}</strong> (${p.menge})</span>
-          <span class="kategorie">${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span>
-          <span class="aktionen">
-            <button onclick="aendereMenge(${p.id}, 1)">+</button>
-            <button onclick="aendereMenge(${p.id}, -1)">-</button>
+      (kat ? produkte.filter(p => p.kategorie === kat) : produkte).forEach(p => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
+          <span class='aktionen'>
+            <button onclick="aendereMenge(${p.id},1)">+</button>
+            <button onclick="aendereMenge(${p.id},-1)">-</button>
           </span>`;
         ul.appendChild(li);
       });
     }
 
-    function aktualisiereKategorieDropdown() {
-      const dropdown = document.getElementById("sortKategorie");
-      const kategorien = [...new Set(produkte.map(p => p.kategorie))];
-      const aktuelleAuswahl = dropdown.value;
-      dropdown.innerHTML = '<option value="">Keine Sortierung</option>';
-      kategorien.forEach(k => {
-        const option = document.createElement("option");
-        option.value = k;
-        option.textContent = k;
-        dropdown.appendChild(option);
-      });
-      dropdown.value = aktuelleAuswahl;
-    }
-
-    function aktualisiereMarktDropdown() {
-      const dropdown = document.getElementById("sortMarkt");
-      const maerkte = [...new Set(produkte.map(p => p.markt).filter(Boolean))];
-      const aktuelleAuswahl = dropdown.value;
-      dropdown.innerHTML = '<option value="">Alle Märkte</option>';
-      maerkte.forEach(k => {
-        const option = document.createElement("option");
-        option.value = k;
-        option.textContent = k;
-        dropdown.appendChild(option);
-      });
-      dropdown.value = aktuelleAuswahl;
-    }
-
-    function aktualisiereVorschlaege() {
-      const vorschlaege = document.getElementById("vorschlaege");
-      vorschlaege.innerHTML = '';
-      produktVorschlaege.forEach(name => {
-        const option = document.createElement("option");
-        option.value = name;
-        vorschlaege.appendChild(option);
-      });
-    }
-
-    function exportiereQR() {
-      const qrContainer = document.getElementById("qrCode");
-      qrContainer.innerHTML = '';
-      const qr = new QRious({
-        value: JSON.stringify(produkte),
-        size: 250
-      });
-      qrContainer.appendChild(qr.image);
-    }
-
-    async function starteScanner() {
-      const codeReader = new ZXing.BrowserQRCodeReader();
-      const videoElement = document.getElementById("qr-video");
-      videoElement.hidden = false;
-      try {
-        const result = await codeReader.decodeOnceFromVideoDevice(undefined, "qr-video");
-        const geleseneProdukte = JSON.parse(result.text);
-        if (Array.isArray(geleseneProdukte)) {
-          produkte = geleseneProdukte;
-          speichereProdukte();
-          renderListe();
-          aktualisiereKategorieDropdown();
-          aktualisiereMarktDropdown();
-          aktualisiereVorschlaege();
-          alert("Liste erfolgreich geladen!");
-        }
-      } catch (err) {
-        alert("Fehler beim Scannen: " + err);
-      } finally {
-        videoElement.hidden = true;
-        codeReader.reset();
+    function aendereMenge(id, delta) {
+      const p = produkte.find(p => p.id === id);
+      const match = p.menge.match(/(\d+)(\s*[^\d]*)/);
+      if (match) {
+        let zahl = parseInt(match[1]);
+        const einheit = match[2];
+        zahl += delta;
+        if (zahl <= 0) produkte = produkte.filter(p => p.id !== id);
+        else p.menge = `${zahl}${einheit}`.trim();
+        speichereProdukte();
+        renderListe();
+        sendeDaten();
       }
     }
 
+    function starteHost() {
+      const pin = pinInput.value.trim();
+      peer = new Peer(pin);
+      peer.on('open', () => {
+        status.innerText = "Warte auf Verbindung… PIN: " + pin;
+      });
+      peer.on('connection', c => {
+        conn = c;
+        status.innerText = "Verbunden (Client)!";
+        conn.on('data', d => {
+          produkte = d;
+          speichereProdukte();
+          renderListe();
+        });
+        sendeDaten();
+      });
+    }
+
+    function verbindeMitHost() {
+      const pin = pinInput.value.trim();
+      peer = new Peer();
+      conn = peer.connect(pin);
+      conn.on('open', () => {
+        status.innerText = "Verbunden (Host)!";
+        conn.on('data', d => {
+          produkte = d;
+          speichereProdukte();
+          renderListe();
+        });
+      });
+    }
+
+    function sendeDaten() {
+      if (conn && conn.open) conn.send(produkte);
+    }
+
     renderListe();
-    aktualisiereKategorieDropdown();
-    aktualisiereMarktDropdown();
-    aktualisiereVorschlaege();
   </script></body>
 </html>
