@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Einkaufsliste</title>
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -10,34 +10,27 @@
     .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ccc; }
     .checked { text-decoration: line-through; color: gray; }
     .controls button { margin-left: 5px; }
-    span.item-name { cursor: pointer; flex-grow: 1; }
+    .item-icon { margin-right: 10px; font-size: 1.5em; user-select: none; }
   </style>
 </head>
 <body>
   <h1>Meine Einkaufsliste</h1>
-
   <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
   <datalist id="suggestions"></datalist>
-
-  <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (optional)" />
-  <button id="addBtn">Hinzufügen</button>
-
-  <label for="filter">Kategorie filtern:</label>
-  <select id="filter">
-    <option value="">Alle</option>
-  </select>
-
+  <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
+  <button onclick="addItem()">Hinzufügen</button>
   <div id="list"></div>
-
-  <button id="shareBtn">Liste teilen (WhatsApp)</button>
-
+  <button onclick="shareList()">Liste teilen (WhatsApp)</button>
+  
   <script>
     let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
-    let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
-
-    function saveList() {
-      localStorage.setItem('einkaufsliste', JSON.stringify(list));
-    }
+    let categoryMap = {
+      'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
+      'brot': 'Backwaren', 'butter': 'Backwaren', 'käse': 'Allgemein',
+      'eier': 'Allgemein', 'zucker': 'Backwaren', 'mehl': 'Backwaren',
+      'äpfel': 'Obst & Gemüse', 'bananen': 'Obst & Gemüse', 'tomaten': 'Obst & Gemüse',
+      'reis': 'Allgemein', 'nudeln': 'Allgemein'
+    };
 
     function updateSuggestions() {
       const dataList = document.getElementById('suggestions');
@@ -49,67 +42,75 @@
       });
     }
 
-    async function guessCategory(name) {
-      try {
-        const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(name)}&search_simple=1&json=1`);
-        const data = await res.json();
-        const product = data.products?.[0];
-        const tag = product?.categories_tags?.find(t => t.startsWith('de:') || t.startsWith('en:'));
-        if (tag) {
-          const clean = tag.replace(/^de:|^en:/, '').replace(/-/g, ' ');
-          if (clean.match(/(obst|gemüse|fruit|vegetable)/i)) return 'Obst & Gemüse';
-          if (clean.match(/(brot|keks|back|bread|bake)/i)) return 'Backwaren';
-          if (clean.match(/(milch|saft|wasser|cola|tee|kaffee|drink|beverage)/i)) return 'Getränke';
-          if (clean.match(/(fleisch|wurst|schinken|meat|sausage|ham)/i)) return 'Fleisch';
-          if (clean.match(/(seife|shampoo|pflege|soap|shampoo|care)/i)) return 'Hygiene';
-          return clean.charAt(0).toUpperCase() + clean.slice(1);
-        }
-      } catch (e) {
-        console.warn('Fehler bei OpenFoodFacts:', e);
-      }
-      return 'Allgemein';
+    let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+
+    function saveList() {
+      localStorage.setItem('einkaufsliste', JSON.stringify(list));
     }
 
     function getCategoryIcon(category, name) {
       const c = category.toLowerCase();
       const n = name.toLowerCase();
 
-      if (c.includes('getränk')) return '🥤';
-      if (c.includes('obst') || c.includes('gemüse')) return '🍎';
-      if (c.includes('fisch')) return '🐟';
-      if (c.includes('fleisch')) return '🥩';
-      if (c.includes('back')) return '🥐';
-      if (c.includes('pflege') || c.includes('hygiene')) return '🧴';
-      if (c.includes('milch')) return '🥛';
+      const iconMap = [
+        { keywords: ['getränk', 'milch', 'wasser', 'saft', 'cola', 'bier', 'wein', 'kaffee', 'tee', 'drink', 'beverage'], icon: '🥤' },
+        { keywords: ['obst', 'gemüse', 'fruit', 'vegetable', 'apfel', 'banane', 'tomate', 'salat', 'karotte'], icon: '🍎' },
+        { keywords: ['fleisch', 'wurst', 'schinken', 'hähnchen', 'steak', 'pork', 'beef', 'chicken'], icon: '🥩' },
+        { keywords: ['fisch', 'meer', 'krabbe', 'garnelen', 'tuna', 'salmon'], icon: '🐟' },
+        { keywords: ['brot', 'keks', 'kuchen', 'backwaren', 'croissant', 'brötchen', 'baguette', 'torte'], icon: '🥐' },
+        { keywords: ['käse', 'butter', 'joghurt', 'quark', 'sahne'], icon: '🧀' },
+        { keywords: ['reis', 'nudeln', 'pasta', 'mehl', 'zucker', 'salz', 'gewürz'], icon: '🍚' },
+        { keywords: ['hygiene', 'seife', 'shampoo', 'zahnpasta', 'pflege', 'kosmetik'], icon: '🧴' },
+        { keywords: ['haushalt', 'reiniger', 'putz', 'papier', 'tücher', 'waschmittel'], icon: '🧹' },
+        { keywords: ['eier'], icon: '🥚' },
+        { keywords: ['süßigkeiten', 'schokolade', 'bonbon', 'keks'], icon: '🍬' },
+      ];
 
-      if (n.includes('milch')) return '🥛';
-      if (n.includes('brot') || n.includes('keks') || n.includes('cake')) return '🥐';
-      if (n.includes('kaffee') || n.includes('tee') || n.includes('cola') || n.includes('wasser')) return '🥤';
-      if (n.includes('apfel') || n.includes('banane') || n.includes('tomate')) return '🍎';
-      if (n.includes('fleisch') || n.includes('wurst') || n.includes('schinken')) return '🥩';
-
+      for (const entry of iconMap) {
+        if (entry.keywords.some(k => c.includes(k))) return entry.icon;
+      }
+      for (const entry of iconMap) {
+        if (entry.keywords.some(k => n.includes(k))) return entry.icon;
+      }
       return '🛒';
     }
 
-    // Hilfsfunktion um realen Index zu finden (für gefilterte Liste)
-    function findRealIndex(filteredList, filteredIndex) {
-      const item = filteredList[filteredIndex];
-      return list.findIndex(i => i.name === item.name && i.category === item.category);
+    function renderList() {
+      const listEl = document.getElementById('list');
+      listEl.innerHTML = '';
+      list.sort((a, b) => {
+        if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
+        return a.category.localeCompare(b.category, 'de');
+      });
+      list.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        const icon = getCategoryIcon(item.category, item.name);
+        div.innerHTML = `
+          <span class="item-icon">${icon}</span>
+          <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})" style="flex:1; cursor:pointer;">
+            [${item.checked ? 'x' : ' '}] ${item.name} (${item.category}) x${item.qty}
+          </span>
+          <span class="controls">
+            <button onclick="changeQty(${index}, -1)">−</button>
+            <button onclick="changeQty(${index}, 1)">+</button>
+          </span>
+        `;
+        listEl.appendChild(div);
+      });
     }
 
-    document.getElementById('addBtn').addEventListener('click', async () => {
+    function addItem() {
       const nameEl = document.getElementById('itemInput');
       const categoryEl = document.getElementById('categoryInput');
       const name = nameEl.value.trim();
       let category = categoryEl.value.trim();
-
-      if (!name) {
-        alert('Bitte ein Produkt eingeben!');
-        return;
-      }
+      if (!name) return;
 
       if (!category) {
-        category = await guessCategory(name);
+        category = categoryMap[name.toLowerCase()] || 'Allgemein';
+      } else {
+        categoryMap[name.toLowerCase()] = category;
       }
 
       if (!suggestions.includes(name)) {
@@ -125,76 +126,22 @@
       }
 
       saveList();
-
-      // Seite neu laden, damit das neue Produkt sofort sichtbar wird
-      location.reload();
-    });
-
-    function toggleItem(filteredIndex) {
-      const filterVal = document.getElementById('filter').value;
-      let filtered = filterVal ? list.filter(i => i.category === filterVal) : list;
-      const realIndex = findRealIndex(filtered, filteredIndex);
-
-      if (realIndex >= 0) {
-        list[realIndex].checked = !list[realIndex].checked;
-        saveList();
-        renderList();
-      }
+      location.reload(); // Seite neu laden, um Änderungen sichtbar zu machen
     }
 
-    function changeQty(filteredIndex, delta) {
-      const filterVal = document.getElementById('filter').value;
-      let filtered = filterVal ? list.filter(i => i.category === filterVal) : list;
-      const realIndex = findRealIndex(filtered, filteredIndex);
-
-      if (realIndex >= 0) {
-        list[realIndex].qty += delta;
-        if (list[realIndex].qty <= 0) {
-          list.splice(realIndex, 1);
-        }
-        saveList();
-        renderList();
-      }
+    function toggleItem(index) {
+      list[index].checked = !list[index].checked;
+      saveList();
+      renderList();
     }
 
-    function renderList() {
-      const listEl = document.getElementById('list');
-      const filterVal = document.getElementById('filter').value;
-
-      listEl.innerHTML = '';
-
-      // Kategorien ermitteln
-      const categories = [...new Set(list.map(i => i.category))].sort();
-
-      // Filter Dropdown aktualisieren und Auswahl merken
-      const filterEl = document.getElementById('filter');
-      const selected = filterVal;
-      filterEl.innerHTML = '<option value="">Alle</option>' +
-        categories.map(c => `<option value="${c}"${c === selected ? ' selected' : ''}>${c}</option>`).join('');
-
-      // Items filtern und sortieren
-      const filtered = filterVal ? list.filter(i => i.category === filterVal) : list;
-
-      filtered.sort((a, b) => {
-        if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
-        return a.category.localeCompare(b.category, 'de');
-      });
-
-      filtered.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.className = 'item';
-
-        div.innerHTML = `
-          <span class="item-name ${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})" title="Status umschalten">
-            ${getCategoryIcon(item.category, item.name)} ${item.name} (${item.category}) x${item.qty}
-          </span>
-          <span class="controls">
-            <button onclick="changeQty(${index}, -1)">−</button>
-            <button onclick="changeQty(${index}, 1)">+</button>
-          </span>
-        `;
-        listEl.appendChild(div);
-      });
+    function changeQty(index, delta) {
+      list[index].qty += delta;
+      if (list[index].qty <= 0) {
+        list.splice(index, 1);
+      }
+      saveList();
+      renderList();
     }
 
     function shareList() {
@@ -206,17 +153,8 @@
       window.open(url, '_blank');
     }
 
-    document.getElementById('shareBtn').addEventListener('click', shareList);
-
-    document.getElementById('filter').addEventListener('change', renderList);
-
-    // Initialisierung
     updateSuggestions();
     renderList();
-
-    // Globale Funktionen für onclick im HTML
-    window.toggleItem = toggleItem;
-    window.changeQty = changeQty;
   </script>
 </body>
 </html>
