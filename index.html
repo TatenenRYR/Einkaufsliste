@@ -1,26 +1,28 @@
 <!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Intelligente Einkaufsliste</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 2rem auto;
-      padding: 1rem;
+      margin: 1rem;
+      padding: 0;
       background-color: #f9f9f9;
       color: #333;
     }
     h1 {
       text-align: center;
+      font-size: 1.5rem;
     }
     input, select, button {
       padding: 0.5rem;
-      margin: 0.5rem 0;
+      margin: 0.3rem 0;
       width: 100%;
       font-size: 1rem;
       border: 1px solid #ccc;
       border-radius: 4px;
+      box-sizing: border-box;
     }
     button {
       background-color: #4CAF50;
@@ -40,6 +42,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
     }
     .kategorie {
       font-style: italic;
@@ -52,6 +55,12 @@
     }
     .aktionen button:hover {
       background-color: #0056b3;
+    }
+    @media (min-width: 600px) {
+      body {
+        max-width: 600px;
+        margin: 2rem auto;
+      }
     }
   </style>
 </head>
@@ -201,9 +210,14 @@
       if (match) {
         let zahl = parseInt(match[1]);
         const einheit = match[2];
-        zahl = Math.max(1, zahl + delta);
-        eintrag.menge = `${zahl}${einheit}`.trim();
+        zahl += delta;
+        if (zahl <= 0) {
+          produkte.splice(index, 1);
+        } else {
+          eintrag.menge = `${zahl}${einheit}`.trim();
+        }
         renderListe();
+        aktualisiereKategorieDropdown();
       } else {
         const neueMenge = prompt("Neue Mengenangabe eingeben:", eintrag.menge);
         if (neueMenge !== null) {
