@@ -61,7 +61,6 @@
           <span class="controls">
             <button onclick="changeQty(${index}, -1)">−</button>
             <button onclick="changeQty(${index}, 1)">+</button>
-            <button onclick="removeItem(${index})">Entfernen</button>
           </span>
         `;
         listEl.appendChild(div);
@@ -78,11 +77,9 @@
       if (!category) {
         category = categoryMap[name.toLowerCase()] || 'Allgemein';
       } else {
-        // Neue Kategorie hinzufügen zur Map
         categoryMap[name.toLowerCase()] = category;
       }
 
-      // Neue Vorschläge ergänzen
       if (!suggestions.includes(name)) {
         suggestions.push(name);
         updateSuggestions();
@@ -105,14 +102,11 @@
       saveList(); renderList();
     }
 
-    function removeItem(index) {
-      list.splice(index, 1);
-      saveList(); renderList();
-    }
-
     function changeQty(index, delta) {
       list[index].qty += delta;
-      if (list[index].qty < 1) list[index].qty = 1;
+      if (list[index].qty <= 0) {
+        list.splice(index, 1);
+      }
       saveList(); renderList();
     }
 
