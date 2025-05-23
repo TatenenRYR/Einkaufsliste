@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,91 +9,94 @@
     input, select, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
     .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #ccc; }
     .checked { text-decoration: line-through; color: gray; }
-    .controls button { margin-left: 5px; }
+    .category-icon { margin-right: 8px; vertical-align: middle; }
+
+    .category-Getränke { background-color: #cce5ff; }
+    .category-Obst_Gemüse { background-color: #d4edda; }
+    .category-Backwaren { background-color: #fff3cd; }
+    .category-Fleisch { background-color: #f8d7da; }
+    .category-Hygiene { background-color: #e2e3e5; }
+    .category-Allgemein { background-color: #fefefe; }
   </style>
 </head>
 <body>
   <h1>Meine Einkaufsliste</h1>
+
   <input type="text" id="itemInput" list="suggestions" placeholder="Produkt eingeben..." autocomplete="off" />
   <datalist id="suggestions"></datalist>
-  <input type="number" id="qtyInput" placeholder="Menge eingeben..." min="1" value="1" />
   <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (automatisch, wenn leer)" />
   <button onclick="addItem()">Hinzufügen</button>
+
+  <label for="filter">Kategorie filtern:</label>
+  <select id="filter" onchange="renderList()">
+    <option value="">Alle</option>
+  </select>
+
   <div id="list"></div>
   <button onclick="shareList()">Liste teilen (WhatsApp)</button>
 
   <script>
-    let suggestions = JSON.parse(localStorage.getItem('vorschlaege')) || [
-      'Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'
-    ];
-
-    let categoryMap = {
-      'milch': 'Getränke', 'wasser': 'Getränke', 'kaffee': 'Getränke', 'tee': 'Getränke',
-      'brot': 'Allgemein', 'butter': 'Allgemein', 'käse': 'Allgemein',
-      'eier': 'Allgemein', 'zucker': 'Allgemein', 'mehl': 'Allgemein',
-      'äpfel': 'Obst & Gemüse', 'bananen': 'Obst & Gemüse', 'tomaten': 'Obst & Gemüse',
-      'reis': 'Allgemein', 'nudeln': 'Allgemein'
-    };
-
-    function updateSuggestions() {
-      const dataList = document.getElementById('suggestions');
-      dataList.innerHTML = '';
-      [...new Set(suggestions)].sort((a, b) => a.localeCompare(b, 'de')).forEach(item => {
-        const option = document.createElement('option');
-        option.value = item;
-        dataList.appendChild(option);
-      });
-      localStorage.setItem('vorschlaege', JSON.stringify(suggestions));
-    }
-
+    let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
     let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
 
     function saveList() {
       localStorage.setItem('einkaufsliste', JSON.stringify(list));
     }
 
-    function renderList() {
-      const listEl = document.getElementById('list');
-      listEl.innerHTML = '';
-      list.sort((a, b) => {
-        if (a.category === b.category) return a.name.localeCompare(b.name, 'de');
-        return a.category.localeCompare(b.category, 'de');
-      });
-      list.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.innerHTML = `
-          <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
-            [${item.checked ? 'x' : ' '}] ${item.name} (${item.category}) x${item.qty}
-          </span>
-          <span class="controls">
-            <button onclick="changeQty(${index}, -1)">−</button>
-            <button onclick="changeQty(${index}, 1)">+</button>
-          </span>
-        `;
-        listEl.appendChild(div);
+    function updateSuggestions() {
+      const dataList = document.getElementById('suggestions');
+      dataList.innerHTML = '';
+      suggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        dataList.appendChild(option);
       });
     }
 
-    function addItem() {
+    async function guessCategory(name) {
+      try {
+        const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(name)}&search_simple=1&json=1`);
+        const data = await res.json();
+        const product = data.products?.[0];
+        const tag = product?.categories_tags?.find(t => t.startsWith('de:') || t.startsWith('en:'));
+        if (tag) {
+          const clean = tag.replace(/^de:|^en:/, '').replace(/-/g, ' ');
+          if (clean.match(/(obst|gemüse)/i)) return 'Obst_Gemüse';
+          if (clean.match(/(brot|keks|back)/i)) return 'Backwaren';
+          if (clean.match(/(milch|saft|wasser|cola|tee|kaffee)/i)) return 'Getränke';
+          if (clean.match(/(fleisch|wurst|schinken)/i)) return 'Fleisch';
+          if (clean.match(/(seife|shampoo|pflege)/i)) return 'Hygiene';
+          return clean.charAt(0).toUpperCase() + clean.slice(1);
+        }
+      } catch (e) {
+        console.warn('Fehler bei OpenFoodFacts:', e);
+      }
+      return 'Allgemein';
+    }
+
+    function getCategoryIcon(cat) {
+      const c = cat.toLowerCase();
+      if (c.includes('getränk')) return '🥤';
+      if (c.includes('obst') || c.includes('gemüse')) return '🍎';
+      if (c.includes('fisch')) return '🐟';
+      if (c.includes('fleisch')) return '🥩';
+      if (c.includes('back')) return '🥐';
+      if (c.includes('pflege') || c.includes('hygiene')) return '🧴';
+      if (c.includes('milch')) return '🥛';
+      return '🛒';
+    }
+
+    async function addItem() {
       const nameEl = document.getElementById('itemInput');
       const categoryEl = document.getElementById('categoryInput');
-      const qtyEl = document.getElementById('qtyInput');
-
       const name = nameEl.value.trim();
       let category = categoryEl.value.trim();
-      let qty = parseInt(qtyEl.value);
       if (!name) return;
-      if (!qty || qty < 1) qty = 1;
 
-      // Kategorie automatisch aus Vorschlagsmap übernehmen
       if (!category) {
-        category = categoryMap[name.toLowerCase()] || 'Allgemein';
-      } else {
-        categoryMap[name.toLowerCase()] = category;
+        category = await guessCategory(name);
       }
 
-      // Neue Vorschläge hinzufügen
       if (!suggestions.includes(name)) {
         suggestions.push(name);
         updateSuggestions();
@@ -100,17 +104,14 @@
 
       const existing = list.find(item => item.name.toLowerCase() === name.toLowerCase());
       if (existing) {
-        existing.qty += qty;
+        existing.qty++;
       } else {
-        list.push({ name, category, checked: false, qty: qty });
+        list.push({ name, category, checked: false, qty: 1 });
       }
 
       saveList(); renderList();
-
-      // Felder zurücksetzen
       nameEl.value = '';
       categoryEl.value = '';
-      qtyEl.value = '1';
     }
 
     function toggleItem(index) {
@@ -126,6 +127,34 @@
       saveList(); renderList();
     }
 
+    function renderList() {
+      const listEl = document.getElementById('list');
+      const filter = document.getElementById('filter').value;
+      listEl.innerHTML = '';
+
+      const categories = [...new Set(list.map(i => i.category))].sort();
+      const filterEl = document.getElementById('filter');
+      filterEl.innerHTML = `<option value="">Alle</option>` + categories.map(c => `<option value="${c}"${c === filter ? ' selected' : ''}>${c}</option>`).join('');
+
+      list
+        .filter(item => !filter || item.category === filter)
+        .sort((a, b) => a.category.localeCompare(b.category, 'de') || a.name.localeCompare(b.name, 'de'))
+        .forEach((item, index) => {
+          const div = document.createElement('div');
+          div.className = 'item category-' + item.category.replace(/\s+/g, '_');
+          div.innerHTML = `
+            <span class="${item.checked ? 'checked' : ''}" onclick="toggleItem(${index})">
+              ${getCategoryIcon(item.category)} ${item.name} (${item.category}) x${item.qty}
+            </span>
+            <span class="controls">
+              <button onclick="changeQty(${index}, -1)">−</button>
+              <button onclick="changeQty(${index}, 1)">+</button>
+            </span>
+          `;
+          listEl.appendChild(div);
+        });
+    }
+
     function shareList() {
       let text = 'Meine Einkaufsliste:%0A';
       list.forEach(item => {
@@ -135,10 +164,12 @@
       window.open(url, '_blank');
     }
 
-    document.getElementById('itemInput').addEventListener('input', function() {
-      const name = this.value.trim().toLowerCase();
-      if (categoryMap[name]) {
-        document.getElementById('categoryInput').value = categoryMap[name];
+    document.getElementById('itemInput').addEventListener('blur', async function () {
+      const name = this.value.trim();
+      const catInput = document.getElementById('categoryInput');
+      if (!catInput.value && name.length > 1) {
+        const guessed = await guessCategory(name);
+        catInput.value = guessed;
       }
     });
 
