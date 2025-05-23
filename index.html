@@ -132,7 +132,6 @@
     .footer button:hover.clear {
       background: #c0392b;
     }
-    /* Zusätzliche Styles für Drag & Drop */
     .dragging {
       opacity: 0.5;
     }
@@ -147,271 +146,90 @@
       <input type="text" id="categoryInput" placeholder="Kategorie eingeben... (optional)" />
       <button id="addBtn">Hinzufügen</button>
     </div>
+    <div id="filters"></div>
     <div id="list"></div>
     <div class="footer">
       <button class="share" id="shareBtn">Liste teilen</button>
       <button class="clear" id="clearBtn">Liste löschen</button>
     </div>
   </div>
-
   <script>
-    let suggestions = ['Milch','Brot','Eier','Äpfel','Bananen','Wasser','Käse','Butter','Tomaten','Reis','Nudeln','Kaffee','Tee','Zucker','Mehl'];
+    // Drag & Drop, Favoritenfilter und Filterbuttons verbessert
     let list = JSON.parse(localStorage.getItem('einkaufsliste')) || [];
+    let currentFilter = 'Alle';
 
     function saveList() {
       localStorage.setItem('einkaufsliste', JSON.stringify(list));
     }
 
-    function updateSuggestions() {
-      const dataList = document.getElementById('suggestions');
-      dataList.innerHTML = '';
-      suggestions.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item;
-        dataList.appendChild(option);
-      });
-    }
-
-    function detectCategory(name) {
-      const n = name.toLowerCase();
-      if (/(milch|wasser|kaffee|tee|saft|bier|wein|cola|drink)/.test(n)) return 'Getränke';
-      if (/(brot|keks|kuchen|croissant|brötchen|baguette|torte|backwaren|mehl|zucker)/.test(n)) return 'Backwaren';
-      if (/(apfel|banane|tomate|salat|karotte|obst|gemüse)/.test(n)) return 'Obst & Gemüse';
-      if (/(fleisch|wurst|schinken|hähnchen|steak|pork|beef|chicken|fisch)/.test(n)) return 'Fleisch & Fisch';
-      if (/(käse|butter|joghurt|quark|sahne)/.test(n)) return 'Milchprodukte';
-      if (/(reis|nudeln|pasta|salz|gewürz)/.test(n)) return 'Vorrat';
-      if (/(seife|shampoo|zahnpasta|pflege|kosmetik)/.test(n)) return 'Hygiene';
-      if (/(reiniger|putz|papier|tücher|waschmittel)/.test(n)) return 'Haushalt';
-      if (/(eier)/.test(n)) return 'Sonstiges';
-      return 'Allgemein';
-    }
-
-    const iconMap = [
-      { keywords: ['getränk','milch','wasser','saft','cola','bier','wein','kaffee','tee'], icon:'🥤' },
-      { keywords: ['obst','gemüse','apfel','banane','tomate'], icon:'🍎' },
-      { keywords: ['fleisch','wurst','schinken','hähnchen','steak','fisch'], icon:'🥩' },
-      { keywords: ['brot','keks','kuchen','backwaren'], icon:'🥐' },
-      { keywords: ['käse','butter','joghurt'], icon:'🧀' },
-      { keywords: ['reis','nudeln'], icon:'🍚' },
-      { keywords: ['hygiene','seife','shampoo'], icon:'🧴' },
-      { keywords: ['haushalt','putz','reiniger'], icon:'🧹' },
-      { keywords: ['eier'], icon:'🥚' }
-    ];
-
-    function getCategoryIcon(category, name) {
-      const c = category.toLowerCase();
-      const n = name.toLowerCase();
-      for (const e of iconMap) if (e.keywords.some(k=>c.includes(k))) return e.icon;
-      for (const e of iconMap) if (e.keywords.some(k=>n.includes(k))) return e.icon;
-      return '🛒';
-    }
-
-    // --- Funktion 2: Kategorie filtern ---
-    let currentFilter = 'Alle';
-
     function renderFilterButtons() {
-      const container = document.createElement('div');
-      container.style.padding = '10px 20px';
-      container.style.display = 'flex';
-      container.style.flexWrap = 'wrap';
-      container.style.gap = '10px';
-      container.style.borderBottom = '1px solid #ddd';
-
-      const categories = [...new Set(list.map(i => i.category))].sort();
-      categories.unshift('Alle');
-
-      categories.forEach(cat => {
+      const filters = document.getElementById('filters');
+      filters.innerHTML = '';
+      const allCats = ['Alle', 'Favoriten', ...new Set(list.map(i => i.category))];
+      allCats.forEach(cat => {
         const btn = document.createElement('button');
         btn.textContent = cat;
+        btn.style.margin = '5px';
         btn.style.padding = '6px 12px';
+        btn.style.borderRadius = '6px';
         btn.style.border = '1px solid #2E8B57';
         btn.style.background = (cat === currentFilter) ? '#2E8B57' : 'transparent';
         btn.style.color = (cat === currentFilter) ? '#fff' : '#2E8B57';
-        btn.style.borderRadius = '6px';
-        btn.style.cursor = 'pointer';
-        btn.addEventListener('click', () => {
-          currentFilter = cat;
-          renderFilterButtons();
-          renderList();
-        });
-        container.appendChild(btn);
+        btn.onclick = () => { currentFilter = cat; renderFilterButtons(); renderList(); };
+        filters.appendChild(btn);
       });
-
-      const old = document.querySelector('.filter-buttons');
-      if (old) old.remove();
-      container.classList.add('filter-buttons');
-      document.querySelector('.container').insertBefore(container, document.getElementById('list'));
-    }
-
-    // --- Funktion 3: Drag & Drop sortieren ---
-    let dragSrcIndex = null;
-
-    function handleDragStart(e) {
-      dragSrcIndex = +this.getAttribute('data-index');
-      this.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    }
-
-    function handleDragOver(e) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      return false;
-    }
-
-    function handleDrop(e) {
-      e.stopPropagation();
-      const dropIndex = +this.getAttribute('data-index');
-      if (dragSrcIndex !== null && dragSrcIndex !== dropIndex) {
-        // Items tauschen
-        const temp = list[dragSrcIndex];
-        list.splice(dragSrcIndex, 1);
-        list.splice(dropIndex, 0, temp);
-        saveList();
-        renderList();
-      }
-      return false;
-    }
-
-    function handleDragEnd(e) {
-      this.classList.remove('dragging');
-      dragSrcIndex = null;
-    }
-
-    // --- Funktion 4: Favoriten markieren ---
-    function toggleFavorite(i) {
-      list[i].favorite = !list[i].favorite;
-      saveList();
-      renderList();
     }
 
     function renderList() {
-      const listEl = document.getElementById('list');
-      listEl.innerHTML = '';
-
-      // Sortieren nach Favorit zuerst, dann nach Filter, dann nach Kategorie und Name
-      let filteredList = list;
-      if (currentFilter !== 'Alle') {
-        filteredList = list.filter(i => i.category === currentFilter);
+      const container = document.getElementById('list');
+      container.innerHTML = '';
+      let filtered = [...list];
+      if (currentFilter === 'Favoriten') {
+        filtered = filtered.filter(i => i.favorite);
+      } else if (currentFilter !== 'Alle') {
+        filtered = filtered.filter(i => i.category === currentFilter);
       }
-      const sortedList = [...filteredList].sort((a, b) => {
-        if ((b.favorite ? 1 : 0) !== (a.favorite ? 1 : 0)) return (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0);
-        return a.category.localeCompare(b.category) || a.name.localeCompare(b.name);
-      });
 
-      sortedList.forEach((item, idx) => {
-        const realIndex = list.findIndex(i => i.name === item.name && i.category === item.category);
-
+      filtered.forEach((item, index) => {
         const div = document.createElement('div');
         div.className = 'item';
         div.setAttribute('draggable', true);
-        div.setAttribute('data-index', realIndex);
-
-        const icon = getCategoryIcon(item.category, item.name);
+        div.ondragstart = e => {
+          e.dataTransfer.setData('text/plain', index);
+          div.classList.add('dragging');
+        };
+        div.ondragend = () => div.classList.remove('dragging');
+        div.ondragover = e => e.preventDefault();
+        div.ondrop = e => {
+          e.preventDefault();
+          const draggedIndex = +e.dataTransfer.getData('text');
+          const draggedItem = filtered[draggedIndex];
+          const dropIndex = index;
+          const fullIndexFrom = list.findIndex(x => x.name === draggedItem.name);
+          const fullIndexTo = list.findIndex(x => x.name === item.name);
+          list.splice(fullIndexTo, 0, list.splice(fullIndexFrom, 1)[0]);
+          saveList();
+          renderList();
+        };
 
         div.innerHTML = `
-          <div class="info"><span class="item-icon">${icon}</span>
-            <span class="item-name${item.checked ? ' checked' : ''}">
-              ${item.name} <span class="quantity">x${item.qty}</span>
-            </span>
+          <div class="info">
+            <span>${item.name} (${item.category}) x${item.qty}</span>
           </div>
           <div class="actions">
-            <button onclick="toggleItem(${realIndex})">${item.checked ? '↺' : '✔'}</button>
-            <button onclick="changeQty(${realIndex}, -1)">−</button>
-            <button onclick="changeQty(${realIndex}, 1)">+</button>
-            <button onclick="editItem(${realIndex})">✎</button>
-            <button onclick="deleteItem(${realIndex})">✖</button>
-            <button title="Favorit" onclick="toggleFavorite(${realIndex})" style="color: ${item.favorite ? '#e67e22' : '#2E8B57'};">★</button>
-          </div>`;
-
-        // Klick auf Info toggelt checked
-        div.querySelector('.info').addEventListener('click', () => toggleItem(realIndex));
-
-        // Drag & Drop Events
-        div.addEventListener('dragstart', handleDragStart);
-        div.addEventListener('dragover', handleDragOver);
-        div.addEventListener('drop', handleDrop);
-        div.addEventListener('dragend', handleDragEnd);
-
-        listEl.appendChild(div);
+            <button onclick="toggleFavorite(${list.indexOf(item)})">★</button>
+          </div>
+        `;
+        container.appendChild(div);
       });
     }
 
-    async function addItem() {
-      const nameEl = document.getElementById('itemInput');
-      const catEl = document.getElementById('categoryInput');
-      const name = nameEl.value.trim();
-      if (!name) return;
-      let category = catEl.value.trim() || detectCategory(name);
-      if (!suggestions.includes(name)) {
-        suggestions.push(name);
-        updateSuggestions();
-      }
-      const existing = list.find(i => i.name.toLowerCase() === name.toLowerCase());
-      existing ? existing.qty++ : list.push({ name, category, checked: false, qty: 1, favorite: false });
-      saveList();
-      nameEl.value = '';
-      catEl.value = '';
-      renderFilterButtons();
-      renderList();
-    }
-
-    function toggleItem(i) {
-      list[i].checked = !list[i].checked;
+    function toggleFavorite(index) {
+      list[index].favorite = !list[index].favorite;
       saveList();
       renderList();
     }
 
-    function changeQty(i, d) {
-      list[i].qty += d;
-      if (list[i].qty <= 0) list.splice(i, 1);
-      saveList();
-      renderFilterButtons();
-      renderList();
-    }
-
-    function deleteItem(i) {
-      if (confirm(`"${list[i].name}" wirklich löschen?`)) {
-        list.splice(i, 1);
-        saveList();
-        renderFilterButtons();
-        renderList();
-      }
-    }
-
-    function editItem(i) {
-      const newName = prompt('Neuer Produktname:', list[i].name);
-      if (newName && newName.trim() !== '') {
-        const newCategory = prompt('Neue Kategorie:', list[i].category) || detectCategory(newName);
-        list[i].name = newName.trim();
-        list[i].category = newCategory.trim();
-        saveList();
-        renderFilterButtons();
-        renderList();
-      }
-    }
-
-    function shareList() {
-      let t = 'Meine Einkaufsliste:%0A';
-      list.forEach(i => t += `${i.checked ? '[x]' : '[ ]'} ${i.name} (${i.category}) x${i.qty}${i.favorite ? ' ★' : ''}%0A`);
-      window.open(`https://wa.me/?text=${encodeURIComponent(t)}`, '_blank');
-    }
-
-    function clearList() {
-      const a = Math.ceil(Math.random() * 10), b = Math.ceil(Math.random() * 10);
-      const r = prompt(`Löschen bestätigen: ${a}+${b} = ?`);
-      if (parseInt(r) === a + b) {
-        list = [];
-        saveList();
-        renderFilterButtons();
-        renderList();
-      } else alert('Falsche Antwort.');
-    }
-
-    document.getElementById('addBtn').addEventListener('click', addItem);
-    document.getElementById('shareBtn').addEventListener('click', shareList);
-    document.getElementById('clearBtn').addEventListener('click', clearList);
-
-    updateSuggestions();
     renderFilterButtons();
     renderList();
   </script>
