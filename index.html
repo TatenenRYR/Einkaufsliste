@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -18,36 +17,23 @@
     .produkt-info { cursor: pointer; flex: 1; }
     .erledigt { text-decoration: line-through; opacity: 0.6; }
     .meldung { background: #fff3cd; color: #856404; padding: 0.5rem; border: 1px solid #ffeeba; margin-top: 0.5rem; border-radius: 4px; }
-    #reader { margin-top: 1rem; }
+    #reader { margin-top: 1rem; width: 100%; max-width: 400px; }
   </style>
 </head>
 <body>
-  <h1>Einkaufsliste mit QR-Teilen</h1>
-
-  <input type="text" id="produktInput" placeholder="Produktname...">
+  <h1>Einkaufsliste mit QR-Teilen</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <input type="text" id="marktInput" placeholder="Markt (optional)">
-  <button onclick="hinzufuegen()">Hinzufügen</button>
+  <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
-  <label for="sortKategorie">Nach Kategorie sortieren:</label>
-  <select id="sortKategorie" onchange="renderListe()">
-    <option value="">Keine Sortierung</option>
-  </select>
-
-  <ul id="liste"></ul>
-
-  <hr>
-
-  <h3>QR-Übertragung</h3>
+  <ul id="liste"></ul>  <hr>  <h3>QR-Übertragung</h3>
   <button onclick="zeigeQRCode()">QR-Code generieren</button>
   <div id="qrcode"></div>
   <br>
   <button id="scanBtn" onclick="starteScanner()">QR-Code scannen</button>
   <button id="stopScanBtn" onclick="stoppeScanner()" disabled>Scanner stoppen</button>
   <div id="reader"></div>
-  <div id="status" class="meldung"></div>
-
-  <script>
+  <div id="status" class="meldung"></div>  <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
     let readerInstance = null;
 
@@ -196,6 +182,5 @@
 
     aktualisiereKategorienDropdown();
     renderListe();
-  </script>
-</body>
+  </script></body>
 </html>
