@@ -1,202 +1,438 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Moderne Einkaufsliste mit QR & Barcode</title>
-  <!-- QR-Code Scanner -->
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <!-- Barcode Scanner -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
-  <style>
-    :root {
-      --primary: #3498db;
-      --accent-bg: #f4f6f8;
-      --text: #333;
-      --sidebar-bg: #fff;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 2rem;
-      font-family: 'Segoe UI', sans-serif;
-      background: var(--accent-bg);
-      color: var(--text);
-    }
-    h1 { text-align: center; margin-bottom: 1.5rem; }
-    input, button {
-      width: 100%; padding: 0.7rem;
-      margin: 0.5rem 0;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-    button {
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button:hover { background: #2980b9; }
-    ul { list-style: none; padding: 0; margin: 1rem 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Einkaufsliste mit QR & Barcode Scanner</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+
+<style>
+  :root {
+    --primary: #2f8f4e;
+    --primary-dark: #26713b;
+    --bg: #f9faf9;
+    --text: #222;
+    --muted: #666;
+    --border: #ddd;
+    --btn-hover: #1f6e3a;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    margin: 1rem;
+    color: var(--text);
+  }
+  h1, h3 {
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+  input, button, select {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    margin: 0.3rem 0 0.6rem 0;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+  button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s ease;
+  }
+  button:hover:not(:disabled) {
+    background: var(--btn-hover);
+  }
+  button:disabled {
+    background: #a5d6a7;
+    cursor: default;
+  }
+  label {
+    font-weight: 600;
+    display: block;
+    margin-top: 1rem;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    max-width: 600px;
+    margin: auto;
+  }
+  li {
+    background: white;
+    margin-bottom: 0.5rem;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  li:hover {
+    background: #e9f5e9;
+  }
+  li.erledigt span.name {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+  .produkt-info {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex: 1 1 60%;
+    min-width: 200px;
+  }
+  .produkt-info i {
+    font-size: 1.6rem;
+    color: var(--primary-dark);
+  }
+  .name {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  .kategorie, .markt {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .aktionen {
+    flex: 1 1 35%;
+    text-align: right;
+  }
+  .aktionen button {
+    width: 2.8rem;
+    margin-left: 0.3rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-radius: 5px;
+    color: var(--primary-dark);
+    background: #d2f0d2;
+  }
+  .aktionen button:hover {
+    background: var(--primary);
+    color: white;
+  }
+  #qrCodeCanvas {
+    text-align: center;
+    margin: 1rem auto;
+  }
+  #qrCodeCanvas canvas {
+    border-radius: 12px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  }
+  #reader {
+    width: 320px;
+    margin: 1rem auto;
+    border-radius: 12px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+  #scanStatus {
+    max-width: 320px;
+    margin: 0.3rem auto 1rem auto;
+    text-align: center;
+    padding: 0.4rem;
+    border-radius: 5px;
+    font-weight: 600;
+    color: #155724;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+  }
+  #scanToggleBtn {
+    display: block;
+    margin: 0.7rem auto 1.2rem auto;
+    max-width: 320px;
+  }
+  /* Sidebar für Produktdetails */
+  #productSidebar {
+    position: fixed;
+    top: 4rem;
+    right: 1rem;
+    width: 320px;
+    max-width: 90vw;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    padding: 1rem 1.2rem;
+    font-size: 0.95rem;
+    display: none;
+    z-index: 9999;
+  }
+  #productSidebar img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-bottom: 0.6rem;
+  }
+  #productSidebar h4 {
+    margin: 0.3rem 0 0.5rem 0;
+    color: var(--primary-dark);
+  }
+  #productSidebar .details-row {
+    margin-bottom: 0.4rem;
+  }
+  #productSidebar button {
+    width: 48%;
+    margin-top: 1rem;
+  }
+  #productSidebar button:first-child {
+    margin-right: 4%;
+  }
+
+  /* Responsive */
+  @media (max-width: 720px) {
     li {
-      background: #fff;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .aktionen {
+      width: 100%;
+      text-align: left;
+      margin-top: 0.4rem;
+    }
+    #productSidebar {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      width: 100%;
+      border-radius: 15px 15px 0 0;
+      box-shadow: 0 -3px 18px rgba(0,0,0,0.3);
       padding: 1rem;
-      margin-bottom: 0.5rem;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      font-size: 1rem;
     }
-    li .kategorie { font-style: italic; color: #666; font-size: 0.85rem; }
-    .qr-container, .barcode-section {
-      background: #fff;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      margin: 1rem 0;
-    }
-    .qr-container h2, .barcode-section h2 { margin-top: 0; }
-    canvas { display: block; margin: 1rem auto; }
-    #reader, #barcodeScanner { margin: 1rem auto; width: 300px; }
-    #produktSidebar {
-      display: none;
-      position: fixed; top: 0; right: 0;
-      width: 300px; height: 100%;
-      background: var(--sidebar-bg);
-      border-left: 2px solid #ccc;
-      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-      padding: 1rem; overflow-y: auto;
-      z-index: 1000;
-    }
-    #produktSidebar h3 { margin-top: 0; }
-    #produktVorschau img { max-width: 100%; border-radius: 8px; }
-    #toggleScannerBtn.off { background: #e74c3c; }
-    .meldung { text-align: center; color: #777; margin-top: 0.5rem; }
-  </style>
+  }
+</style>
 </head>
-<body>  <h1>Moderne Einkaufsliste</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
-  <input type="text" id="mengeInput" placeholder="Menge (z.B. 1 Stück)">
-  <button onclick="hinzufuegen()">Hinzufügen</button>  <ul id="liste"></ul>  <div class="qr-container">
-    <h2>QR-Code</h2>
-    <button onclick="zeigeQR()">QR-Code generieren</button>
-    <canvas id="qrCanvas" width="256" height="256"></canvas>
-  </div>  <div class="barcode-section">
-    <h2>Barcode scannen</h2>
-    <button id="toggleScannerBtn" class="toggle-button" onclick="toggleBarcodeScanner()">Scanner starten</button>
-    <div id="barcodeScanner" style="display:none;height:200px;"></div>
-    <div id="barcodeStatus" class="meldung"></div>
-  </div>  <!-- Seitenleiste für Produktvorschau -->  <aside id="produktSidebar">
-    <h3>Produktvorschau</h3>
-    <div id="produktVorschau"></div>
-    <button onclick="uebernehmeProdukt()">Übernehmen</button>
-    <button onclick="schliesseSidebar()" style="background:#ddd;color:#333;">Abbrechen</button>
-  </aside>  <script>
-    // Datenstruktur
-    let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
+<body>
 
-    function speichereProdukte() {
-      localStorage.setItem("produkte", JSON.stringify(produkte));
+<h1>Einkaufsliste</h1>
+
+<div style="max-width: 600px; margin: auto;">
+  <input id="produktInput" type="text" placeholder="Produktname...">
+  <input id="mengeInput" type="text" placeholder="Menge (z. B. 2 Stück)">
+  <input id="marktInput" type="text" placeholder="Markt (optional)">
+  <button id="addBtn">Hinzufügen</button>
+
+  <label for="sortKategorie">Nach Kategorie sortieren:</label>
+  <select id="sortKategorie">
+    <option value="">Keine Sortierung</option>
+  </select>
+
+  <ul id="liste"></ul>
+
+  <hr>
+
+  <h3>QR-Code teilen</h3>
+  <button id="showQRBtn">QR-Code generieren</button>
+  <div id="qrCodeCanvas"></div>
+
+  <h3>Barcode scannen</h3>
+  <button id="scanToggleBtn">Scanner starten</button>
+  <div id="reader"></div>
+  <div id="scanStatus"></div>
+</div>
+
+<!-- Sidebar mit Produktdetails -->
+<div id="productSidebar">
+  <img id="sidebarImg" src="" alt="Produktbild" />
+  <h4 id="sidebarName"></h4>
+  <div class="details-row"><strong>Menge:</strong> <span id="sidebarMenge"></span></div>
+  <div class="details-row"><strong>Markt:</strong> <span id="sidebarMarkt"></span></div>
+  <div class="details-row"><strong>Barcode:</strong> <span id="sidebarBarcode"></span></div>
+  <button id="acceptProductBtn">Übernehmen</button>
+  <button id="cancelProductBtn">Abbrechen</button>
+</div>
+
+<script>
+  // --- Daten & Speicherung ---
+  let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
+  let scannerRunning = false;
+  let qrScanner;
+
+  function speichereProdukte() {
+    localStorage.setItem("produkte", JSON.stringify(produkte));
+  }
+
+  // --- Kategorie + Icon Erkennung ---
+  function erkenneKategorieUndIcon(name) {
+    const n = name.toLowerCase();
+    if (n.includes("cola") || n.includes("wasser") || n.includes("saft")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
+    if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
+    if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
+    if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
+    if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
+    if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
+    if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
+    if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
+    return { kategorie: "Sonstiges", icon: "bi-bag" };
+  }
+
+  function aktualisiereKategorienDropdown() {
+    const katSet = new Set(produkte.map(p => p.kategorie));
+    const sortKategorie = document.getElementById("sortKategorie");
+    sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
+    katSet.forEach(k => {
+      if(k) {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = k;
+        sortKategorie.appendChild(opt);
+      }
+    });
+  }
+
+  // --- Liste rendern ---
+  function renderListe() {
+    const kat = document.getElementById("sortKategorie").value;
+    const ul = document.getElementById("liste");
+    ul.innerHTML = '';
+    const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
+    gefiltert.forEach(p => {
+      const li = document.createElement("li");
+      li.className = p.erledigt ? 'erledigt' : '';
+      li.innerHTML = `
+        <span class="produkt-info" onclick="toggleErledigt(${p.id})" title="Markieren als erledigt">
+          <i class="bi ${p.icon}"></i>
+          <span class="name">${p.name}</span>
+          <br>
+          <span class="kategorie">${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span>
+        </span>
+        <div class="aktionen">
+          <button onclick="event.stopPropagation(); aendereMenge(${p.id},1)">+</button>
+          <button onclick="event.stopPropagation(); aendereMenge(${p.id},-1)">-</button>
+        </div>
+      `;
+      ul.appendChild(li);
+    });
+  }
+
+  // --- Menge ändern ---
+  function aendereMenge(id, delta) {
+    const p = produkte.find(p => p.id === id);
+    if (!p) return;
+    const match = p.menge.match(/(\d+)(\s*[^\d]*)/);
+    if(match) {
+      let zahl = parseInt(match[1]);
+      const einheit = match[2];
+      zahl += delta;
+      if(zahl <= 0) {
+        produkte = produkte.filter(p => p.id !== id);
+      } else {
+        p.menge = `${zahl}${einheit}`.trim();
+      }
+      speichereProdukte();
+      aktualisiereKategorienDropdown();
+      renderListe();
     }
+  }
 
-    function renderListe() {
-      const ul = document.getElementById("liste"); ul.innerHTML = '';
-      produkte.forEach(p => {
-        const li = document.createElement('li');
-        li.innerHTML = `<span><strong>${p.name}</strong> (${p.menge})<br><span class="kategorie">${p.kategorie}</span></span>`;
-        ul.appendChild(li);
+  // --- Erledigt toggle ---
+  function toggleErledigt(id) {
+    const p = produkte.find(p => p.id === id);
+    if(p) {
+      p.erledigt = !p.erledigt;
+      speichereProdukte();
+      renderListe();
+    }
+  }
+
+  // --- Produkt hinzufügen ---
+  function hinzufuegen(name, menge, markt, scannedBarcode = null) {
+    if (!name || !menge) return;
+    const { kategorie, icon } = erkenneKategorieUndIcon(name);
+    const id = Date.now();
+    produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false, barcode: scannedBarcode });
+    speichereProdukte();
+    aktualisiereKategorienDropdown();
+    renderListe();
+  }
+
+  // --- QR-Code generieren ---
+  function zeigeQR() {
+    const div = document.getElementById("qrCodeCanvas");
+    div.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    div.appendChild(canvas);
+    QRCode.toCanvas(canvas, JSON.stringify(produkte), {
+      width: 256,
+      errorCorrectionLevel: 'H'
+    }, (err) => {
+      if(err) {
+        console.error(err);
+        div.innerText = "QR-Code konnte nicht erstellt werden.";
+      }
+    });
+  }
+
+  // --- Scanner starten/stoppen ---
+  function toggleScanner() {
+    const btn = document.getElementById("scanToggleBtn");
+    const status = document.getElementById("scanStatus");
+
+    if(scannerRunning) {
+      qrScanner.stop().then(() => {
+        qrScanner.clear();
+        status.textContent = "Scanner gestoppt.";
+        btn.textContent = "Scanner starten";
+        scannerRunning = false;
+      });
+    } else {
+      qrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        onScanSuccess,
+        (err) => { /* Ignoriere Scan-Fehler */ }
+      ).then(() => {
+        status.textContent = "Scanner läuft...";
+        btn.textContent = "Scanner stoppen";
+        scannerRunning = true;
+      }).catch(err => {
+        status.textContent = "Kamera konnte nicht gestartet werden.";
+        console.error(err);
       });
     }
+  }
 
-    function hinzufuegen() {
-      const name = document.getElementById('produktInput').value.trim();
-      const menge = document.getElementById('mengeInput').value.trim();
-      if (!name || !menge) return;
-      produkte.push({ name, menge, kategorie: '-' });
-      speichereProdukte(); renderListe();
-      document.getElementById('produktInput').value = '';
-      document.getElementById('mengeInput').value = '';
-    }
+  // --- Scan Erfolg ---
+  let scanCooldown = false; // verhindert mehrfaches sofortiges Scannen
+  function onScanSuccess(decodedText, decodedResult) {
+    if(scanCooldown) return;
+    scanCooldown = true;
 
-    // QR-Code offline mit QRious (Beispielbibliothek eingebettet)
-    function generateQR(text, canvas) {
-      const qr = new QRious({ element: canvas, value: text, size:256, level:'H' });
-    }
-    class QRious {
-      constructor(opts) {
-        this.el = opts.element; this.val=opts.value; this.size=opts.size;
-        this.qr=new window.qrcode(0,'H'); this.qr.addData(this.val); this.qr.make(); this.draw();
-      }
-      draw() {
-        const ctx=this.el.getContext('2d'), c=this.size, m=this.qr.getModuleCount();
-        const w=c/m;
-        this.el.width=this.el.height=c;
-        ctx.fillStyle='#fff'; ctx.fillRect(0,0,c,c);
-        ctx.fillStyle='#000';
-        for(let r=0;r<m;r++) for(let q=0;q<m;q++) if(this.qr.isDark(r,q)) ctx.fillRect(q*w, r*w, w, w);
-      }
-    }
+    // Beispiel: Barcode in Produktname umwandeln (hier einfache Demo mit Barcode als Name)
+    const barcode = decodedText;
 
-    function zeigeQR() {
-      const canvas=document.getElementById('qrCanvas');
-      try { generateQR(JSON.stringify(produkte), canvas); }
-      catch(e){ console.error(e); }
-    }
+    // Beispiel-Bild-URL (Du kannst hier echte API-Anbindung machen)
+    const exampleImageUrl = "https://via.placeholder.com/280x160?text=Produkt";
 
-    // Barcode-Scanner mit QuaggaJS
-    let barcodeAktiv=false, vorgemerktProdukt=null;
-    function toggleBarcodeScanner() {
-      const btn=document.getElementById('toggleScannerBtn');
-      const container=document.getElementById('barcodeScanner');
-      const status=document.getElementById('barcodeStatus');
-      if(!barcodeAktiv) {
-        Quagga.init({ inputStream:{ type:'LiveStream', target:container, constraints:{ facingMode:'environment'}}, decoder:{ readers:['ean_reader','code_128_reader']}}, err=>{
-          if(err){ status.textContent='Fehler beim Starten'; return; }
-          container.style.display='block'; Quagga.start();
-          barcodeAktiv=true; btn.textContent='Scanner stoppen'; btn.classList.add('off'); status.textContent='Scanner läuft...';
-        });
-        Quagga.onDetected(onBarcodeDetected);
-      } else {
-        Quagga.stop(); container.style.display='none'; barcodeAktiv=false;
-        btn.textContent='Scanner starten'; btn.classList.remove('off'); status.textContent='Scanner gestoppt.';
-      }
-    }
+    // Öffne Sidebar mit Details
+    zeigeSidebar({
+      name: `Produkt (Barcode: ${barcode})`,
+      menge: '1 Stück',
+      markt: '',
+      barcode: barcode,
+      image: exampleImageUrl
+    });
 
-    function onBarcodeDetected(result) {
-      const code=result.codeResult.code;
-      const status=document.getElementById('barcodeStatus');
-      const container=document.getElementById('barcodeScanner');
-      fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`)
-      .then(res=>res.json())
-      .then(data=>{
-        if(data.status===1){
-          const prod=data.product;
-          const name=prod.product_name || 'Unbekannt';
-          const bild=prod.image_front_small_url||'';
-          const marke=prod.brands||'unbekannt';
-          const kategorie=name.includes('Milch')?'Milchprodukte':'Sonstiges';
-          vorgemerktProdukt={ name, menge:'1 Stück', kategorie };
-          document.getElementById('produktVorschau').innerHTML=`
-            ${bild?`<img src="${bild}" alt="${name}"/>`:''}
-            <p><strong>${name}</strong></p>
-            <p>Marke: ${marke}</p>
-            <p>Barcode: ${code}</p>
-          `;
-          document.getElementById('produktSidebar').style.display='block';
-          status.textContent='Produkt erkannt.';
-        } else {
-          status.textContent='Produkt nicht gefunden.';
-        }
-      })
-      .catch(()=>{ status.textContent='Fehler bei Abruf'; })
-      .finally(()=>{ Quagga.stop(); container.style.display='none'; barcodeAktiv=false; document.getElementById('toggleScannerBtn').textContent='Scanner starten'; document.getElementById('toggleScannerBtn').classList.remove('off'); });
-    }
+    // Cooldown nach 2 Sekunden resetten
+    setTimeout(() => {
+      scanCooldown = false;
+    }, 2000);
+  }
 
-    function uebernehmeProdukt() {
-      if(vorgemerktProdukt){ produkte.push(vorgemerktProdukt); speichereProdukte(); renderListe(); schliesseSidebar(); }
-    }
-    function schliesseSidebar(){ document.getElementById('produktSidebar').style.display='none'; vorgemerktProdukt=null; }
-
-    // Initial
-    renderListe();
-  </script>  <!-- qrcode.js minimal (v1) -->  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script></body>
-</html>
+  // --- Sidebar anzeigen ---
+  function zeigeSidebar(data) {
+    document.getElementById("sidebarImg").src = data.image || "";
+    document.getElementById("sidebarName").textContent = data.name || "";
+    document.getElementById("sidebarMenge").textContent = data.menge || "";
+    document.getElementById("sidebarMarkt").textContent = data.markt || "";
+    document.getElementById("sidebarBarcode").textContent
