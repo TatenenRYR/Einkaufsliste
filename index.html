@@ -3,69 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lokale Einkaufsliste</title>
+  <title>Lokale Einkaufsliste mit QR-Sync & Icons</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 1rem; background: #f2f2f2; }
-    h1, h3 { text-align: center; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 1rem;
+      background: #f9f9f9;
+    }
+    h1, h3 {
+      text-align: center;
+    }
     input, button, select, textarea {
-      width: 100%; padding: 0.6rem; margin: 0.4rem 0;
-      box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc;
+      width: 100%;
+      padding: 0.5rem;
+      margin: 0.3rem 0;
+      box-sizing: border-box;
     }
     button {
-      background-color: #4CAF50; color: white;
-      border: none; cursor: pointer; font-weight: bold;
-      transition: background-color 0.3s;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
     }
-    button:hover { background-color: #45a049; }
-    ul { list-style-type: none; padding: 0; }
+    button:hover {
+      background-color: #45a049;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
     li {
-      background: white; margin: 0.3rem 0; padding: 0.6rem;
-      border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+      padding: 0.6rem;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
     }
     .aktionen button {
       margin-left: 0.3rem;
-      background: #ddd; color: #333;
     }
-    .aktionen button:hover { background: #bbb; }
-    .kategorie { font-style: italic; font-size: 0.9rem; color: #666; }
-    .produkt-info { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
-    .produkt-info i { font-size: 1.4rem; color: #4CAF50; }
-    .erledigt { text-decoration: line-through; opacity: 0.5; }
+    .kategorie {
+      font-style: italic;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .produkt-info {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+    }
+    .produkt-info i {
+      font-size: 1.4rem;
+      color: #333;
+    }
+    .erledigt {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
     .meldung {
-      background: #fff3cd; color: #856404;
-      padding: 0.6rem; border: 1px solid #ffeeba;
-      margin-top: 0.6rem; border-radius: 4px; text-align: center;
+      background: #fff3cd;
+      color: #856404;
+      padding: 0.5rem;
+      border: 1px solid #ffeeba;
+      margin-top: 0.5rem;
+      border-radius: 4px;
+      text-align: center;
     }
-
-    /* QR-Code Modal */
-    #qrModal {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
-    }
-    #qrContent {
-      background: white; padding: 1rem; border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center;
-    }
-    #qrContent canvas {
-      margin: 1rem auto; display: block;
-    }
-    #closeQR {
-      background: #e74c3c;
+    #qrCodeCanvas {
       margin-top: 1rem;
-    }
-    #closeQR:hover { background: #c0392b; }
-
-    #reader {
-      margin: 1rem auto;
-      width: 100%; max-width: 300px;
-      border-radius: 8px;
-      overflow: hidden;
+      text-align: center;
+      padding: 1rem;
       background: white;
-      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
   </style>
 </head>
@@ -85,18 +100,11 @@
 
   <hr>
   <h3>QR-Code teilen</h3>
-  <button onclick="zeigeQR()">QR-Code anzeigen</button>
-
-  <div id="qrModal">
-    <div id="qrContent">
-      <h3>Deine Einkaufsliste als QR-Code</h3>
-      <div id="qrCodeCanvas"></div>
-      <button id="closeQR" onclick="schliesseQR()">Schließen</button>
-    </div>
-  </div>
+  <button onclick="zeigeQR()">QR-Code generieren</button>
+  <div id="qrCodeCanvas"></div>
 
   <h3>QR-Code einscannen</h3>
-  <div id="reader"></div>
+  <div id="reader" style="width:300px; margin:auto;"></div>
   <button onclick="stopScan()">Scan stoppen</button>
   <div id="scanStatus" class="meldung"></div>
 
@@ -198,20 +206,15 @@
       div.innerHTML = '';
       const canvas = document.createElement('canvas');
       div.appendChild(canvas);
-      QRCode.toCanvas(canvas, JSON.stringify(produkte), {
+      window.QRCode.toCanvas(canvas, JSON.stringify(produkte), {
         width: 256,
         errorCorrectionLevel: 'H'
-      }, err => {
+      }, (err) => {
         if (err) {
           console.error(err);
           div.innerText = "QR-Code konnte nicht erstellt werden.";
         }
       });
-      document.getElementById("qrModal").style.display = "flex";
-    }
-
-    function schliesseQR() {
-      document.getElementById("qrModal").style.display = "none";
     }
 
     function starteScanner() {
