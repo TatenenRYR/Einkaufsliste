@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lokale Einkaufsliste mit PIN-Sync & Icons</title>
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <style>
     body { font-family: Arial, sans-serif; margin: 1rem; background: #f9f9f9; }
     h1 { text-align: center; }
@@ -23,23 +22,21 @@
 </head>
 <body>
   <h1>Einkaufsliste (lokal & PIN-Sync)</h1>
-  <input type="text" id="produktInput" placeholder="Produktname..." />
-  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)" />
-  <input type="text" id="marktInput" placeholder="Markt (optional)" />
+  <input type="text" id="produktInput" placeholder="Produktname...">
+  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
+  <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button>
   <label for="sortKategorie">Nach Kategorie sortieren:</label>
   <select id="sortKategorie" onchange="renderListe()">
     <option value="">Keine Sortierung</option>
   </select>
-
   <ul id="liste"></ul>
-  <hr />
+  <hr>
   <h3>PIN-Verbindung</h3>
-  <input type="text" id="pinInput" placeholder="PIN eingeben oder generieren" />
+  <input type="text" id="pinInput" placeholder="PIN eingeben oder generieren">
   <button onclick="starteHost()">Start (als Host)</button>
   <button onclick="verbindeMitHost()">Beitreten (mit PIN)</button>
   <div id="status" class="meldung"></div>
-
   <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
     let peer, conn;
@@ -60,6 +57,27 @@
       });
     }
 
+    function erkenneKategorieUndIcon(name) {
+      const n = name.toLowerCase();
+      if (n.includes("cola") || n.includes("wasser") || n.includes("saft"))
+        return { kategorie: "Getränke", icon: "bi-cup-straw" };
+      if (n.includes("apfel") || n.includes("banane") || n.includes("birne") || n.includes("obst"))
+        return { kategorie: "Obst", icon: "bi-emoji-smile" };
+      if (n.includes("brot") || n.includes("brötchen") || n.includes("toast"))
+        return { kategorie: "Backwaren", icon: "bi-bag-fill" };
+      if (n.includes("milch") || n.includes("joghurt") || n.includes("käse") || n.includes("butter"))
+        return { kategorie: "Milchprodukte", icon: "bi-box-seam" };
+      if (n.includes("fleisch") || n.includes("wurst") || n.includes("hähnchen") || n.includes("schinken"))
+        return { kategorie: "Fleisch", icon: "bi-basket2-fill" };
+      if (n.includes("zahnpasta") || n.includes("seife") || n.includes("shampoo"))
+        return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
+      if (n.includes("nudel") || n.includes("reis") || n.includes("mehl"))
+        return { kategorie: "Grundnahrungsmittel", icon: "bi-archive" };
+      if (n.includes("eier") || n.includes("ei"))
+        return { kategorie: "Eier", icon: "bi-egg" };
+      return { kategorie: "Sonstiges", icon: "bi-question-circle" };
+    }
+
     function hinzufuegen() {
       const name = produktInput.value.trim();
       const menge = mengeInput.value.trim();
@@ -73,23 +91,6 @@
       aktualisiereKategorienDropdown();
       renderListe();
       sendeDaten();
-    }
-
-    function erkenneKategorieUndIcon(name) {
-      const n = name.toLowerCase();
-      if (n.includes("cola") || n.includes("wasser") || n.includes("saft"))
-        return { kategorie: "Getränke", icon: "bi-cup-straw" };
-      if (n.includes("apfel") || n.includes("banane") || n.includes("birne"))
-        return { kategorie: "Obst", icon: "bi-emoji-smile" };
-      if (n.includes("brot") || n.includes("brötchen"))
-        return { kategorie: "Backwaren", icon: "bi-bag-fill" };
-      if (n.includes("milch") || n.includes("joghurt") || n.includes("käse"))
-        return { kategorie: "Milchprodukte", icon: "bi-box-seam" };
-      if (n.includes("fleisch") || n.includes("wurst"))
-        return { kategorie: "Fleisch", icon: "bi-basket2-fill" };
-      if (n.includes("zahnpasta") || n.includes("seife"))
-        return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
-      return { kategorie: "Sonstiges", icon: "bi-question-circle" };
     }
 
     function renderListe() {
