@@ -1,41 +1,55 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Einkaufsliste mit QR-Teilen</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.9/html5-qrcode.min.js"></script>
+  <title>Lokale Einkaufsliste mit QR-Sync & Icons</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
     body { font-family: Arial, sans-serif; margin: 1rem; background: #f9f9f9; }
-    h1 { text-align: center; }
-    input, button, select { width: 100%; padding: 0.5rem; margin: 0.3rem 0; box-sizing: border-box; }
+    h1, h3 { text-align: center; }
+    input, button, select, textarea { width: 100%; padding: 0.5rem; margin: 0.3rem 0; box-sizing: border-box; }
     button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
     button:hover { background-color: #45a049; }
     ul { list-style-type: none; padding: 0; }
-    li { padding: 0.6rem; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; flex-wrap: wrap; }
+    li { padding: 0.6rem; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+    .aktionen button { margin-left: 0.3rem; }
     .kategorie { font-style: italic; font-size: 0.9rem; color: #666; }
-    .produkt-info { cursor: pointer; flex: 1; }
-    .erledigt { text-decoration: line-through; opacity: 0.6; }
+    .produkt-info { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; }
+    .produkt-info i { font-size: 1.4rem; color: #333; }
+    .erledigt { text-decoration: line-through; opacity: 0.5; }
     .meldung { background: #fff3cd; color: #856404; padding: 0.5rem; border: 1px solid #ffeeba; margin-top: 0.5rem; border-radius: 4px; }
-    #reader { margin-top: 1rem; width: 100%; max-width: 400px; }
   </style>
 </head>
 <body>
-  <h1>Einkaufsliste mit QR-Teilen</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
+  <h1>Einkaufsliste</h1>
+  <input type="text" id="produktInput" placeholder="Produktname...">
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <input type="text" id="marktInput" placeholder="Markt (optional)">
-  <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
+  <button onclick="hinzufuegen()">Hinzufügen</button>
 
-  <ul id="liste"></ul>  <hr>  <h3>QR-Übertragung</h3>
-  <button onclick="zeigeQRCode()">QR-Code generieren</button>
-  <div id="qrcode"></div>
-  <br>
-  <button id="scanBtn" onclick="starteScanner()">QR-Code scannen</button>
-  <button id="stopScanBtn" onclick="stoppeScanner()" disabled>Scanner stoppen</button>
-  <div id="reader"></div>
-  <div id="status" class="meldung"></div>  <script>
+  <label for="sortKategorie">Nach Kategorie sortieren:</label>
+  <select id="sortKategorie" onchange="renderListe()">
+    <option value="">Keine Sortierung</option>
+  </select>
+
+  <ul id="liste"></ul>
+
+  <hr>
+  <h3>QR-Code teilen</h3>
+  <button onclick="zeigeQR()">QR-Code generieren</button>
+  <div id="qrCodeCanvas" style="margin-top: 1rem;"></div>
+
+  <h3>QR-Code einscannen</h3>
+  <div id="reader" style="width:300px; margin:auto;"></div>
+  <button onclick="stopScan()">Scan stoppen</button>
+  <div id="scanStatus" class="meldung"></div>
+
+  <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
-    let readerInstance = null;
+    let qrScanner;
 
     function speichereProdukte() {
       localStorage.setItem("produkte", JSON.stringify(produkte));
@@ -46,11 +60,26 @@
       const sortKategorie = document.getElementById("sortKategorie");
       sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
       katSet.forEach(k => {
-        const opt = document.createElement("option");
-        opt.value = k;
-        opt.textContent = k;
-        sortKategorie.appendChild(opt);
+        if (k) {
+          const opt = document.createElement("option");
+          opt.value = k;
+          opt.textContent = k;
+          sortKategorie.appendChild(opt);
+        }
       });
+    }
+
+    function erkenneKategorieUndIcon(name) {
+      const n = name.toLowerCase();
+      if (n.includes("cola") || n.includes("wasser") || n.includes("saft")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
+      if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
+      if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
+      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
+      if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
+      if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
+      if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
+      if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
+      return { kategorie: "Sonstiges", icon: "bi-bag" };
     }
 
     function hinzufuegen() {
@@ -58,25 +87,15 @@
       const menge = mengeInput.value.trim();
       const markt = marktInput.value.trim();
       if (!name || !menge) return;
-      const { kategorie } = erkenneKategorieUndIcon(name);
+
+      const { kategorie, icon } = erkenneKategorieUndIcon(name);
       const id = Date.now();
-      produkte.push({ id, name, menge, markt, kategorie, erledigt: false });
+      produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
+
       speichereProdukte();
       produktInput.value = mengeInput.value = marktInput.value = '';
       aktualisiereKategorienDropdown();
       renderListe();
-    }
-
-    function erkenneKategorieUndIcon(name) {
-      const n = name.toLowerCase();
-      if (n.includes("cola") || n.includes("wasser") || n.includes("saft")) return { kategorie: "Getränke" };
-      if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst" };
-      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren" };
-      if (n.includes("milch") || n.includes("joghurt") || n.includes("käse")) return { kategorie: "Milchprodukte" };
-      if (n.includes("eier")) return { kategorie: "Eier" };
-      if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch" };
-      if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege" };
-      return { kategorie: "Sonstiges" };
     }
 
     function renderListe() {
@@ -86,15 +105,30 @@
       const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
       gefiltert.forEach(p => {
         const li = document.createElement("li");
-        li.innerHTML = `
-          <span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
-            <strong>${p.name}</strong> (${p.menge})<br>
-            <span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span>
-          </span>
-          <button onclick="loesche(${p.id})">Löschen</button>
-        `;
+        li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
+          <i class="bi ${p.icon}"></i>
+          <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
+        </span>
+        <span class='aktionen'>
+          <button onclick="aendereMenge(${p.id},1)">+</button>
+          <button onclick="aendereMenge(${p.id},-1)">-</button>
+        </span>`;
         ul.appendChild(li);
       });
+    }
+
+    function aendereMenge(id, delta) {
+      const p = produkte.find(p => p.id === id);
+      const match = p.menge.match(/(\d+)(\s*[^\d]*)/);
+      if (match) {
+        let zahl = parseInt(match[1]);
+        const einheit = match[2];
+        zahl += delta;
+        if (zahl <= 0) produkte = produkte.filter(p => p.id !== id);
+        else p.menge = `${zahl}${einheit}`.trim();
+        speichereProdukte();
+        renderListe();
+      }
     }
 
     function toggleErledigt(id) {
@@ -106,81 +140,67 @@
       }
     }
 
-    function loesche(id) {
-      produkte = produkte.filter(p => p.id !== id);
-      speichereProdukte();
-      renderListe();
-    }
-
-    function zeigeQRCode() {
-      const qrDiv = document.getElementById("qrcode");
-      qrDiv.innerHTML = '';
-      QRCode.toCanvas(JSON.stringify(produkte), { width: 256 }, function (err, canvas) {
-        if (err) return console.error(err);
-        qrDiv.appendChild(canvas);
+    function zeigeQR() {
+      const div = document.getElementById("qrCodeCanvas");
+      div.innerHTML = '';
+      const canvas = document.createElement('canvas');
+      div.appendChild(canvas);
+      QRCode.toCanvas(canvas, JSON.stringify(produkte), {
+        width: 256,
+        errorCorrectionLevel: 'H'
+      }, (err) => {
+        if (err) {
+          console.error(err);
+          div.innerText = "QR-Code konnte nicht erstellt werden.";
+        }
       });
     }
 
-    async function starteScanner() {
-      const readerDiv = document.getElementById("reader");
-      const statusDiv = document.getElementById("status");
-      const scanBtn = document.getElementById("scanBtn");
-      const stopBtn = document.getElementById("stopScanBtn");
+    function starteScanner() {
+      const status = document.getElementById("scanStatus");
+      qrScanner = new Html5Qrcode("reader");
 
-      statusDiv.innerText = "Starte Kamera...";
-      scanBtn.disabled = true;
-      stopBtn.disabled = false;
-
-      if (!readerInstance) {
-        readerInstance = new Html5Qrcode("reader");
-      }
-
-      try {
-        await readerInstance.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: 250 },
-          qrCodeMessage => {
-            try {
-              const daten = JSON.parse(qrCodeMessage);
-              if (!Array.isArray(daten)) throw "Ungültige Daten";
+      qrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        qrCodeMessage => {
+          try {
+            const daten = JSON.parse(qrCodeMessage);
+            if (Array.isArray(daten)) {
               produkte = daten;
               speichereProdukte();
               aktualisiereKategorienDropdown();
               renderListe();
-              statusDiv.innerText = "Liste erfolgreich übernommen.";
-              stoppeScanner();
-            } catch (e) {
-              statusDiv.innerText = "Fehlerhafte QR-Daten.";
+              status.innerText = "Liste erfolgreich importiert.";
+              stopScan();
+            } else {
+              status.innerText = "Ungültiges Format.";
             }
-          },
-          error => {}
-        );
-      } catch (e) {
-        statusDiv.innerText = "Fehler beim Start der Kamera.";
-        scanBtn.disabled = false;
-        stopBtn.disabled = true;
-      }
+          } catch (e) {
+            status.innerText = "Fehler beim Einlesen.";
+            console.error(e);
+          }
+        },
+        err => {}
+      ).catch(err => {
+        console.error(err);
+        status.innerText = "Kamera konnte nicht gestartet werden.";
+      });
     }
 
-    function stoppeScanner() {
-      const statusDiv = document.getElementById("status");
-      const scanBtn = document.getElementById("scanBtn");
-      const stopBtn = document.getElementById("stopScanBtn");
-
-      if (readerInstance) {
-        readerInstance.stop().then(() => {
-          document.getElementById("reader").innerHTML = "";
-          readerInstance.clear();
-          statusDiv.innerText = "Scanner gestoppt.";
-          scanBtn.disabled = false;
-          stopBtn.disabled = true;
-        }).catch(err => {
-          statusDiv.innerText = "Konnte Scanner nicht stoppen.";
+    function stopScan() {
+      if (qrScanner) {
+        qrScanner.stop().then(() => {
+          qrScanner.clear();
+          document.getElementById("scanStatus").innerText = "Scan gestoppt.";
         });
       }
     }
 
+    // Initiale Darstellung
     aktualisiereKategorienDropdown();
     renderListe();
-  </script></body>
+    setTimeout(starteScanner, 1000);
+  </script>
+</body>
 </html>
