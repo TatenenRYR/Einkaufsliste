@@ -3,41 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lokale Einkaufsliste mit QR-Sync & Icons</title>
+  <title>Moderne Einkaufsliste mit QR-Sync</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
+    :root {
+      --primary: #4CAF50;
+      --accent: #f1f1f1;
+      --text: #333;
+    }
     body {
-      font-family: Arial, sans-serif;
-      margin: 1rem;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 1rem;
       background: #f9f9f9;
+      color: var(--text);
     }
     h1, h3 {
       text-align: center;
     }
-    input, button, select, textarea {
+    input, button, select {
       width: 100%;
-      padding: 0.5rem;
-      margin: 0.3rem 0;
-      box-sizing: border-box;
+      padding: 0.7rem;
+      margin-top: 0.4rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
     }
     button {
-      background-color: #4CAF50;
+      background-color: var(--primary);
       color: white;
       border: none;
-      cursor: pointer;
+      transition: 0.3s ease;
     }
     button:hover {
       background-color: #45a049;
     }
     ul {
-      list-style-type: none;
+      list-style: none;
       padding: 0;
+      margin-top: 1rem;
     }
     li {
-      padding: 0.6rem;
-      border-bottom: 1px solid #ccc;
+      background: white;
+      margin: 0.5rem 0;
+      padding: 0.8rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -45,11 +58,6 @@
     }
     .aktionen button {
       margin-left: 0.3rem;
-    }
-    .kategorie {
-      font-style: italic;
-      font-size: 0.9rem;
-      color: #666;
     }
     .produkt-info {
       display: flex;
@@ -61,31 +69,36 @@
       font-size: 1.4rem;
       color: #333;
     }
+    .kategorie {
+      display: block;
+      font-style: italic;
+      font-size: 0.85rem;
+      color: #666;
+    }
     .erledigt {
       text-decoration: line-through;
       opacity: 0.5;
     }
-    .meldung {
-      background: #fff3cd;
-      color: #856404;
-      padding: 0.5rem;
-      border: 1px solid #ffeeba;
-      margin-top: 0.5rem;
-      border-radius: 4px;
-      text-align: center;
-    }
-    #qrCodeCanvas {
-      margin-top: 1rem;
-      text-align: center;
+    #qrCodeCanvas, #reader {
+      display: none;
+      margin: 1rem auto;
       padding: 1rem;
       background: white;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      max-width: 300px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    .meldung {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-size: 0.95rem;
+      color: #777;
     }
   </style>
 </head>
 <body>
   <h1>Einkaufsliste</h1>
+
   <input type="text" id="produktInput" placeholder="Produktname...">
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <input type="text" id="marktInput" placeholder="Markt (optional)">
@@ -99,18 +112,18 @@
   <ul id="liste"></ul>
 
   <hr>
-  <h3>QR-Code teilen</h3>
-  <button onclick="zeigeQR()">QR-Code generieren</button>
+  <h3>Liste teilen / scannen</h3>
+  <button onclick="zeigeQR()">QR-Code anzeigen</button>
   <div id="qrCodeCanvas"></div>
 
-  <h3>QR-Code einscannen</h3>
-  <div id="reader" style="width:300px; margin:auto;"></div>
-  <button onclick="stopScan()">Scan stoppen</button>
+  <button id="scanButton" onclick="toggleScanner()">QR-Code scannen</button>
+  <div id="reader"></div>
   <div id="scanStatus" class="meldung"></div>
 
   <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
     let qrScanner;
+    let scannerAktiv = false;
 
     function speichereProdukte() {
       localStorage.setItem("produkte", JSON.stringify(produkte));
@@ -168,7 +181,7 @@
         const li = document.createElement("li");
         li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
           <i class="bi ${p.icon}"></i>
-          <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
+          <span><strong>${p.name}</strong> (${p.menge})<span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
         </span>
         <span class='aktionen'>
           <button onclick="aendereMenge(${p.id},1)">+</button>
@@ -204,12 +217,13 @@
     function zeigeQR() {
       const div = document.getElementById("qrCodeCanvas");
       div.innerHTML = '';
+      div.style.display = "block";
       const canvas = document.createElement('canvas');
       div.appendChild(canvas);
       window.QRCode.toCanvas(canvas, JSON.stringify(produkte), {
         width: 256,
         errorCorrectionLevel: 'H'
-      }, (err) => {
+      }, err => {
         if (err) {
           console.error(err);
           div.innerText = "QR-Code konnte nicht erstellt werden.";
@@ -217,50 +231,50 @@
       });
     }
 
-    function starteScanner() {
+    function toggleScanner() {
+      const reader = document.getElementById("reader");
       const status = document.getElementById("scanStatus");
-      qrScanner = new Html5Qrcode("reader");
+      const btn = document.getElementById("scanButton");
 
-      qrScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        qrCodeMessage => {
-          try {
-            const daten = JSON.parse(qrCodeMessage);
-            if (Array.isArray(daten)) {
-              produkte = daten;
-              speichereProdukte();
-              aktualisiereKategorienDropdown();
-              renderListe();
-              status.innerText = "Liste erfolgreich importiert.";
-              stopScan();
-            } else {
-              status.innerText = "Ungültiges Format.";
+      if (!scannerAktiv) {
+        reader.style.display = "block";
+        status.innerText = "Scanner aktiv...";
+        btn.innerText = "Scanner stoppen";
+        qrScanner = new Html5Qrcode("reader");
+        qrScanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: 250 },
+          qrCodeMessage => {
+            try {
+              const daten = JSON.parse(qrCodeMessage);
+              if (Array.isArray(daten)) {
+                produkte = daten;
+                speichereProdukte();
+                aktualisiereKategorienDropdown();
+                renderListe();
+                status.innerText = "Liste erfolgreich importiert.";
+                toggleScanner(); // scanner stoppen
+              } else {
+                status.innerText = "Ungültiges Format.";
+              }
+            } catch (e) {
+              status.innerText = "Fehler beim Einlesen.";
             }
-          } catch (e) {
-            status.innerText = "Fehler beim Einlesen.";
-            console.error(e);
           }
-        },
-        err => {}
-      ).catch(err => {
-        console.error(err);
-        status.innerText = "Kamera konnte nicht gestartet werden.";
-      });
-    }
-
-    function stopScan() {
-      if (qrScanner) {
+        ).then(() => scannerAktiv = true);
+      } else {
         qrScanner.stop().then(() => {
+          reader.style.display = "none";
           qrScanner.clear();
-          document.getElementById("scanStatus").innerText = "Scan gestoppt.";
+          scannerAktiv = false;
+          status.innerText = "Scanner gestoppt.";
+          btn.innerText = "QR-Code scannen";
         });
       }
     }
 
     aktualisiereKategorienDropdown();
     renderListe();
-    setTimeout(starteScanner, 1000);
   </script>
 </body>
 </html>
