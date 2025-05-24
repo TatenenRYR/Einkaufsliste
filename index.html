@@ -1,50 +1,202 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <title>QR-Code Test</title>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Moderne Einkaufsliste mit QR & Barcode</title>
+  <!-- QR-Code Scanner -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <!-- Barcode Scanner -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <style>
+    :root {
+      --primary: #3498db;
+      --accent-bg: #f4f6f8;
+      --text: #333;
+      --sidebar-bg: #fff;
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 2rem;
-      background: #f0f0f0;
+      margin: 0; padding: 2rem;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--accent-bg);
+      color: var(--text);
     }
-    #qrCodeCanvas {
-      margin-top: 2rem;
-      padding: 1rem;
-      background: white;
-      display: inline-block;
+    h1 { text-align: center; margin-bottom: 1.5rem; }
+    input, button {
+      width: 100%; padding: 0.7rem;
+      margin: 0.5rem 0;
+      font-size: 1rem;
       border: 1px solid #ccc;
-      border-radius: 10px;
+      border-radius: 8px;
     }
+    button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: #2980b9; }
+    ul { list-style: none; padding: 0; margin: 1rem 0; }
+    li {
+      background: #fff;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    li .kategorie { font-style: italic; color: #666; font-size: 0.85rem; }
+    .qr-container, .barcode-section {
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      margin: 1rem 0;
+    }
+    .qr-container h2, .barcode-section h2 { margin-top: 0; }
+    canvas { display: block; margin: 1rem auto; }
+    #reader, #barcodeScanner { margin: 1rem auto; width: 300px; }
+    #produktSidebar {
+      display: none;
+      position: fixed; top: 0; right: 0;
+      width: 300px; height: 100%;
+      background: var(--sidebar-bg);
+      border-left: 2px solid #ccc;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+      padding: 1rem; overflow-y: auto;
+      z-index: 1000;
+    }
+    #produktSidebar h3 { margin-top: 0; }
+    #produktVorschau img { max-width: 100%; border-radius: 8px; }
+    #toggleScannerBtn.off { background: #e74c3c; }
+    .meldung { text-align: center; color: #777; margin-top: 0.5rem; }
   </style>
 </head>
-<body>
-  <h1>QR-Code Test</h1>
-  <button onclick="zeigeQR()">QR-Code anzeigen</button>
-  <div id="qrCodeCanvas"></div>
+<body>  <h1>Moderne Einkaufsliste</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
+  <input type="text" id="mengeInput" placeholder="Menge (z.B. 1 Stück)">
+  <button onclick="hinzufuegen()">Hinzufügen</button>  <ul id="liste"></ul>  <div class="qr-container">
+    <h2>QR-Code</h2>
+    <button onclick="zeigeQR()">QR-Code generieren</button>
+    <canvas id="qrCanvas" width="256" height="256"></canvas>
+  </div>  <div class="barcode-section">
+    <h2>Barcode scannen</h2>
+    <button id="toggleScannerBtn" class="toggle-button" onclick="toggleBarcodeScanner()">Scanner starten</button>
+    <div id="barcodeScanner" style="display:none;height:200px;"></div>
+    <div id="barcodeStatus" class="meldung"></div>
+  </div>  <!-- Seitenleiste für Produktvorschau -->  <aside id="produktSidebar">
+    <h3>Produktvorschau</h3>
+    <div id="produktVorschau"></div>
+    <button onclick="uebernehmeProdukt()">Übernehmen</button>
+    <button onclick="schliesseSidebar()" style="background:#ddd;color:#333;">Abbrechen</button>
+  </aside>  <script>
+    // Datenstruktur
+    let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
 
-  <script>
-    function zeigeQR() {
-      const div = document.getElementById("qrCodeCanvas");
-      div.innerHTML = '';
-      const canvas = document.createElement('canvas');
-      div.appendChild(canvas);
+    function speichereProdukte() {
+      localStorage.setItem("produkte", JSON.stringify(produkte));
+    }
 
-      const daten = [{ name: "Milch", menge: "2 Stück", kategorie: "Milchprodukte" }];
-
-      QRCode.toCanvas(canvas, JSON.stringify(daten), {
-        width: 256,
-        errorCorrectionLevel: 'H'
-      }, function (error) {
-        if (error) {
-          console.error("Fehler beim Generieren des QR-Codes:", error);
-          div.innerHTML = "QR-Code konnte nicht erzeugt werden.";
-        }
+    function renderListe() {
+      const ul = document.getElementById("liste"); ul.innerHTML = '';
+      produkte.forEach(p => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span><strong>${p.name}</strong> (${p.menge})<br><span class="kategorie">${p.kategorie}</span></span>`;
+        ul.appendChild(li);
       });
     }
-  </script>
-</body>
+
+    function hinzufuegen() {
+      const name = document.getElementById('produktInput').value.trim();
+      const menge = document.getElementById('mengeInput').value.trim();
+      if (!name || !menge) return;
+      produkte.push({ name, menge, kategorie: '-' });
+      speichereProdukte(); renderListe();
+      document.getElementById('produktInput').value = '';
+      document.getElementById('mengeInput').value = '';
+    }
+
+    // QR-Code offline mit QRious (Beispielbibliothek eingebettet)
+    function generateQR(text, canvas) {
+      const qr = new QRious({ element: canvas, value: text, size:256, level:'H' });
+    }
+    class QRious {
+      constructor(opts) {
+        this.el = opts.element; this.val=opts.value; this.size=opts.size;
+        this.qr=new window.qrcode(0,'H'); this.qr.addData(this.val); this.qr.make(); this.draw();
+      }
+      draw() {
+        const ctx=this.el.getContext('2d'), c=this.size, m=this.qr.getModuleCount();
+        const w=c/m;
+        this.el.width=this.el.height=c;
+        ctx.fillStyle='#fff'; ctx.fillRect(0,0,c,c);
+        ctx.fillStyle='#000';
+        for(let r=0;r<m;r++) for(let q=0;q<m;q++) if(this.qr.isDark(r,q)) ctx.fillRect(q*w, r*w, w, w);
+      }
+    }
+
+    function zeigeQR() {
+      const canvas=document.getElementById('qrCanvas');
+      try { generateQR(JSON.stringify(produkte), canvas); }
+      catch(e){ console.error(e); }
+    }
+
+    // Barcode-Scanner mit QuaggaJS
+    let barcodeAktiv=false, vorgemerktProdukt=null;
+    function toggleBarcodeScanner() {
+      const btn=document.getElementById('toggleScannerBtn');
+      const container=document.getElementById('barcodeScanner');
+      const status=document.getElementById('barcodeStatus');
+      if(!barcodeAktiv) {
+        Quagga.init({ inputStream:{ type:'LiveStream', target:container, constraints:{ facingMode:'environment'}}, decoder:{ readers:['ean_reader','code_128_reader']}}, err=>{
+          if(err){ status.textContent='Fehler beim Starten'; return; }
+          container.style.display='block'; Quagga.start();
+          barcodeAktiv=true; btn.textContent='Scanner stoppen'; btn.classList.add('off'); status.textContent='Scanner läuft...';
+        });
+        Quagga.onDetected(onBarcodeDetected);
+      } else {
+        Quagga.stop(); container.style.display='none'; barcodeAktiv=false;
+        btn.textContent='Scanner starten'; btn.classList.remove('off'); status.textContent='Scanner gestoppt.';
+      }
+    }
+
+    function onBarcodeDetected(result) {
+      const code=result.codeResult.code;
+      const status=document.getElementById('barcodeStatus');
+      const container=document.getElementById('barcodeScanner');
+      fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`)
+      .then(res=>res.json())
+      .then(data=>{
+        if(data.status===1){
+          const prod=data.product;
+          const name=prod.product_name || 'Unbekannt';
+          const bild=prod.image_front_small_url||'';
+          const marke=prod.brands||'unbekannt';
+          const kategorie=name.includes('Milch')?'Milchprodukte':'Sonstiges';
+          vorgemerktProdukt={ name, menge:'1 Stück', kategorie };
+          document.getElementById('produktVorschau').innerHTML=`
+            ${bild?`<img src="${bild}" alt="${name}"/>`:''}
+            <p><strong>${name}</strong></p>
+            <p>Marke: ${marke}</p>
+            <p>Barcode: ${code}</p>
+          `;
+          document.getElementById('produktSidebar').style.display='block';
+          status.textContent='Produkt erkannt.';
+        } else {
+          status.textContent='Produkt nicht gefunden.';
+        }
+      })
+      .catch(()=>{ status.textContent='Fehler bei Abruf'; })
+      .finally(()=>{ Quagga.stop(); container.style.display='none'; barcodeAktiv=false; document.getElementById('toggleScannerBtn').textContent='Scanner starten'; document.getElementById('toggleScannerBtn').classList.remove('off'); });
+    }
+
+    function uebernehmeProdukt() {
+      if(vorgemerktProdukt){ produkte.push(vorgemerktProdukt); speichereProdukte(); renderListe(); schliesseSidebar(); }
+    }
+    function schliesseSidebar(){ document.getElementById('produktSidebar').style.display='none'; vorgemerktProdukt=null; }
+
+    // Initial
+    renderListe();
+  </script>  <!-- qrcode.js minimal (v1) -->  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script></body>
 </html>
