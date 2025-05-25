@@ -197,6 +197,43 @@
     // Initiale Darstellung
     aktualisiereKategorienDropdown();
     renderListe();
+    let zuletztGeloeschtes = null;
+let undoTimer;
+
+function loescheProdukt(id) {
+  const index = produkte.findIndex(p => p.id === id);
+  if (index > -1) {
+    zuletztGeloeschtes = produkte[index];
+    produkte.splice(index, 1);
+    speichereProdukte();
+    renderListe();
+    zeigeUndoPopup();
+  }
+}
+
+function zeigeUndoPopup() {
+  clearTimeout(undoTimer);
+  const popup = document.getElementById("undoPopup");
+  popup.style.display = "block";
+  undoTimer = setTimeout(() => {
+    popup.style.display = "none";
+    zuletztGeloeschtes = null;
+  }, 5000);
+}
+
+function rueckgaengig() {
+  if (zuletztGeloeschtes) {
+    produkte.push(zuletztGeloeschtes);
+    speichereProdukte();
+    renderListe();
+    zuletztGeloeschtes = null;
+    document.getElementById("undoPopup").style.display = "none";
+  }
+}
   </script>
+  <div id="undoPopup" style="display:none; position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: #e0ffe0; color: #155724; border: 1px solid #c3e6cb; padding: 0.5rem 1rem; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); z-index: 1000;">
+  Produkt gelöscht. <button onclick="rueckgaengig()" style="margin-left: 1rem; background: #28a745; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px;">Rückgängig</button>
+  </div>
 </body>
 </html>
