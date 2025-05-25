@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Einkaufsliste mit Barcode</title>
-  <script src="https://unpkg.com/@zxing/browser@latest"></script>
+  <title>Einkaufsliste</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
     body {
@@ -68,27 +66,6 @@
       text-decoration: line-through;
       opacity: 0.5;
     }
-    .scanner-box {
-      border: 3px solid red;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 200px;
-      height: 200px;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-    #videoContainer {
-      position: relative;
-      width: 100%;
-      max-width: 320px;
-      margin: 0 auto;
-      display: none;
-    }
-    video {
-      width: 100%;
-      border-radius: 8px;
-    }
     .whatsapp-button {
       background: #25d366;
       color: white;
@@ -98,22 +75,10 @@
   </style>
 </head>
 <body>
-  <h1>Einkaufsliste</h1>
-
-  <input type="text" id="produktInput" placeholder="Produktname...">
+  <h1>Einkaufsliste</h1>  <input type="text" id="produktInput" placeholder="Produktname...">
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <input type="text" id="marktInput" placeholder="Markt (optional)">
-  <button onclick="hinzufuegen()">Hinzufügen</button>
-
-  <button onclick="toggleBarcodeScanner()">Barcode scannen</button>
-  <div id="videoContainer">
-    <video id="videoPreview"></video>
-    <div class="scanner-box"></div>
-  </div>
-
-  <ul id="liste"></ul>
-
-  <button class="whatsapp-button" onclick="teilePerWhatsapp()">Auf WhatsApp teilen</button>
+  <button onclick="hinzufuegen()">Hinzufügen</button>  <ul id="liste"></ul><button class="whatsapp-button" onclick="teilePerWhatsapp()">Auf WhatsApp teilen</button>
 
   <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
@@ -125,19 +90,20 @@
 
     function erkenneKategorieUndIcon(name) {
       const n = name.toLowerCase();
-      if (n.includes("cola") || n.includes("bier") || n.includes("wasser")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
-      if (n.includes("apfel") || n.includes("banane")) return { kategorie: "Obst", icon: "bi-apple" };
-      if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
-      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
-      if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
-      if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
-      if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
-      if (n.includes("seife") || n.includes("zahnpasta")) return { kategorie: "Pflege", icon: "bi-heart-pulse" };
+      if (/\b(cola|bier|wasser|saft)\b/.test(n)) return { kategorie: "Getränke", icon: "bi-cup-straw" };
+      if (/\b(apfel|banane|birne|obst)\b/.test(n)) return { kategorie: "Obst", icon: "bi-apple" };
+      if (/\b(gurke|tomate|salat|gemüse)\b/.test(n)) return { kategorie: "Gemüse", icon: "bi-carrot" };
+      if (/\b(eier)\b/.test(n)) return { kategorie: "Eier", icon: "bi-egg" };
+      if (/\b(brot|brötchen|backwaren)\b/.test(n)) return { kategorie: "Backwaren", icon: "bi-basket" };
+      if (/\b(milch|joghurt|quark|butter)\b/.test(n)) return { kategorie: "Milchprodukte", icon: "bi-box" };
+      if (/\b(käse)\b/.test(n)) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
+      if (/\b(fleisch|wurst|schnitzel)\b/.test(n)) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
+      if (/\b(seife|zahnpasta|shampoo|pflege)\b/.test(n)) return { kategorie: "Pflege", icon: "bi-heart-pulse" };
       return { kategorie: "Sonstiges", icon: "bi-bag" };
     }
 
-    function hinzufuegen(nameManuell = null) {
-      const name = nameManuell || document.getElementById("produktInput").value.trim();
+    function hinzufuegen() {
+      const name = document.getElementById("produktInput").value.trim();
       const mengeInput = document.getElementById("mengeInput").value.trim() || "1 Stück";
       const markt = document.getElementById("marktInput").value.trim();
 
@@ -149,11 +115,9 @@
 
       speichereProdukte();
       renderListe();
-      if (!nameManuell) {
-        document.getElementById("produktInput").value = '';
-        document.getElementById("mengeInput").value = '';
-        document.getElementById("marktInput").value = '';
-      }
+      document.getElementById("produktInput").value = '';
+      document.getElementById("mengeInput").value = '';
+      document.getElementById("marktInput").value = '';
     }
 
     function renderListe() {
@@ -202,34 +166,6 @@
       window.open(link, "_blank");
     }
 
-    // Barcode-Scanner
-    let scanner, isScanning = false;
-    async function toggleBarcodeScanner() {
-      const container = document.getElementById("videoContainer");
-      const video = document.getElementById("videoPreview");
-
-      if (isScanning) {
-        await scanner.stop();
-        container.style.display = "none";
-        isScanning = false;
-        return;
-      }
-
-      container.style.display = "block";
-
-      scanner = new ZXing.BrowserBarcodeReader();
-      scanner.decodeFromVideoDevice(null, video, (result, err) => {
-        if (result) {
-          hinzufuegen("Produkt " + result.text);
-          toggleBarcodeScanner(); // automatisch beenden
-        }
-      });
-
-      isScanning = true;
-    }
-
-    // Start
     renderListe();
-  </script>
-</body>
+  </script></body>
 </html>
