@@ -2,55 +2,154 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Einkaufsliste mit Barcode Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Einkaufsliste mit Barcode-Scan</title>
+  <script type="module" src="https://unpkg.com/@zxing/browser@latest"></script>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 1rem; background: #f0fff0; color: #2f4f2f; }
-    h1, h3 { text-align: center; }
-    input, button, select { width: 100%; padding: 0.5rem; margin: 0.3rem 0; box-sizing: border-box; font-size: 1rem; border-radius: 6px; border: 1px solid #4CAF50; }
-    button { background-color: #4CAF50; color: white; border: none; cursor: pointer; transition: background-color 0.3s ease; }
-    button:hover { background-color: #45a049; }
-    ul { list-style-type: none; padding: 0; margin-top: 1rem; }
-    li { padding: 0.6rem; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-    .aktionen button { margin-left: 0.3rem; font-weight: bold; }
-    .produkt-info { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; flex-grow: 1; }
-    .produkt-info i { font-size: 1.4rem; color: #2f4f2f; }
-    .erledigt { text-decoration: line-through; opacity: 0.5; }
-    #video { width: 100%; max-width: 320px; margin: 1rem auto; display: none; border-radius: 8px; border: 2px solid #4CAF50; }
-    #toggleScannerBtn { max-width: 320px; margin: 0 auto 1rem auto; display: block; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f1fdf4;
+      margin: 1rem;
+      color: #333;
+    }
+
+    h1, h3 {
+      text-align: center;
+      color: #2d7a46;
+    }
+
+    input, button, select {
+      width: 100%;
+      padding: 0.6rem;
+      margin: 0.4rem 0;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    li {
+      padding: 0.8rem;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      background: white;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+
+    .aktionen button {
+      margin-left: 0.3rem;
+    }
+
+    .kategorie {
+      font-style: italic;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .produkt-info {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+    }
+
+    .produkt-info i {
+      font-size: 1.4rem;
+      color: #2d7a46;
+    }
+
+    .erledigt {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    .meldung {
+      background: #fff3cd;
+      color: #856404;
+      padding: 0.5rem;
+      border: 1px solid #ffeeba;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+
+    #scannerContainer {
+      position: relative;
+      max-width: 100%;
+      margin: 1rem auto;
+      display: none;
+    }
+
+    #video {
+      width: 100%;
+      border-radius: 8px;
+    }
+
+    #canvasOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    #toggleScannerBtn {
+      background-color: #007bff;
+    }
+
+    #toggleScannerBtn:hover {
+      background-color: #0056b3;
+    }
   </style>
 </head>
 <body>
-
   <h1>Einkaufsliste</h1>
-
-  <!-- Barcode Scanner Start/Stop Button -->
-  <button id="toggleScannerBtn">Scanner starten</button>
-  <video id="video" muted></video>
-
-  <input type="text" id="produktInput" placeholder="Produktname..." />
-  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)" />
-  <input type="text" id="marktInput" placeholder="Markt (optional)" />
+  <input type="text" id="produktInput" placeholder="Produktname...">
+  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
+  <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button>
 
-  <label for="sortKategorie">Nach Kategorie sortieren:</label>
-  <select id="sortKategorie" onchange="renderListe()">
-    <option value="">Keine Sortierung</option>
-  </select>
+  <button id="toggleScannerBtn" onclick="toggleScanner()">Scanner starten</button>
+  <div id="scannerContainer">
+    <video id="video" muted></video>
+    <canvas id="canvasOverlay"></canvas>
+  </div>
 
   <ul id="liste"></ul>
 
-  <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
-  <script>
-    // Produktliste laden/speichern
+  <script type="module">
+    import { BrowserMultiFormatReader } from 'https://unpkg.com/@zxing/browser@latest';
+
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
+    const codeReader = new BrowserMultiFormatReader();
+    const videoElement = document.getElementById("video");
+    const canvas = document.getElementById("canvasOverlay");
+    const context = canvas.getContext("2d");
+    let scannerActive = false;
 
     function speichereProdukte() {
       localStorage.setItem("produkte", JSON.stringify(produkte));
     }
 
-    // Kategorie & Icon erkennen
     function erkenneKategorieUndIcon(name) {
       const n = name.toLowerCase();
       if (n.includes("cola") || n.includes("wasser") || n.includes("saft") || n.includes("bier")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
@@ -64,93 +163,56 @@
       return { kategorie: "Sonstiges", icon: "bi-bag" };
     }
 
-    // Menge default auf 1, falls leer
-    function korrigiereMenge(menge) {
-      return menge.trim() === '' ? '1 Stück' : menge.trim();
-    }
-
-    // Produkt hinzufügen
-    function hinzufuegen(name, menge, markt) {
+    function hinzufuegen(name = null, menge = null, markt = "") {
       name = name || document.getElementById("produktInput").value.trim();
-      menge = korrigiereMenge(menge || document.getElementById("mengeInput").value);
+      menge = menge || document.getElementById("mengeInput").value.trim();
       markt = markt || document.getElementById("marktInput").value.trim();
 
       if (!name) return;
+      if (!menge) menge = "1 Stück";
 
       const { kategorie, icon } = erkenneKategorieUndIcon(name);
       const id = Date.now();
       produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
-
       speichereProdukte();
-      aktualisiereKategorienDropdown();
       renderListe();
 
-      // Inputs leeren
       document.getElementById("produktInput").value = '';
       document.getElementById("mengeInput").value = '';
       document.getElementById("marktInput").value = '';
     }
 
-    // Kategorien Dropdown aktualisieren
-    function aktualisiereKategorienDropdown() {
-      const katSet = new Set(produkte.map(p => p.kategorie));
-      const sortKategorie = document.getElementById("sortKategorie");
-      sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
-      katSet.forEach(k => {
-        if (k) {
-          const opt = document.createElement("option");
-          opt.value = k;
-          opt.textContent = k;
-          sortKategorie.appendChild(opt);
-        }
-      });
-    }
-
-    // Liste rendern
     function renderListe() {
-      const kat = document.getElementById("sortKategorie").value;
       const ul = document.getElementById("liste");
       ul.innerHTML = '';
-      const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
-      gefiltert.forEach(p => {
+      produkte.forEach(p => {
         const li = document.createElement("li");
-        li.innerHTML = `
-          <span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
-            <i class="bi ${p.icon}"></i>
-            <span><strong>${p.name}</strong> (${p.menge})<br><span style="font-style: italic; font-size: 0.9rem; color: #666;">
-              ${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
-          </span>
-          <span class="aktionen">
-            <button onclick="aendereMenge(event, ${p.id}, 1)">+</button>
-            <button onclick="aendereMenge(event, ${p.id}, -1)">-</button>
-          </span>
-        `;
+        li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
+          <i class="bi ${p.icon}"></i>
+          <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
+        </span>
+        <span class='aktionen'>
+          <button onclick="aendereMenge(${p.id},1)">+</button>
+          <button onclick="aendereMenge(${p.id},-1)">-</button>
+        </span>`;
         ul.appendChild(li);
       });
     }
 
-    // Menge ändern
-    function aendereMenge(event, id, delta) {
-      event.stopPropagation();
+    function aendereMenge(id, delta) {
       const p = produkte.find(p => p.id === id);
-      if (!p) return;
-
-      const match = p.menge.match(/(\d+)(.*)/);
+      const match = p.menge.match(/(\d+)(\s*[^\d]*)/);
       if (match) {
         let zahl = parseInt(match[1]);
-        const rest = match[2];
+        const einheit = match[2];
         zahl += delta;
-        if (zahl <= 0) {
-          produkte = produkte.filter(pr => pr.id !== id);
-        } else {
-          p.menge = `${zahl}${rest}`;
-        }
+        if (zahl <= 0) produkte = produkte.filter(p => p.id !== id);
+        else p.menge = `${zahl}${einheit}`.trim();
         speichereProdukte();
         renderListe();
       }
     }
 
-    // Produkt als erledigt markieren / entmarkieren
     function toggleErledigt(id) {
       const p = produkte.find(p => p.id === id);
       if (p) {
@@ -160,64 +222,61 @@
       }
     }
 
-    // Barcode Scanner Setup
-    const ZXing = window.ZXing;
-    const formats = [
-      ZXing.BarcodeFormat.EAN_13,
-      ZXing.BarcodeFormat.EAN_8,
-      ZXing.BarcodeFormat.UPC_A,
-      ZXing.BarcodeFormat.UPC_E,
-      ZXing.BarcodeFormat.CODE_128,
-      ZXing.BarcodeFormat.CODE_39,
-      ZXing.BarcodeFormat.CODE_93,
-      ZXing.BarcodeFormat.ITF
-    ];
-    const hints = new Map();
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-    const codeReader = new ZXing.BrowserMultiFormatReader(hints);
-
-    const videoElement = document.getElementById('video');
-    const toggleScannerBtn = document.getElementById('toggleScannerBtn');
-    let scannerActive = false;
-
-    toggleScannerBtn.addEventListener('click', () => {
+    function toggleScanner() {
       if (scannerActive) {
         codeReader.reset();
         videoElement.style.display = 'none';
-        toggleScannerBtn.textContent = 'Scanner starten';
+        canvas.style.display = 'none';
+        document.getElementById("scannerContainer").style.display = "none";
+        document.getElementById("toggleScannerBtn").textContent = "Scanner starten";
         scannerActive = false;
       } else {
-        startScanner();
-      }
-    });
+        canvas.width = videoElement.clientWidth;
+        canvas.height = videoElement.clientHeight;
+        document.getElementById("scannerContainer").style.display = "block";
+        videoElement.style.display = 'block';
+        canvas.style.display = 'block';
+        document.getElementById("toggleScannerBtn").textContent = "Scanner stoppen";
+        scannerActive = true;
 
-    function startScanner() {
-      videoElement.style.display = 'block';
-      codeReader.decodeFromConstraints(
-        {
-          video: { width: 640, height: 480, facingMode: "environment" }
-        },
-        videoElement,
-        (result, err) => {
+        codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
           if (result) {
-            // Gefundener Barcode als Produkt hinzufügen
-            hinzufuegen(result.text, '1 Stück', '');
-            alert("Barcode erkannt: " + result.text + "\nProdukt wurde hinzugefügt.");
+            drawBoundingBox(result.resultPoints);
+            hinzufuegen(result.text, "1 Stück", "");
+            alert("Barcode erkannt: " + result.text);
             codeReader.reset();
-            videoElement.style.display = 'none';
-            toggleScannerBtn.textContent = 'Scanner starten';
-            scannerActive = false;
-          } else if (err && !(err instanceof ZXing.NotFoundException)) {
-            console.error(err);
+            toggleScanner();
+          } else {
+            clearOverlay();
+            if (err && !(err instanceof ZXing.NotFoundException)) {
+              console.error(err);
+            }
           }
-        }
-      );
-      toggleScannerBtn.textContent = 'Scanner stoppen';
-      scannerActive = true;
+        });
+      }
     }
 
-    // Initiale Aktionen
-    aktualisiereKategorienDropdown();
+    function drawBoundingBox(points) {
+      if (!points || points.length < 2) return;
+
+      const scale = videoElement.videoWidth / videoElement.clientWidth;
+      const x = Math.min(...points.map(p => p.x / scale));
+      const y = Math.min(...points.map(p => p.y / scale));
+      const width = Math.max(...points.map(p => p.x / scale)) - x;
+      const height = Math.max(...points.map(p => p.y / scale)) - y;
+
+      canvas.width = videoElement.clientWidth;
+      canvas.height = videoElement.clientHeight;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.strokeStyle = 'red';
+      context.lineWidth = 4;
+      context.strokeRect(x, y, width, height);
+    }
+
+    function clearOverlay() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
     renderListe();
   </script>
 </body>
