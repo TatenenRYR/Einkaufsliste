@@ -1,34 +1,101 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moderne Einkaufsliste</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Einkaufsliste</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
-    body { font-family: Arial, sans-serif; background: #f0fdf4; color: #222; margin: 1rem; }
-    h1, h3 { text-align: center; color: #2e7d32; }
-    input, button, select { width: 100%; padding: 0.5rem; margin: 0.3rem 0; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; }
-    button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-    button:hover { background-color: #388e3c; }
-    ul { list-style-type: none; padding: 0; }
-    li { padding: 0.6rem; margin-bottom: 0.5rem; border: 1px solid #c8e6c9; border-radius: 8px; background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-    .aktionen button { margin-left: 0.3rem; }
-    .kategorie { font-style: italic; font-size: 0.85rem; color: #666; }
-    .produkt-info { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; flex: 1; }
-    .produkt-info i { font-size: 1.4rem; color: #388e3c; }
-    .erledigt { text-decoration: line-through; opacity: 0.5; }
-    .meldung { background: #fff3cd; color: #856404; padding: 0.5rem; border: 1px solid #ffeeba; margin-top: 0.5rem; border-radius: 4px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 1rem;
+      background: #f0fdf4;
+      color: #1a3e2f;
+    }
+    h1, h3 {
+      text-align: center;
+      color: #2d6a4f;
+    }
+    input, button, select {
+      width: 100%;
+      padding: 0.6rem;
+      margin: 0.3rem 0;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #40916c;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2d6a4f;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: white;
+      margin: 0.3rem 0;
+      padding: 0.6rem;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #d0f0e2;
+    }
+    .aktionen button {
+      margin-left: 0.3rem;
+      background: #74c69d;
+    }
+    .aktionen button:hover {
+      background: #52b788;
+    }
+    .kategorie {
+      font-style: italic;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    .produkt-info {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+      flex: 1;
+    }
+    .produkt-info i {
+      font-size: 1.4rem;
+      color: #40916c;
+    }
+    .erledigt {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
-  <h1>Einkaufsliste</h1>
-  <input type="text" id="produktInput" placeholder="Produktname...">
-  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Flaschen)">
-  <input type="text" id="marktInput" placeholder="Markt (optional)">
-  <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
-  <ul id="liste"></ul>  <h3>Teilen</h3>
-  <button onclick="teilePerWhatsApp()">Liste über WhatsApp teilen</button>  <script>
+  <h1>Einkaufsliste</h1>
+
+  <input type="text" id="produktInput" placeholder="Produktname...">
+  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
+  <input type="text" id="marktInput" placeholder="Markt (optional)">
+  <button onclick="hinzufuegen()">Hinzufügen</button>
+
+  <label for="sortKategorie">Nach Kategorie sortieren:</label>
+  <select id="sortKategorie" onchange="renderListe()">
+    <option value="">Keine Sortierung</option>
+  </select>
+
+  <ul id="liste"></ul>
+
+  <h3>Liste teilen</h3>
+  <button onclick="teilePerWhatsApp()">Auf WhatsApp teilen</button>
+
+  <script>
     let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
 
     function speichereProdukte() {
@@ -51,24 +118,27 @@
 
     function erkenneKategorieUndIcon(name) {
       const n = name.toLowerCase();
-      if (n.includes("cola") || n.includes("wasser") || n.includes("saft") || n.includes("bier")) return { kategorie: "Getränke", icon: "bi-cup-straw", einheit: "Flasche" };
-      if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple", einheit: "Stück" };
-      if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg", einheit: "Stück" };
-      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket", einheit: "Stück" };
-      if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box", einheit: "Becher" };
-      if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet", einheit: "Stück" };
-      if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried", einheit: "Packung" };
-      if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse", einheit: "Tube" };
-      return { kategorie: "Sonstiges", icon: "bi-bag", einheit: "Stück" };
+      if (n.includes("cola") || n.includes("wasser") || n.includes("saft") || n.includes("bier")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
+      if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
+      if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
+      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
+      if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
+      if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
+      if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
+      if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
+      return { kategorie: "Sonstiges", icon: "bi-bag" };
     }
 
-    function formatiereMenge(anzahl, einheit) {
-      if (anzahl <= 1) return `1 ${einheit}`;
-      // einfache Pluralregel für Deutsch
-      let plural = einheit;
-      if (einheit.endsWith("e")) plural += "n";
-      else plural += "en";
-      return `${anzahl} ${plural}`;
+    function parseMenge(menge) {
+      const match = menge.match(/^(\d+)\s*(.*)?$/);
+      if (match) {
+        return {
+          anzahl: parseInt(match[1]),
+          einheit: match[2] ? match[2].trim() : ""
+        };
+      } else {
+        return { anzahl: 1, einheit: menge.trim() };
+      }
     }
 
     function hinzufuegen() {
@@ -77,16 +147,18 @@
       const markt = marktInput.value.trim();
       if (!name) return;
 
-      const { kategorie, icon, einheit } = erkenneKategorieUndIcon(name);
-
-      // Wenn keine Menge eingetragen, automatisch "1 + Einheit"
-      let anzahl = 1;
-      if (menge) {
-        const match = menge.match(/(\d+)/);
-        if (match) anzahl = parseInt(match[1]);
+      // Automatische Menge ergänzen
+      if (!menge) {
+        if (name.toLowerCase().includes("cola") || name.toLowerCase().includes("bier")) {
+          menge = "1 Flasche";
+        } else if (name.toLowerCase().includes("brot")) {
+          menge = "1 Stück";
+        } else {
+          menge = "1";
+        }
       }
-      menge = formatiereMenge(anzahl, einheit);
 
+      const { kategorie, icon } = erkenneKategorieUndIcon(name);
       const id = Date.now();
       produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
 
@@ -117,13 +189,14 @@
 
     function aendereMenge(id, delta) {
       const p = produkte.find(p => p.id === id);
-      const match = p.menge.match(/(\d+)/);
-      if (match) {
-        let zahl = parseInt(match[1]);
-        const einheit = p.menge.replace(/\d+/g, '').trim();
-        zahl += delta;
-        if (zahl <= 0) produkte = produkte.filter(p => p.id !== id);
-        else p.menge = formatiereMenge(zahl, einheit);
+      if (p) {
+        const { anzahl, einheit } = parseMenge(p.menge);
+        let neueAnzahl = anzahl + delta;
+        if (neueAnzahl <= 0) {
+          produkte = produkte.filter(x => x.id !== id);
+        } else {
+          p.menge = `${neueAnzahl} ${einheit}`.trim();
+        }
         speichereProdukte();
         renderListe();
       }
@@ -139,12 +212,13 @@
     }
 
     function teilePerWhatsApp() {
-      const text = produkte.map(p => `- ${p.name} (${p.menge})`).join("%0A");
-      const link = `https://wa.me/?text=${encodeURIComponent("Meine Einkaufsliste:\n" + text)}`;
-      window.open(link, '_blank');
+      const text = produkte.map(p => `${p.name} (${p.menge})${p.markt ? ' @ ' + p.markt : ''}`).join('\n');
+      const url = `https://wa.me/?text=${encodeURIComponent("Meine Einkaufsliste:\n" + text)}`;
+      window.open(url, '_blank');
     }
 
     aktualisiereKategorienDropdown();
     renderListe();
-  </script></body>
+  </script>
+</body>
 </html>
