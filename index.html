@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -12,113 +11,93 @@
       background: #f1fdf4;
       margin: 1rem;
       color: #333;
-    }
+    }h1, h3 {
+  text-align: center;
+  color: #2d7a46;
+}
 
-    h1, h3 {
-      text-align: center;
-      color: #2d7a46;
-    }
+input, button, select {
+  width: 100%;
+  padding: 0.6rem;
+  margin: 0.4rem 0;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
 
-    input, button, select {
-      width: 100%;
-      padding: 0.6rem;
-      margin: 0.4rem 0;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
 
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
+button:hover {
+  background-color: #45a049;
+}
 
-    button:hover {
-      background-color: #45a049;
-    }
+ul {
+  list-style-type: none;
+  padding: 0;
+}
 
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
+li {
+  padding: 0.8rem;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
 
-    li {
-      padding: 0.8rem;
-      border-bottom: 1px solid #ddd;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      background: white;
-      border-radius: 6px;
-      margin-bottom: 0.5rem;
-    }
+.aktionen button {
+  margin-left: 0.3rem;
+}
 
-    .aktionen button {
-      margin-left: 0.3rem;
-    }
+.kategorie {
+  font-style: italic;
+  font-size: 0.85rem;
+  color: #666;
+}
 
-    .kategorie {
-      font-style: italic;
-      font-size: 0.85rem;
-      color: #666;
-    }
+.produkt-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
 
-    .produkt-info {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      cursor: pointer;
-    }
+.produkt-info i {
+  font-size: 1.4rem;
+  color: #2d7a46;
+}
 
-    .produkt-info i {
-      font-size: 1.4rem;
-      color: #2d7a46;
-    }
+.erledigt {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
 
-    .erledigt {
-      text-decoration: line-through;
-      opacity: 0.6;
-    }
+#scannerContainer {
+  display: none;
+  position: relative;
+}
 
-    .meldung {
-      background: #fff3cd;
-      color: #856404;
-      padding: 0.5rem;
-      border: 1px solid #ffeeba;
-      border-radius: 4px;
-      margin-top: 0.5rem;
-    }
+#video {
+  width: 100%;
+  border-radius: 8px;
+}
 
-    #scannerContainer {
-      position: relative;
-      max-width: 100%;
-      margin: 1rem auto;
-      display: none;
-    }
+#canvasOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+}
 
-    #video {
-      width: 100%;
-      border-radius: 8px;
-    }
-
-    #canvasOverlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    #toggleScannerBtn {
-      background-color: #007bff;
-    }
-
-    #toggleScannerBtn:hover {
-      background-color: #0056b3;
-    }
   </style>
 </head>
 <body>
@@ -127,157 +106,128 @@
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button>
-
-  <button id="toggleScannerBtn" onclick="toggleScanner()">Scanner starten</button>
-  <div id="scannerContainer">
-    <video id="video" muted></video>
+  <button onclick="toggleScanner()">Barcode scannen</button>  <div id="scannerContainer">
+    <video id="video" muted autoplay></video>
     <canvas id="canvasOverlay"></canvas>
-  </div>
+  </div>  <ul id="liste"></ul>  <script type="module">
+    import { BrowserMultiFormatReader, NotFoundException } from 'https://unpkg.com/@zxing/browser@latest';
 
-  <ul id="liste"></ul>
-
-  <script type="module">
-    import { BrowserMultiFormatReader } from 'https://unpkg.com/@zxing/browser@latest';
-
-    let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
+    let produkte = JSON.parse(localStorage.getItem("produkte") || "[]");
     const codeReader = new BrowserMultiFormatReader();
-    const videoElement = document.getElementById("video");
+    const video = document.getElementById("video");
     const canvas = document.getElementById("canvasOverlay");
-    const context = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
     let scannerActive = false;
 
-    function speichereProdukte() {
+    function speichere() {
       localStorage.setItem("produkte", JSON.stringify(produkte));
     }
 
-    function erkenneKategorieUndIcon(name) {
-      const n = name.toLowerCase();
-      if (n.includes("cola") || n.includes("wasser") || n.includes("saft") || n.includes("bier")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
-      if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
-      if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
-      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
-      if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
-      if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
-      if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
-      if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
-      return { kategorie: "Sonstiges", icon: "bi-bag" };
+    function render() {
+      const liste = document.getElementById("liste");
+      liste.innerHTML = "";
+      produkte.forEach(p => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
+            <i class="bi bi-cart"></i>
+            <span><strong>${p.name}</strong> (${p.menge})<br><span class="kategorie">${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
+          </span>
+          <span class="aktionen">
+            <button onclick="aendereMenge(${p.id},1)">+</button>
+            <button onclick="aendereMenge(${p.id},-1)">-</button>
+          </span>`;
+        liste.appendChild(li);
+      });
     }
 
-    function hinzufuegen(name = null, menge = null, markt = "") {
+    window.toggleErledigt = function(id) {
+      const eintrag = produkte.find(e => e.id === id);
+      if (eintrag) {
+        eintrag.erledigt = !eintrag.erledigt;
+        speichere();
+        render();
+      }
+    }
+
+    window.aendereMenge = function(id, delta) {
+      const eintrag = produkte.find(e => e.id === id);
+      if (!eintrag) return;
+      const match = eintrag.menge.match(/(\d+)(\D*)/);
+      if (!match) return;
+      let anzahl = parseInt(match[1]) + delta;
+      if (anzahl < 1) {
+        produkte = produkte.filter(e => e.id !== id);
+      } else {
+        eintrag.menge = anzahl + match[2];
+      }
+      speichere();
+      render();
+    }
+
+    window.hinzufuegen = function(name = null, menge = null, markt = null) {
       name = name || document.getElementById("produktInput").value.trim();
-      menge = menge || document.getElementById("mengeInput").value.trim();
+      menge = menge || document.getElementById("mengeInput").value.trim() || "1 Stück";
       markt = markt || document.getElementById("marktInput").value.trim();
-
       if (!name) return;
-      if (!menge) menge = "1 Stück";
-
-      const { kategorie, icon } = erkenneKategorieUndIcon(name);
-      const id = Date.now();
-      produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
-      speichereProdukte();
-      renderListe();
-
+      const kategorie = erkenneKategorie(name);
+      produkte.push({ id: Date.now(), name, menge, markt, kategorie, erledigt: false });
+      speichere();
+      render();
       document.getElementById("produktInput").value = '';
       document.getElementById("mengeInput").value = '';
       document.getElementById("marktInput").value = '';
     }
 
-    function renderListe() {
-      const ul = document.getElementById("liste");
-      ul.innerHTML = '';
-      produkte.forEach(p => {
-        const li = document.createElement("li");
-        li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
-          <i class="bi ${p.icon}"></i>
-          <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
-        </span>
-        <span class='aktionen'>
-          <button onclick="aendereMenge(${p.id},1)">+</button>
-          <button onclick="aendereMenge(${p.id},-1)">-</button>
-        </span>`;
-        ul.appendChild(li);
-      });
+    function erkenneKategorie(text) {
+      const t = text.toLowerCase();
+      if (t.includes("cola") || t.includes("wasser") || t.includes("bier")) return "Getränke";
+      if (t.includes("brot")) return "Backwaren";
+      if (t.includes("käse") || t.includes("milch")) return "Milchprodukte";
+      return "Sonstiges";
     }
 
-    function aendereMenge(id, delta) {
-      const p = produkte.find(p => p.id === id);
-      const match = p.menge.match(/(\d+)(\s*[^\d]*)/);
-      if (match) {
-        let zahl = parseInt(match[1]);
-        const einheit = match[2];
-        zahl += delta;
-        if (zahl <= 0) produkte = produkte.filter(p => p.id !== id);
-        else p.menge = `${zahl}${einheit}`.trim();
-        speichereProdukte();
-        renderListe();
-      }
-    }
-
-    function toggleErledigt(id) {
-      const p = produkte.find(p => p.id === id);
-      if (p) {
-        p.erledigt = !p.erledigt;
-        speichereProdukte();
-        renderListe();
-      }
-    }
-
-    function toggleScanner() {
+    window.toggleScanner = async function() {
+      const container = document.getElementById("scannerContainer");
       if (scannerActive) {
         codeReader.reset();
-        videoElement.style.display = 'none';
-        canvas.style.display = 'none';
-        document.getElementById("scannerContainer").style.display = "none";
-        document.getElementById("toggleScannerBtn").textContent = "Scanner starten";
+        container.style.display = "none";
         scannerActive = false;
-      } else {
-        canvas.width = videoElement.clientWidth;
-        canvas.height = videoElement.clientHeight;
-        document.getElementById("scannerContainer").style.display = "block";
-        videoElement.style.display = 'block';
-        canvas.style.display = 'block';
-        document.getElementById("toggleScannerBtn").textContent = "Scanner stoppen";
-        scannerActive = true;
-
-        codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
-          if (result) {
-            drawBoundingBox(result.resultPoints);
-            hinzufuegen(result.text, "1 Stück", "");
-            alert("Barcode erkannt: " + result.text);
-            codeReader.reset();
-            toggleScanner();
-          } else {
-            clearOverlay();
-            if (err && !(err instanceof ZXing.NotFoundException)) {
-              console.error(err);
-            }
-          }
-        });
+        return;
       }
+
+      container.style.display = "block";
+      canvas.width = video.clientWidth;
+      canvas.height = video.clientHeight;
+
+      codeReader.decodeFromVideoDevice(null, video, (result, err) => {
+        if (result) {
+          zeichneBox(result.resultPoints);
+          hinzufuegen(result.text);
+          alert("Gefunden: " + result.text);
+          toggleScanner();
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      });
+
+      scannerActive = true;
     }
 
-    function drawBoundingBox(points) {
-      if (!points || points.length < 2) return;
-
-      const scale = videoElement.videoWidth / videoElement.clientWidth;
-      const x = Math.min(...points.map(p => p.x / scale));
-      const y = Math.min(...points.map(p => p.y / scale));
-      const width = Math.max(...points.map(p => p.x / scale)) - x;
-      const height = Math.max(...points.map(p => p.y / scale)) - y;
-
-      canvas.width = videoElement.clientWidth;
-      canvas.height = videoElement.clientHeight;
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.strokeStyle = 'red';
-      context.lineWidth = 4;
-      context.strokeRect(x, y, width, height);
+    function zeichneBox(punkte) {
+      if (!punkte || punkte.length < 2) return;
+      const xs = punkte.map(p => p.x);
+      const ys = punkte.map(p => p.y);
+      const x = Math.min(...xs);
+      const y = Math.min(...ys);
+      const w = Math.max(...xs) - x;
+      const h = Math.max(...ys) - y;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x, y, w, h);
     }
 
-    function clearOverlay() {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    renderListe();
-  </script>
-</body>
+    render();
+  </script></body>
 </html>
