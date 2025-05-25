@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Einkaufsliste mit WhatsApp-Teilen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Einkaufsliste mit Barcode-Scanner</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
     body {
@@ -13,7 +13,7 @@
       background: #f0f7f3;
       color: #2f4f2f;
     }
-    h1, h3 {
+    h1 {
       text-align: center;
       color: #2f4f2f;
     }
@@ -102,14 +102,31 @@
       margin: 1rem 0;
       font-size: 1.1rem;
     }
+    #barcodeScannerContainer {
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    #video {
+      width: 100%;
+      max-height: 300px;
+      border-radius: 8px;
+      background: #000;
+      display: none;
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
-  <h1>Einkaufsliste</h1>
+  <h1>Einkaufsliste mit Barcode-Scanner</h1>
 
-  <input type="text" id="produktInput" placeholder="Produktname...">
-  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück, optional)">
-  <input type="text" id="marktInput" placeholder="Markt (optional)">
+  <div id="barcodeScannerContainer">
+    <button id="toggleScannerBtn">Scanner starten</button><br/>
+    <video id="video" muted></video>
+  </div>
+
+  <input type="text" id="produktInput" placeholder="Produktname..." />
+  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück, optional)" />
+  <input type="text" id="marktInput" placeholder="Markt (optional)" />
 
   <button onclick="hinzufuegen()">Hinzufügen</button>
 
@@ -122,166 +139,181 @@
 
   <ul id="liste"></ul>
 
-  <script>
-    let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
+<script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
+<script>
+  let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
 
-    function speichereProdukte() {
-      localStorage.setItem("produkte", JSON.stringify(produkte));
+  // Barcode Scanner Variablen
+  const codeReader = new ZXing.BrowserMultiFormatReader();
+  const videoElement = document.getElementById('video');
+  const toggleScannerBtn = document.getElementById('toggleScannerBtn');
+  let scannerActive = false;
+
+  toggleScannerBtn.addEventListener('click', () => {
+    if (scannerActive) {
+      codeReader.reset();
+      videoElement.style.display = 'none';
+      toggleScannerBtn.textContent = 'Scanner starten';
+      scannerActive = false;
+    } else {
+      startScanner();
     }
+  });
 
-    function aktualisiereKategorienDropdown() {
-      const katSet = new Set(produkte.map(p => p.kategorie));
-      const sortKategorie = document.getElementById("sortKategorie");
-      sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
-      katSet.forEach(k => {
-        if (k) {
-          const opt = document.createElement("option");
-          opt.value = k;
-          opt.textContent = k;
-          sortKategorie.appendChild(opt);
-        }
-      });
-    }
-
-    function erkenneKategorieUndIcon(name) {
-      const n = name.toLowerCase();
-      if (n.includes("cola") || n.includes("wasser") || n.includes("saft") || n.includes("bier")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
-      if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
-      if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
-      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
-      if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
-      if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
-      if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
-      if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
-      return { kategorie: "Sonstiges", icon: "bi-bag" };
-    }
-
-    function standardisiereMenge(mengeRaw) {
-      let menge = mengeRaw.trim();
-      if (!menge) return "1 Stück";
-
-      const match = menge.match(/^(\d+)\s*(\w*)$/);
-      if (match) {
-        let zahl = parseInt(match[1]);
-        let einheit = match[2] || "Stück";
-
-        // Einheit vereinfachen und normalisieren (optional)
-        const einheitMap = {
-          stück: "Stück",
-          stueck: "Stück",
-          flasche: "Flasche",
-          dose: "Dose",
-          packung: "Packung",
-          beutel: "Beutel",
-          glas: "Glas",
-          sachet: "Sachet"
-        };
-        let einheitLower = einheit.toLowerCase();
-        if (einheitMap[einheitLower]) einheit = einheitMap[einheitLower];
-
-        return `${zahl} ${einheit}`;
+  function startScanner() {
+    videoElement.style.display = 'block';
+    codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+      if (result) {
+        console.log('Barcode erkannt:', result.text);
+        codeReader.reset();
+        videoElement.style.display = 'none';
+        toggleScannerBtn.textContent = 'Scanner starten';
+        scannerActive = false;
+        barcodeErkannt(result.text);
       }
-      return menge; // falls freier Text ohne Zahl, einfach zurückgeben
-    }
-
-    function hinzufuegen() {
-      const name = document.getElementById("produktInput").value.trim();
-      let menge = document.getElementById("mengeInput").value.trim();
-      const markt = document.getElementById("marktInput").value.trim();
-
-      if (!name) return alert("Bitte Produktname eingeben.");
-      menge = standardisiereMenge(menge);
-
-      const { kategorie, icon } = erkenneKategorieUndIcon(name);
-      const id = Date.now();
-      produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
-
-      speichereProdukte();
-      document.getElementById("produktInput").value = '';
-      document.getElementById("mengeInput").value = '';
-      document.getElementById("marktInput").value = '';
-      aktualisiereKategorienDropdown();
-      renderListe();
-    }
-
-    function renderListe() {
-      const kat = document.getElementById("sortKategorie").value;
-      const ul = document.getElementById("liste");
-      ul.innerHTML = '';
-      const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
-      gefiltert.forEach(p => {
-        const li = document.createElement("li");
-        li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
-          <i class="bi ${p.icon}"></i>
-          <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
-        </span>
-        <span class='aktionen'>
-          <button onclick="event.stopPropagation(); aendereMenge(${p.id},1)">+</button>
-          <button onclick="event.stopPropagation(); aendereMenge(${p.id},-1)">-</button>
-        </span>`;
-        ul.appendChild(li);
-      });
-    }
-
-    function aendereMenge(id, delta) {
-      const p = produkte.find(p => p.id === id);
-      if (!p) return;
-
-      const match = p.menge.match(/^(\d+)\s*(\w*)$/);
-      let zahl, einheit;
-      if (match) {
-        zahl = parseInt(match[1]);
-        einheit = match[2];
-      } else {
-        zahl = 1;
-        einheit = 'Stück';
+      if (err && !(err instanceof ZXing.NotFoundException)) {
+        console.error(err);
       }
+    });
+    toggleScannerBtn.textContent = 'Scanner stoppen';
+    scannerActive = true;
+  }
 
-      zahl += delta;
-      if (zahl <= 0) {
-        produkte = produkte.filter(x => x.id !== id);
-      } else {
-        // Pluralbildung
-        let plural = einheit;
-        if (zahl === 1) {
-          plural = einheit;
-        } else {
-          if (einheit.toLowerCase() === 'stück') plural = 'Stücke';
-          else if (einheit.toLowerCase() === 'flasche') plural = 'Flaschen';
-          else if (einheit.toLowerCase() === 'dose') plural = 'Dosen';
-          else plural = einheit + 'n';
-        }
-        p.menge = `${zahl} ${plural}`;
+  function barcodeErkannt(code) {
+    // Optional: hier kannst du Produkte anhand Barcode in Datenbank / Map nachschlagen
+    // Für Demo: Barcode direkt als Produktname setzen + Menge "1 Stück"
+    document.getElementById('produktInput').value = code;
+    document.getElementById('mengeInput').value = '1 Stück';
+    document.getElementById('produktInput').focus();
+  }
+
+  // Hilfsfunktionen
+
+  function speichereProdukte() {
+    localStorage.setItem("produkte", JSON.stringify(produkte));
+  }
+
+  function aktualisiereKategorienDropdown() {
+    const katSet = new Set(produkte.map(p => p.kategorie));
+    const sortKategorie = document.getElementById("sortKategorie");
+    sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
+    katSet.forEach(k => {
+      if (k) {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = k;
+        sortKategorie.appendChild(opt);
       }
-      speichereProdukte();
-      renderListe();
-    }
+    });
+  }
 
-    function toggleErledigt(id) {
-      const p = produkte.find(p => p.id === id);
-      if (p) {
-        p.erledigt = !p.erledigt;
-        speichereProdukte();
-        renderListe();
-      }
-    }
+  function erkenneKategorieUndIcon(name) {
+    const n = name.toLowerCase();
+    if (n.includes("cola") || n.includes("wasser") || n.includes("saft") || n.includes("bier")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
+    if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
+    if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
+    if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
+    if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
+    if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
+    if (n.includes("fleisch") || n.includes("wurst")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
+    if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
+    return { kategorie: "Sonstiges", icon: "bi-bag" };
+  }
 
-    function teileWhatsApp() {
-      if (produkte.length === 0) {
-        alert("Die Einkaufsliste ist leer.");
-        return;
-      }
-      const text = produkte.map(p => {
-        return `- ${p.name} (${p.menge}${p.markt ? ', ' + p.markt : ''})`;
-      }).join('\n');
+  function standardisiereMenge(mengeRaw) {
+    let menge = mengeRaw.trim();
+    if (!menge) return "1 Stück";
+    return menge; // keine Mehrzahl-Logik mehr
+  }
 
-      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent("Meine Einkaufsliste:\n" + text)}`;
-      window.open(url, '_blank');
-    }
+  function hinzufuegen() {
+    const name = document.getElementById("produktInput").value.trim();
+    let menge = document.getElementById("mengeInput").value.trim();
+    const markt = document.getElementById("marktInput").value.trim();
 
-    // Initial laden
+    if (!name) return alert("Bitte Produktname eingeben.");
+    menge = standardisiereMenge(menge);
+
+    const { kategorie, icon } = erkenneKategorieUndIcon(name);
+    const id = Date.now();
+    produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
+
+    speichereProdukte();
+    document.getElementById("produktInput").value = '';
+    document.getElementById("mengeInput").value = '';
+    document.getElementById("marktInput").value = '';
     aktualisiereKategorienDropdown();
     renderListe();
-  </script>
+  }
+
+  function renderListe() {
+    const kat = document.getElementById("sortKategorie").value;
+    const ul = document.getElementById("liste");
+    ul.innerHTML = '';
+    const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
+    gefiltert.forEach(p => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
+        <i class="bi ${p.icon}"></i>
+        <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
+      </span>
+      <span class='aktionen'>
+        <button onclick="event.stopPropagation(); aendereMenge(${p.id},1)">+</button>
+        <button onclick="event.stopPropagation(); aendereMenge(${p.id},-1)">-</button>
+      </span>`;
+      ul.appendChild(li);
+    });
+  }
+
+  function aendereMenge(id, delta) {
+    const p = produkte.find(p => p.id === id);
+    if (!p) return;
+
+    const match = p.menge.match(/^(\d+)\s*(.*)$/);
+    let zahl, rest;
+    if (match) {
+      zahl = parseInt(match[1]);
+      rest = match[2];
+    } else {
+      zahl = 1;
+      rest = 'Stück';
+    }
+
+    zahl += delta;
+    if (zahl <= 0) {
+      produkte = produkte.filter(x => x.id !== id);
+    } else {
+      p.menge = `${zahl} ${rest}`;
+    }
+    speichereProdukte();
+    renderListe();
+  }
+
+  function toggleErledigt(id) {
+    const p = produkte.find(p => p.id === id);
+    if (p) {
+      p.erledigt = !p.erledigt;
+      speichereProdukte();
+      renderListe();
+    }
+  }
+
+  function teileWhatsApp() {
+    if (produkte.length === 0) {
+      alert("Die Einkaufsliste ist leer.");
+      return;
+    }
+    const text = produkte.map(p => {
+      return `- ${p.name} (${p.menge}${p.markt ? ', ' + p.markt : ''})`;
+    }).join('\n');
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent("Meine Einkaufsliste:\n" + text)}`;
+    window.open(url, '_blank');
+  }
+
+  // Initial laden
+  aktualisiereKategorienDropdown();
+  renderListe();
+</script>
 </body>
 </html>
