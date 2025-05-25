@@ -2,29 +2,88 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Einkaufsliste</title>
+  <title>Moderne Einkaufsliste mit QR-Code & Barcode-Scan</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 2rem;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #4CAF50;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    input, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 0.75rem;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #qrCodeCanvas canvas {
+      display: block;
+      margin: auto;
+    }
+    #reader {
+      margin-top: 1rem;
+    }
+  </style>
 </head>
 <body>
-  <h1>Einkaufsliste</h1>
-  <input id="produktInput" type="text" placeholder="Produktname">
-  <input id="mengeInput" type="text" placeholder="Menge">
-  <button onclick="addProdukt()">Hinzufügen</button>
-  <ul id="liste"></ul><button onclick="zeigeQR()">QR-Code anzeigen</button>
+  <div class="container">
+    <h1>Einkaufsliste</h1>
+    <input id="produktInput" type="text" placeholder="Produktname">
+    <input id="mengeInput" type="text" placeholder="Menge">
+    <button onclick="hinzufuegen()">Hinzufügen</button><ul id="liste"></ul>
 
-  <div id="qrCodeCanvas"></div><button onclick="toggleScanner()">Barcode Scanner Start/Stopp</button>
+<button onclick="zeigeQR()">QR-Code anzeigen</button>
+<div id="qrCodeCanvas"></div>
 
-  <div id="reader" style="width: 300px;"></div>  <script>
-    let produkte = [];
+<button onclick="toggleScanner()">Barcode Scanner Start/Stopp</button>
+<div id="reader" style="width: 100%;"></div>
 
-    function addProdukt() {
-      const name = document.getElementById("produktInput").value;
-      const menge = document.getElementById("mengeInput").value;
-      if (!name || !menge) return;
-      produkte.push({ name, menge });
-      renderListe();
+  </div>  <script>
+    let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
+    let qrScanner;
+    let scannerRunning = false;
+
+    function speichereProdukte() {
+      localStorage.setItem("produkte", JSON.stringify(produkte));
     }
 
     function renderListe() {
@@ -37,19 +96,35 @@
       });
     }
 
+    function hinzufuegen() {
+      const name = document.getElementById("produktInput").value.trim();
+      const menge = document.getElementById("mengeInput").value.trim();
+      if (!name || !menge) return;
+      produkte.push({ name, menge });
+      speichereProdukte();
+      document.getElementById("produktInput").value = '';
+      document.getElementById("mengeInput").value = '';
+      renderListe();
+    }
+
     function zeigeQR() {
+      const canvasDiv = document.getElementById("qrCodeCanvas");
+      canvasDiv.innerHTML = '';
       const canvas = document.createElement("canvas");
-      document.getElementById("qrCodeCanvas").innerHTML = '';
-      document.getElementById("qrCodeCanvas").appendChild(canvas);
-      QRCode.toCanvas(canvas, JSON.stringify(produkte), { width: 256 }, (error) => {
-        if (error) console.error(error);
+      canvasDiv.appendChild(canvas);
+      QRCode.toCanvas(canvas, JSON.stringify(produkte), {
+        width: 256,
+        errorCorrectionLevel: 'H'
+      }, err => {
+        if (err) {
+          console.error(err);
+          canvasDiv.innerText = "QR-Code konnte nicht erstellt werden.";
+        }
       });
     }
 
-    let qrScanner;
-    let scannerRunning = false;
-
     function toggleScanner() {
+      const reader = document.getElementById("reader");
       if (scannerRunning) {
         qrScanner.stop().then(() => {
           qrScanner.clear();
@@ -60,18 +135,28 @@
         qrScanner.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: 250 },
-          (decodedText, decodedResult) => {
-            alert("Gescannt: " + decodedText);
+          text => {
+            try {
+              const obj = JSON.parse(text);
+              if (Array.isArray(obj)) {
+                produkte = obj;
+                speichereProdukte();
+                renderListe();
+                alert("Produkte erfolgreich importiert.");
+              }
+            } catch (e) {
+              alert("Ungültiger QR-Code-Inhalt.");
+            }
           },
-          (errorMessage) => {
-            console.warn(errorMessage);
+          err => {
+            console.warn("Scanfehler:", err);
           }
-        ).then(() => {
-          scannerRunning = true;
-        }).catch(err => {
-          console.error("Kamera konnte nicht gestartet werden.", err);
-        });
+        ).then(() => scannerRunning = true)
+        .catch(err => console.error("Kamera konnte nicht gestartet werden:", err));
       }
     }
+
+    // Initialer Aufbau
+    renderListe();
   </script></body>
 </html>
