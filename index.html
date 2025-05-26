@@ -6,40 +6,25 @@
   <title>Einkaufsliste</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <h1>Einkaufsliste</h1>
+  <input type="text" id="produktInput" placeholder="Produktname..." />
+  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2)" />
+  <input type="text" id="marktInput" placeholder="Markt (optional)" />
+  <button id="btnHinzufuegen">Hinzufügen</button>
 
-  <div class="input-group">
-    <input type="text" id="produktInput" placeholder="Produktname..." />
-    <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)" />
-    <input type="text" id="marktInput" placeholder="Markt (optional)" />
-    <button id="btnHinzufuegen">Hinzufügen</button>
-  </div>
-
-  <div class="sort-controls">
-    <label for="sortKategorie">Nach Kategorie filtern:</label>
-    <select id="sortKategorie">
-      <option value="">Alle Kategorien</option>
-    </select>
-
-    <label for="marktSortToggle" class="markt-toggle-label">
-      <input type="checkbox" id="marktSortToggle" />
-      Nach Markt gruppieren
-    </label>
-  </div>
+  <label for="sortKategorie">Nach Kategorie filtern:</label>
+  <select id="sortKategorie">
+    <option value="">Alle Kategorien</option>
+  </select>
 
   <ul id="liste"></ul>
 
   <button id="btnTeilen">Per WhatsApp teilen</button>
 
-  <div id="undoPopup" class="undo-popup">
-    <span>Produkt gelöscht.</span>
-    <button id="btnUndo">Rückgängig</button>
-  </div>
-
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
