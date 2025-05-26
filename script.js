@@ -164,3 +164,54 @@ db.collection("einkaufslisten").doc(LISTEN_ID).onSnapshot(doc => {
     renderListe();
   }
 });
+
+function aendereMenge(id, delta) {
+  const p = produkte.find(p => p.id === id);
+  if (!p) return;
+
+  // Menge als Zahl extrahieren (z.B. "2 Stück" -> 2)
+  const match = p.menge.match(/(\d+)/);
+  let zahl = match ? parseInt(match[1]) : 1;
+
+  zahl += delta;
+
+  if (zahl <= 0) {
+    // Produkt löschen und für Undo speichern
+    zuletztGeloescht = {...p}; // klonen, damit später zurück
+    produkte = produkte.filter(prod => prod.id !== id);
+    speichereProdukte();
+    renderListe();
+    zeigeUndo();
+  } else {
+    // Menge aktualisieren (immer mit " Stück" als Einheit)
+    p.menge = zahl + " Stück";
+    speichereProdukte();
+    renderListe();
+  }
+}
+
+function zeigeUndo() {
+  const popup = document.getElementById("undoPopup");
+  popup.style.display = "block";
+
+  // Popup nach 5 Sekunden automatisch ausblenden und Undo verwerfen
+  if (window.undoTimeout) clearTimeout(window.undoTimeout);
+  window.undoTimeout = setTimeout(() => {
+    popup.style.display = "none";
+    zuletztGeloescht = null;
+  }, 5000);
+}
+
+function undoLoeschen() {
+  if (!zuletztGeloescht) return;
+
+  produkte.push(zuletztGeloescht);
+  zuletztGeloescht = null;
+  speichereProdukte();
+  renderListe();
+
+  const popup = document.getElementById("undoPopup");
+  popup.style.display = "none";
+
+  if (window.undoTimeout) clearTimeout(window.undoTimeout);
+}
