@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einkaufsliste</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 1rem; background: #f9f9f9; }
     h1, h3 { text-align: center; }
@@ -35,20 +37,48 @@
   </select>
 
   <ul id="liste"></ul>
-
   <button onclick="teileListe()">Per WhatsApp teilen</button>
-
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
     <button onclick="undoLoeschen()">Rückgängig</button>
   </div>
 
   <script>
-    let produkte = JSON.parse(localStorage.getItem("produkte")) || [];
+    
+
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
+  authDomain: "einkaufliste-cd5d3.firebaseapp.com",
+  projectId: "einkaufliste-cd5d3",
+  storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
+  messagingSenderId: "36721747923",
+  appId: "1:36721747923:web:dbe48ff974c80435eff126",
+  measurementId: "G-37TDK0257N"
+};
+
+
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const params = new URLSearchParams(window.location.search);
+    const LISTEN_ID = params.get("liste") || "standardliste";
+
+    let produkte = [];
     let zuletztGeloescht = null;
 
+    db.collection("einkaufslisten").doc(LISTEN_ID)
+      .onSnapshot((doc) => {
+        if (doc.exists) {
+          produkte = doc.data().produkte || [];
+          aktualisiereKategorienDropdown();
+          renderListe();
+        }
+      });
+
     function speichereProdukte() {
-      localStorage.setItem("produkte", JSON.stringify(produkte));
+      db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
     }
 
     function erkenneKategorieUndIcon(name) {
@@ -80,8 +110,6 @@
 
       speichereProdukte();
       produktInput.value = mengeInput.value = marktInput.value = '';
-      aktualisiereKategorienDropdown();
-      renderListe();
     }
 
     function aktualisiereKategorienDropdown() {
@@ -132,7 +160,6 @@
           p.menge = `${zahl}${einheit}`.trim();
         }
         speichereProdukte();
-        renderListe();
       }
     }
 
@@ -141,7 +168,6 @@
       if (p) {
         p.erledigt = !p.erledigt;
         speichereProdukte();
-        renderListe();
       }
     }
 
@@ -155,7 +181,6 @@
       if (zuletztGeloescht) {
         produkte.push(zuletztGeloescht);
         speichereProdukte();
-        renderListe();
         zuletztGeloescht = null;
         document.getElementById("undoPopup").style.display = "none";
       }
@@ -166,9 +191,6 @@
       const link = `https://wa.me/?text=${text}`;
       window.open(link, '_blank');
     }
-
-    aktualisiereKategorienDropdown();
-    renderListe();
   </script>
 </body>
 </html>
