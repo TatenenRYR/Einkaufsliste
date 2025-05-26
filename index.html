@@ -1,170 +1,93 @@
 <!DOCTYPE html><html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einkaufsliste</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #e8f5e9;
+      background-color: #f1fdf3;
+      color: #333;
       margin: 0;
-      padding: 1rem;
-    }
-    h1 {
-      text-align: center;
-      color: #2e7d32;
-    }
-    .input-area {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    input {
-      flex: 1;
-      padding: 0.5rem;
-    }
-    button {
-      padding: 0.5rem;
-      background-color: #66bb6a;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    ul {
-      list-style: none;
       padding: 0;
     }
-    li {
-      background: white;
-      margin-bottom: 0.5rem;
-      padding: 0.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-left: 5px solid #66bb6a;
-    }
-    li.done {
-      text-decoration: line-through;
-      opacity: 0.6;
-    }
-    .category {
-      font-size: 0.8rem;
-      color: #555;
-    }
-    .toast {
-      position: fixed;
-      bottom: 1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #424242;
+    header {
+      background-color: #4caf50;
       color: white;
       padding: 1rem;
-      border-radius: 0.3rem;
+      text-align: center;
+    }
+    #liste {
+      padding: 1rem;
+    }
+    .item {
+      padding: 0.5rem;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+    }
+    .item.strikethrough span {
+      text-decoration: line-through;
+      color: gray;
+    }
+    #eingabe {
+      display: flex;
+      gap: 0.5rem;
+      padding: 1rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+    #rueckgängigPopup {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #444;
+      color: white;
+      padding: 1rem;
+      border-radius: 5px;
       display: none;
     }
   </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
-  <h1>Einkaufsliste</h1>
-  <div class="input-area">
-    <input id="itemInput" type="text" placeholder="Produktname und Menge (z. B. Brot 1 Stück)">
-    <button onclick="addItem()">Hinzufügen</button>
-    <button onclick="shareList()">WhatsApp teilen</button>
-  </div>
-  <ul id="itemList"></ul>
-  <div class="toast" id="toast"></div>  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-
+  <header>
+    <h1>Einkaufsliste</h1>
+  </header>  <div id="eingabe">
+    <input type="text" id="neuesProdukt" placeholder="Produktname..." />
+    <button onclick="hinzufuegen()">Hinzufügen</button>
+    <button onclick="teileListe()">WhatsApp</button>
+  </div>  <div id="liste"></div>
+  <div id="rueckgängigPopup"></div>  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
       authDomain: "einkaufliste-cd5d3.firebaseapp.com",
       projectId: "einkaufliste-cd5d3",
-      storageBucket: "einkaufliste-cd5d3.app.com",
+      storageBucket: "einkaufliste-cd5d3.appspot.com",
       messagingSenderId: "36721747923",
       appId: "1:36721747923:web:dbe48ff974c80435eff126",
       measurementId: "G-37TDK0257N"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const listRef = collection(db, "items");
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const listeRef = db.collection("produkte");
 
-    const categoryMap = {
-      "brot": "Backwaren",
-      "milch": "Molkerei",
-      "käse": "Molkerei",
-      "butter": "Molkerei",
-      "apfel": "Obst",
-      "banane": "Obst",
-      "hackfleisch": "Fleisch",
-      "fleisch": "Fleisch",
-      "salat": "Gemüse",
-      "gurke": "Gemüse",
-      "tomate": "Gemüse",
-      "aufschnitt": "Aufschnitt"
-    };
+    let geloeschtesItem = null;
 
-    const itemList = document.getElementById("itemList");
-    const toast = document.getElementById("toast");
-
-    function showToast(message, undoCallback) {
-      toast.innerHTML = `${message} <button onclick="(${undoCallback})();">Rückgängig</button>`;
-      toast.style.display = "block";
-      setTimeout(() => toast.style.display = "none", 5000);
-    }
-
-    async function addItem() {
-      const input = document.getElementById("itemInput");
-      let text = input.value.trim();
-      if (!text) return;
-      let [name, menge, einheit] = parseItem(text);
-      let category = findCategory(name);
-
-      await addDoc(listRef, { name, menge, einheit, category });
-      input.value = "";
-    }
-
-    function parseItem(text) {
-      const parts = text.split(" ");
-      if (parts.length >= 3 && !isNaN(parts[parts.length - 2])) {
-        return [parts.slice(0, -2).join(" "), parseInt(parts[parts.length - 2]), parts[parts.length - 1]];
-      } else {
-        return [text, 1, "Stück"];
-      }
-    }
-
-    function findCategory(name) {
-      const lower = name.toLowerCase();
-      for (const key in categoryMap) {
-        if (lower.includes(key)) return categoryMap[key];
-      }
-      return "Sonstiges";
-    }
-
-    async function deleteItem(id, itemData) {
-      await deleteDoc(doc(db, "items", id));
-      showToast("Gelöscht:", async () => {
-        await addDoc(listRef, itemData);
-      });
-    }
-
-    function shareList() {
-      const items = Array.from(itemList.querySelectorAll("li")).map(li => li.textContent.split("Kategorie:")[0].trim());
-      const msg = encodeURIComponent("Meine Einkaufsliste:\n" + items.join("\n"));
-      window.open(`https://wa.me/?text=${msg}`);
-    }
-
-    onSnapshot(listRef, (snapshot) => {
-      itemList.innerHTML = "";
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        const li = document.createElement("li");
-        li.innerHTML = `<span>${data.name} ${data.menge} ${data.einheit}<div class="category">Kategorie: ${data.category}</div></span>`;
-        li.onclick = () => li.classList.toggle("done");
-        li.ondblclick = () => deleteItem(docSnap.id, data);
-        itemList.appendChild(li);
-      });
-    });
-  </script></body>
-</html>
+    function holeListe() {
+      listeRef.orderBy("zeit", "asc").onSnapshot(snapshot => {
+        const liste = document.get
