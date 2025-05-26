@@ -63,7 +63,7 @@ const firebaseConfig = {
     const db = firebase.firestore();
 
     const params = new URLSearchParams(window.location.search);
-    const LISTEN_ID = params.get("liste") || "standardliste";
+    const LISTEN_ID = params.get("list") ||  params.get("liste") || "standardliste";
 
     let produkte = [];
     let zuletztGeloescht = null;
