@@ -1,93 +1,67 @@
+// Hauptdatei: index.html
+
 <!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einkaufsliste</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f1fdf3;
-      color: #333;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background-color: #4caf50;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
-    #liste {
-      padding: 1rem;
-    }
-    .item {
-      padding: 0.5rem;
-      border-bottom: 1px solid #ddd;
-      display: flex;
-      justify-content: space-between;
-    }
-    .item.strikethrough span {
-      text-decoration: line-through;
-      color: gray;
-    }
-    #eingabe {
-      display: flex;
-      gap: 0.5rem;
-      padding: 1rem;
-    }
-    input[type="text"] {
-      flex: 1;
-      padding: 0.5rem;
-      font-size: 1rem;
-    }
-    button {
-      background-color: #4caf50;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-    }
-    #rueckgängigPopup {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #444;
-      color: white;
-      padding: 1rem;
-      border-radius: 5px;
-      display: none;
-    }
-  </style>
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module" src="app.js" defer></script>
 </head>
 <body>
-  <header>
+  <div class="container">
     <h1>Einkaufsliste</h1>
-  </header>  <div id="eingabe">
-    <input type="text" id="neuesProdukt" placeholder="Produktname..." />
-    <button onclick="hinzufuegen()">Hinzufügen</button>
-    <button onclick="teileListe()">WhatsApp</button>
-  </div>  <div id="liste"></div>
-  <div id="rueckgängigPopup"></div>  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
-      authDomain: "einkaufliste-cd5d3.firebaseapp.com",
-      projectId: "einkaufliste-cd5d3",
-      storageBucket: "einkaufliste-cd5d3.appspot.com",
-      messagingSenderId: "36721747923",
-      appId: "1:36721747923:web:dbe48ff974c80435eff126",
-      measurementId: "G-37TDK0257N"
-    };
+    <form id="product-form">
+      <input id="product-name" type="text" placeholder="Produktname" required />
+      <input id="product-amount" type="text" placeholder="Menge (optional)" />
+      <button type="submit">Hinzufügen</button>
+    </form>
+    <ul id="product-list"></ul>
+    <button id="share-btn">Auf WhatsApp teilen</button>
+  </div>  <div id="undo-popup" class="hidden">
+    <span>Eintrag gelöscht</span>
+    <button id="undo-btn">Rückgängig</button>
+  </div>
+</body>
+</html>// Datei: style.css
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const listeRef = db.collection("produkte");
+body { font-family: sans-serif; background-color: #f1fdf5; color: #333; margin: 0; padding: 1rem; }
 
-    let geloeschtesItem = null;
+.container { max-width: 500px; margin: auto; background: white; padding: 1rem; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
 
-    function holeListe() {
-      listeRef.orderBy("zeit", "asc").onSnapshot(snapshot => {
-        const liste = document.get
+#product-list li { padding: 0.5rem; display: flex; justify-content: space-between; border-bottom: 1px solid #eee; }
+
+#product-list li.done { text-decoration: line-through; color: gray; }
+
+#undo-popup { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 1rem; border-radius: 5px; display: flex; gap: 1rem; }
+
+.hidden { display: none; }
+
+// Datei: app.js
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"; import { getFirestore, collection, addDoc, getDocs, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+const firebaseConfig = { apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY", authDomain: "einkaufliste-cd5d3.firebaseapp.com", projectId: "einkaufliste-cd5d3", storageBucket: "einkaufliste-cd5d3.appspot.com", messagingSenderId: "36721747923", appId: "1:36721747923:web:dbe48ff974c80435eff126", measurementId: "G-37TDK0257N" };
+
+const app = initializeApp(firebaseConfig); const db = getFirestore(app); const listRef = collection(db, "items");
+
+const form = document.getElementById("product-form"); const list = document.getElementById("product-list"); const undoPopup = document.getElementById("undo-popup"); let lastDeleted = null;
+
+function getCategory(product) { const map = { milch: "Milchprodukte", käse: "Milchprodukte", butter: "Milchprodukte", brot: "Bäckerei", brötchen: "Bäckerei", salat: "Gemüse", tomate: "Gemüse", gurke: "Gemüse", banane: "Obst", apfel: "Obst", hackfleisch: "Fleisch", schinken: "Aufschnitt", salami: "Aufschnitt", cola: "Getränke", wasser: "Getränke", }; for (const key in map) { if (product.toLowerCase().includes(key)) return map[key]; } return "Sonstiges"; }
+
+form.addEventListener("submit", async (e) => { e.preventDefault(); const nameInput = document.getElementById("product-name"); const amountInput = document.getElementById("product-amount");
+
+const name = nameInput.value.trim(); const amount = amountInput.value.trim() || "1";
+
+if (!name) return;
+
+const category = getCategory(name); await addDoc(listRef, { name, amount, category, timestamp: Date.now(), });
+
+nameInput.value = ""; amountInput.value = ""; });
+
+onSnapshot(listRef, (snapshot) => { list.innerHTML = ""; snapshot.docs.forEach((docSnap) => { const item = docSnap.data(); const li = document.createElement("li"); li.textContent = ${item.name} (${item.amount}) [${item.category}]; li.addEventListener("click", () => { li.classList.toggle("done"); }); li.addEventListener("contextmenu", async (e) => { e.preventDefault(); lastDeleted = { id: docSnap.id, data: item }; await deleteDoc(doc(db, "items", docSnap.id)); undoPopup.classList.remove("hidden"); setTimeout(() => undoPopup.classList.add("hidden"), 5000); }); list.appendChild(li); }); });
+
+document.getElementById("undo-btn").addEventListener("click", async () => { if (lastDeleted) { await addDoc(listRef, lastDeleted.data); lastDeleted = null; undoPopup.classList.add("hidden"); } });
+
+document.getElementById("share-btn").addEventListener("click", async () => { const snapshot = await getDocs(listRef); const items = snapshot.docs.map(doc => { const d = doc.data(); return - ${d.name} (${d.amount}); }).join("\n"); const url = https://wa.me/?text=${encodeURIComponent("Meine Einkaufsliste:\n" + items)}; window.open(url, '_blank'); });
+
