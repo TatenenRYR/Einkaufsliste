@@ -35,21 +35,33 @@ document.addEventListener("DOMContentLoaded", () => {
     db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
   }
 
-  function erkenneKategorieUndIcon(name) {
-    const n = name.toLowerCase();
-    if (n.includes("cola") || n.includes("wasser") || n.includes("saft") || n.includes("bier")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
-    if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
-    if (n.includes("salat")) return { kategorie: "Salat", icon: "bi-emoji-smile" };
-    if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
-    if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
-    if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
-    if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
-    if (n.includes("wurst") || n.includes("aufschnitt")) return { kategorie: "Aufschnitt", icon: "bi-list-ul" };
-    if (n.includes("hackfleisch") || n.includes("fleisch")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
-    if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
-    if (n.includes("spülmittel") || n.includes("reiniger")) return { kategorie: "Haushalt", icon: "bi-house" };
-    return { kategorie: "Sonstiges", icon: "bi-bag" };
+
+function erkenneKategorieUndIcon(name) {
+  const n = name.toLowerCase();
+  const kategorien = [
+    { keywords: ["cola", "wasser", "saft", "bier"], kategorie: "Getränke", icon: "bi-cup-straw" },
+    { keywords: ["apfel", "banane", "birne", "orange", "obst"], kategorie: "Obst", icon: "bi-apple" },
+    { keywords: ["salat", "gurke", "tomate"], kategorie: "Gemüse", icon: "bi-emoji-smile" },
+    { keywords: ["eier"], kategorie: "Eier", icon: "bi-egg" },
+    { keywords: ["brot", "brötchen", "toast"], kategorie: "Backwaren", icon: "bi-basket" },
+    { keywords: ["milch", "joghurt", "quark"], kategorie: "Milchprodukte", icon: "bi-box" },
+    { keywords: ["käse"], kategorie: "Milchprodukte", icon: "bi-droplet" },
+    { keywords: ["wurst", "aufschnitt", "salami"], kategorie: "Aufschnitt", icon: "bi-list-ul" },
+    { keywords: ["hackfleisch", "fleisch", "hähnchen"], kategorie: "Fleisch", icon: "bi-egg-fried" },
+    { keywords: ["zahnpasta", "seife", "duschgel"], kategorie: "Körperpflege", icon: "bi-heart-pulse" },
+    { keywords: ["spülmittel", "reiniger", "putz"], kategorie: "Haushalt", icon: "bi-house" },
+    { keywords: ["nudel", "reis", "mehl", "zucker"], kategorie: "Grundnahrungsmittel", icon: "bi-cart" },
+  ];
+
+  for (const eintrag of kategorien) {
+    if (eintrag.keywords.some(k => n.includes(k))) {
+      return { kategorie: eintrag.kategorie, icon: eintrag.icon };
+    }
   }
+
+  return { kategorie: "Sonstiges", icon: "bi-bag" };
+}
+  
 
   window.hinzufuegen = function () {
     const name = produktInput.value.trim();
