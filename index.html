@@ -38,6 +38,8 @@
 
   <ul id="liste"></ul>
   <button onclick="teileListe()">Per WhatsApp teilen</button>
+  <button onclick="teileURL()">Listen-Link kopieren</button>
+<span id="kopierHinweis" class="meldung" style="display: none;">Link kopiert!</span>
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
     <button onclick="undoLoeschen()">Rückgängig</button>
@@ -198,6 +200,14 @@
       const text = produkte.map(p => `• ${p.name} (${p.menge})`).join("%0A");
       const link = `https://wa.me/?text=${text}`;
       window.open(link, '_blank');
+    }
+    function teileURL() {
+  const url = `${location.origin}${location.pathname}?list=${LISTEN_ID}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const hinweis = document.getElementById("kopierHinweis");
+    hinweis.style.display = "inline";
+    setTimeout(() => hinweis.style.display = "none", 3000);
+  });
     }
   </script>
 </body>
