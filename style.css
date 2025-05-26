@@ -1,31 +1,37 @@
 body {
-  font-family: Arial, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f5f7fa;
+  color: #222;
   margin: 1rem;
-  background: #f9f9f9;
-  color: #333;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
 h1 {
   text-align: center;
   margin-bottom: 1rem;
+  font-weight: 700;
 }
 
 .input-group {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  justify-content: center;
   margin-bottom: 1rem;
 }
 
 .input-group input,
 .input-group button {
-  flex: 1 1 150px;
-  padding: 0.6rem 0.8rem;
+  padding: 0.6rem 1rem;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  transition: border-color 0.3s ease;
+  border: 1.5px solid #ccc;
+  border-radius: 6px;
+  transition: border-color 0.25s ease;
+}
+
+.input-group input:focus {
+  border-color: #4caf50;
+  outline: none;
 }
 
 .input-group button {
@@ -33,86 +39,96 @@ h1 {
   color: white;
   border: none;
   cursor: pointer;
-  flex: 0 0 120px;
-  transition: background-color 0.3s ease;
+  flex: 0 0 140px;
+  font-weight: 600;
+  box-shadow: 0 3px 8px rgb(76 175 80 / 0.4);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .input-group button:hover {
-  background-color: #45a049;
+  background-color: #43a047;
+  box-shadow: 0 5px 15px rgb(67 160 71 / 0.6);
 }
 
 .sort-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  margin-bottom: 1rem;
   justify-content: center;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 .sort-controls label {
-  font-weight: 600;
   user-select: none;
+  font-weight: 600;
 }
 
 #sortKategorie {
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   font-size: 1rem;
-  border-radius: 5px;
-  border: 1px solid #ccc;
+  border-radius: 6px;
+  border: 1.5px solid #ccc;
   cursor: pointer;
+  transition: border-color 0.25s ease;
+}
+
+#sortKategorie:focus {
+  border-color: #4caf50;
+  outline: none;
 }
 
 .markt-toggle-label {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
+  gap: 0.3rem;
   font-weight: 500;
-  font-size: 0.9rem;
+  cursor: pointer;
 }
 
 #liste {
-  list-style: none;
-  padding: 0;
   max-width: 600px;
-  margin: 0 auto 1rem auto;
+  margin: 0 auto 2rem auto;
+  padding: 0;
+  list-style: none;
 }
 
 #liste li {
   background: white;
-  margin-bottom: 0.5rem;
-  padding: 0.7rem 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 5px rgb(0 0 0 / 0.05);
+  margin-bottom: 0.6rem;
+  padding: 0.9rem 1.2rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-  transition: background 0.3s ease;
+  gap: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  user-select: none;
 }
 
 #liste li:hover {
-  background: #e6f4ea;
+  background-color: #e9f5ec;
 }
 
 .produkt-info {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  cursor: pointer;
+  gap: 1rem;
   flex-wrap: wrap;
   max-width: 70%;
 }
 
 .produkt-info i {
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   color: #4caf50;
   flex-shrink: 0;
 }
 
 .produkt-info strong {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
 .kategorie {
@@ -128,19 +144,16 @@ h1 {
 }
 
 .aktionen button {
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  color: #555;
-  font-size: 1rem;
-  padding: 0.3rem 0.6rem;
+  background: transparent;
+  border: none;
+  color: #777;
+  font-size: 1.2rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  margin-left: 0.3rem;
+  transition: color 0.3s ease;
 }
 
 .aktionen button:hover {
-  background-color: #ddd;
+  color: #4caf50;
 }
 
 #btnTeilen {
@@ -149,15 +162,18 @@ h1 {
   background-color: #007bff;
   color: white;
   border: none;
-  padding: 0.7rem 1.5rem;
-  border-radius: 8px;
-  font-size: 1rem;
+  padding: 0.75rem 1.8rem;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  box-shadow: 0 3px 10px rgb(0 123 255 / 0.5);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 #btnTeilen:hover {
   background-color: #0056b3;
+  box-shadow: 0 5px 20px rgb(0 86 179 / 0.7);
 }
 
 .undo-popup {
@@ -165,31 +181,31 @@ h1 {
   bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);
-  background: #fff3cd;
-  border: 1px solid #ffeeba;
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
+  background: #fff9c4;
+  border: 1px solid #f0e68c;
+  padding: 1rem 1.8rem;
+  border-radius: 12px;
   display: none;
   align-items: center;
   gap: 1rem;
-  z-index: 1000;
-  box-shadow: 0 0 10px rgb(0 0 0 / 0.1);
+  box-shadow: 0 0 15px rgb(0 0 0 / 0.1);
   font-weight: 600;
+  z-index: 1000;
 }
 
 .undo-popup button {
   background: transparent;
-  border: 1px solid #856404;
-  color: #856404;
-  border-radius: 5px;
-  padding: 0.3rem 0.7rem;
+  border: 1.5px solid #b58900;
+  color: #b58900;
+  border-radius: 6px;
+  padding: 0.4rem 1rem;
   cursor: pointer;
   font-weight: 700;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .undo-popup button:hover {
-  background-color: #856404;
+  background-color: #b58900;
   color: white;
 }
 
@@ -197,14 +213,19 @@ h1 {
 @media (max-width: 600px) {
   .input-group {
     flex-direction: column;
+    align-items: stretch;
   }
+
   .input-group button {
-    flex: 1 1 auto;
+    flex: none;
+    width: 100%;
   }
+
   #liste li {
     flex-direction: column;
     align-items: flex-start;
   }
+
   .produkt-info {
     max-width: 100%;
   }
