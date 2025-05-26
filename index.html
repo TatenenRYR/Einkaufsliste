@@ -1,37 +1,40 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Geteilte Einkaufsliste</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Einkaufsliste</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 1rem; background: #f9f9f9; }
-    h1 { text-align: center; }
-    input, button { width: 100%; padding: 0.5rem; margin: 0.3rem 0; box-sizing: border-box; }
-    button { background: #4CAF50; color: white; border: none; cursor: pointer; }
-    ul { list-style-type: none; padding: 0; }
-    li { padding: 0.5rem; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; }
-    .erledigt { text-decoration: line-through; opacity: 0.5; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 1em;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+    h1 { color: green; }
+    .input-row { display: flex; gap: 1em; margin-bottom: 1em; }
+    .input-row input, .input-row button { padding: 0.5em; font-size: 1em; }
+    ul { list-style: none; padding: 0; }
+    li { background: #fff; padding: 0.5em; margin-bottom: 0.5em; border-radius: 5px; display: flex; justify-content: space-between; }
+    .category { font-size: 0.8em; color: #999; }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
-  <h1>Gemeinsame Einkaufsliste</h1>
-
-  <input type="text" id="produkt" placeholder="Produktname">
-  <input type="text" id="menge" placeholder="Menge (z. B. 2 Stück)">
-  <button onclick="hinzufuegen()">Hinzufügen</button>
-
-  <ul id="liste"></ul>
-
-  <script>
-    // Firebase-Konfiguration
+  <h1>Einkaufsliste</h1>
+  <div class="input-row">
+    <input type="text" id="produktName" placeholder="Produktname">
+    <input type="text" id="produktMenge" placeholder="Menge">
+    <button onclick="hinzufuegen()">Hinzufügen</button>
+  </div>
+  <ul id="liste"></ul>  <script>
+    // Firebase Konfiguration
     const firebaseConfig = {
       apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
       authDomain: "einkaufliste-cd5d3.firebaseapp.com",
       projectId: "einkaufliste-cd5d3",
-      storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
+      storageBucket: "einkaufliste-cd5d3.appspot.com",
       messagingSenderId: "36721747923",
       appId: "1:36721747923:web:dbe48ff974c80435eff126",
       measurementId: "G-37TDK0257N"
@@ -39,72 +42,57 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const listeRef = db.collection("einkaufslisten").doc("standardListe");
 
-    const listId = new URLSearchParams(location.search).get("list") || generateId();
-    const listeRef = db.collection("einkaufslisten").doc(listId);
-
-    if (!location.search.includes("list=")) {
-      history.replaceState(null, "", "?list=" + listId);
+    async function laden() {
+      const doc = await listeRef.get();
+      if (doc.exists) {
+        const daten = doc.data();
+        zeigeListe(daten.eintraege || []);
+      }
     }
 
-    function render(produkte) {
+    function zeigeListe(eintraege) {
       const ul = document.getElementById("liste");
-      ul.innerHTML = '';
-      produkte.forEach(p => {
+      ul.innerHTML = "";
+      eintraege.forEach((eintrag, index) => {
         const li = document.createElement("li");
-        li.className = p.erledigt ? 'erledigt' : '';
-        li.innerHTML = `
-          <span onclick="toggleErledigt('${p.id}')">${p.name} (${p.menge})</span>
-          <button onclick="entferne('${p.id}')">✕</button>
-        `;
+        li.innerHTML = `<span>${eintrag.name} - ${eintrag.menge}</span> <span class='category'>${eintrag.kategorie || "Sonstiges"}</span>`;
         ul.appendChild(li);
       });
     }
 
-    function aktualisiere() {
-      listeRef.onSnapshot(doc => {
-        const daten = doc.data();
-        render(daten?.produkte || []);
-      });
-    }
-
-    function hinzufuegen() {
-      const name = document.getElementById("produkt").value.trim();
-      const menge = document.getElementById("menge").value.trim() || "1 Stück";
+    async function hinzufuegen() {
+      const nameInput = document.getElementById("produktName");
+      const mengeInput = document.getElementById("produktMenge");
+      const name = nameInput.value.trim();
+      const menge = mengeInput.value.trim() || "1";
       if (!name) return;
 
-      listeRef.get().then(doc => {
-        const produkte = doc.exists ? doc.data().produkte : [];
-        produkte.push({ id: Date.now().toString(), name, menge, erledigt: false });
-        listeRef.set({ produkte });
-        document.getElementById("produkt").value = '';
-        document.getElementById("menge").value = '';
-      });
+      const kat = bestimmeKategorie(name);
+      const doc = await listeRef.get();
+      const daten = doc.exists ? doc.data().eintraege || [] : [];
+
+      daten.push({ name, menge, kategorie: kat });
+      await listeRef.set({ eintraege: daten });
+
+      nameInput.value = "";
+      mengeInput.value = "";
+      zeigeListe(daten);
     }
 
-    function entferne(id) {
-      listeRef.get().then(doc => {
-        if (!doc.exists) return;
-        const produkte = doc.data().produkte.filter(p => p.id !== id);
-        listeRef.set({ produkte });
-      });
+    function bestimmeKategorie(name) {
+      const n = name.toLowerCase();
+      if (n.includes("brot") || n.includes("bröt")) return "Backwaren";
+      if (n.includes("milch") || n.includes("joghurt")) return "Milchprodukte";
+      if (n.includes("wurst") || n.includes("schinken") || n.includes("aufschnitt")) return "Aufschnitt";
+      if (n.includes("salat")) return "Salate";
+      if (n.includes("hack") || n.includes("fleisch")) return "Fleisch";
+      if (n.includes("bier") || n.includes("cola") || n.includes("saft")) return "Getränke";
+      if (n.includes("eier")) return "Eier";
+      return "Sonstiges";
     }
 
-    function toggleErledigt(id) {
-      listeRef.get().then(doc => {
-        if (!doc.exists) return;
-        const produkte = doc.data().produkte.map(p =>
-          p.id === id ? { ...p, erledigt: !p.erledigt } : p
-        );
-        listeRef.set({ produkte });
-      });
-    }
-
-    function generateId() {
-      return Math.random().toString(36).substr(2, 9);
-    }
-
-    aktualisiere();
-  </script>
-</body>
+    laden();
+  </script></body>
 </html>
