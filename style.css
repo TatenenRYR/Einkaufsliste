@@ -1,90 +1,36 @@
-body {
-  font-family: Arial, sans-serif;
-  margin: 1rem;
-  background: #f9f9f9;
-}
+body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; color: #333; transition: background 0.3s ease; }
 
-h1, h3 {
-  text-align: center;
-}
+.container { max-width: 600px; margin: 2rem auto; background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); transition: box-shadow 0.3s ease; }
 
-input, button, select {
-  width: 100%;
-  padding: 0.5rem;
-  margin: 0.3rem 0;
-  box-sizing: border-box;
-}
+h1 { text-align: center; margin-bottom: 1.5rem; font-size: 2rem; }
 
-button {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
+.eingabe { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem; margin-bottom: 1rem; }
 
-button:hover {
-  background-color: #45a049;
-}
+input[type="text"] { padding: 0.6rem; border: 1px solid #ccc; border-radius: 0.5rem; transition: border-color 0.3s ease; }
 
-ul {
-  list-style-type: none;
-  padding: 0;
-}
+input[type="text"]:focus { border-color: #4CAF50; outline: none; }
 
-li {
-  padding: 0.6rem;
-  border-bottom: 1px solid #ccc;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-}
+button { background-color: #4CAF50; color: white; border: none; padding: 0.6rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: background 0.3s ease, transform 0.2s ease; }
 
-.aktionen button {
-  margin-left: 0.3rem;
-}
+button:hover { background-color: #45a049; transform: scale(1.05); }
 
-.kategorie {
-  font-style: italic;
-  font-size: 0.9rem;
-  color: #666;
-}
+.filter { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 
-.produkt-info {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  cursor: pointer;
-}
+select { padding: 0.6rem; border-radius: 0.5rem; border: 1px solid #ccc; }
 
-.produkt-info i {
-  font-size: 1.4rem;
-  color: #333;
-}
+ul#liste { list-style: none; padding: 0; margin: 0; }
 
-.erledigt {
-  text-decoration: line-through;
-  opacity: 0.5;
-}
+ul#liste li { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; background: #f9f9f9; border-radius: 0.5rem; margin-bottom: 0.5rem; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease; }
 
-.meldung {
-  background: #fff3cd;
-  color: #856404;
-  padding: 0.5rem;
-  border: 1px solid #ffeeba;
-  margin-top: 0.5rem;
-  border-radius: 4px;
-}
+ul#liste li:hover { transform: translateY(-2px); }
 
-#undoPopup {
-  position: fixed;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #fff3cd;
-  border: 1px solid #ffeeba;
-  padding: 1rem;
-  border-radius: 5px;
-  display: none;
-  z-index: 1000;
-}
+.produkt-info { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+
+.kategorie { font-size: 0.85rem; color: #666; font-style: italic; }
+
+.erledigt { text-decoration: line-through; opacity: 0.5; }
+
+.popup { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: #fff8e1; color: #665c00; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); display: none; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
