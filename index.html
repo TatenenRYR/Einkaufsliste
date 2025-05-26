@@ -1,39 +1,45 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Einkaufsliste</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
   <style>
-    :root {
-      color-scheme: light dark;
-    }
-    body {
-      background-color: Canvas;
-      color: CanvasText;
-    }
+    /* CSS hier, siehe unten */
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Einkaufsliste</h1>
-    <div class="eingabe">
-      <input type="text" id="produktInput" placeholder="Produktname...">
-      <input type="text" id="mengeInput" placeholder="Menge">
-      <input type="text" id="marktInput" placeholder="Markt (optional)">
-      <button onclick="hinzufuegen()">+</button>
-    </div><div class="filter">
-  <label for="sortKategorie">Kategorie:</label>
+  <h1>Einkaufsliste</h1>
+
+  <input type="text" id="produktInput" placeholder="Produktname..." />
+  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)" />
+  <input type="text" id="marktInput" placeholder="Markt (optional)" />
+  <button onclick="hinzufuegen()">Hinzufügen</button>
+
+  <label for="sortKategorie">Nach Kategorie sortieren:</label>
   <select id="sortKategorie" onchange="renderListe()">
-    <option value="">Alle</option>
+    <option value="">Keine Sortierung</option>
   </select>
-</div>
 
-<ul id="liste"></ul>
-<button onclick="teileListe()">Per WhatsApp teilen</button>
+  <label>
+    <input type="checkbox" id="marktSortToggle" onchange="renderListe()" />
+    Nach Markt gruppieren
+  </label>
 
-  </div>  <div id="undoPopup" class="popup">
-    Produkt gelöscht. <button onclick="undoLoeschen()">Rückgängig</button>
-  </div>  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>  <script src="script.js"></script></body>
+  <ul id="liste"></ul>
+
+  <button onclick="teileListe()">Per WhatsApp teilen</button>
+
+  <div id="undoPopup">
+    <span>Produkt gelöscht.</span>
+    <button onclick="undoLoeschen()">Rückgängig</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    // JS hier, siehe unten
+  </script>
+</body>
 </html>
