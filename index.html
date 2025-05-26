@@ -44,21 +44,17 @@
   </div>
 
   <script>
-    
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
+      authDomain: "einkaufliste-cd5d3.firebaseapp.com",
+      projectId: "einkaufliste-cd5d3",
+      storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
+      messagingSenderId: "36721747923",
+      appId: "1:36721747923:web:dbe48ff974c80435eff126",
+      measurementId: "G-37TDK0257N"
+    };
 
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
-  authDomain: "einkaufliste-cd5d3.firebaseapp.com",
-  projectId: "einkaufliste-cd5d3",
-  storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
-  messagingSenderId: "36721747923",
-  appId: "1:36721747923:web:dbe48ff974c80435eff126",
-  measurementId: "G-37TDK0257N"
-};
-
-
-    
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -77,30 +73,34 @@ const firebaseConfig = {
         }
       });
 
-    function speichereProdukte() {
-      db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
-    }
-
+    // Intelligente Kategorieerkennung mit Keywords und Priorität
     function erkenneKategorieUndIcon(name) {
       const n = name.toLowerCase();
-      if (n.includes("cola") || n.includes("wasser") || n.includes("saft") || n.includes("bier")) return { kategorie: "Getränke", icon: "bi-cup-straw" };
-      if (n.includes("apfel") || n.includes("banane") || n.includes("birne")) return { kategorie: "Obst", icon: "bi-apple" };
-      if (n.includes("salat")) return { kategorie: "Salat", icon: "bi-emoji-smile" };
-      if (n.includes("eier")) return { kategorie: "Eier", icon: "bi-egg" };
-      if (n.includes("brot") || n.includes("brötchen")) return { kategorie: "Backwaren", icon: "bi-basket" };
-      if (n.includes("milch") || n.includes("joghurt")) return { kategorie: "Milchprodukte", icon: "bi-box" };
-      if (n.includes("käse")) return { kategorie: "Milchprodukte", icon: "bi-droplet" };
-      if (n.includes("wurst") || n.includes("aufschnitt")) return { kategorie: "Aufschnitt", icon: "bi-list-ul" };
-      if (n.includes("hackfleisch") || n.includes("fleisch")) return { kategorie: "Fleisch", icon: "bi-egg-fried" };
-      if (n.includes("zahnpasta") || n.includes("seife")) return { kategorie: "Körperpflege", icon: "bi-heart-pulse" };
-      if (n.includes("spülmittel") || n.includes("reiniger")) return { kategorie: "Haushalt", icon: "bi-house" };
+      const kategorien = [
+        { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft", "bier", "wein", "säfte"] },
+        { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane", "birne", "orange", "traube", "kiwi"] },
+        { kategorie: "Salat", icon: "bi-emoji-smile", keywords: ["salat", "gurke", "tomate", "paprika"] },
+        { kategorie: "Eier", icon: "bi-egg", keywords: ["ei", "eier"] },
+        { kategorie: "Backwaren", icon: "bi-basket", keywords: ["brot", "brötchen", "brote", "croissant"] },
+        { kategorie: "Milchprodukte", icon: "bi-box", keywords: ["milch", "joghurt", "käse", "quark"] },
+        { kategorie: "Aufschnitt", icon: "bi-list-ul", keywords: ["wurst", "aufschnitt", "schinken"] },
+        { kategorie: "Fleisch", icon: "bi-egg-fried", keywords: ["hackfleisch", "fleisch", "steak", "hähnchen"] },
+        { kategorie: "Körperpflege", icon: "bi-heart-pulse", keywords: ["zahnpasta", "seife", "shampoo", "deo"] },
+        { kategorie: "Haushalt", icon: "bi-house", keywords: ["spülmittel", "reiniger", "putzmittel"] }
+      ];
+
+      for (const kat of kategorien) {
+        if (kat.keywords.some(kw => n.includes(kw))) {
+          return { kategorie: kat.kategorie, icon: kat.icon };
+        }
+      }
       return { kategorie: "Sonstiges", icon: "bi-bag" };
     }
 
     function hinzufuegen() {
-      const name = produktInput.value.trim();
-      let menge = mengeInput.value.trim();
-      const markt = marktInput.value.trim();
+      const name = document.getElementById('produktInput').value.trim();
+      let menge = document.getElementById('mengeInput').value.trim();
+      const markt = document.getElementById('marktInput').value.trim();
       if (!name) return;
       if (!menge) menge = "1 Stück";
 
@@ -109,25 +109,31 @@ const firebaseConfig = {
       produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
 
       speichereProdukte();
-      produktInput.value = mengeInput.value = marktInput.value = '';
+
+      document.getElementById('produktInput').value = '';
+      document.getElementById('mengeInput').value = '';
+      document.getElementById('marktInput').value = '';
     }
 
+    function speichereProdukte() {
+      db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
+    }
+
+    // Kategorien-Dropdown alphabetisch und eindeutig
     function aktualisiereKategorienDropdown() {
-      const katSet = new Set(produkte.map(p => p.kategorie));
+      const katSet = new Set(produkte.map(p => p.kategorie).filter(k => k));
       const sortKategorie = document.getElementById("sortKategorie");
       sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
-      katSet.forEach(k => {
-        if (k) {
-          const opt = document.createElement("option");
-          opt.value = k;
-          opt.textContent = k;
-          sortKategorie.appendChild(opt);
-        }
+      Array.from(katSet).sort().forEach(k => {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = k;
+        sortKategorie.appendChild(opt);
       });
     }
 
     function renderListe() {
-      const kat = sortKategorie.value;
+      const kat = document.getElementById("sortKategorie").value;
       const ul = document.getElementById("liste");
       ul.innerHTML = '';
       const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
@@ -147,6 +153,7 @@ const firebaseConfig = {
 
     function aendereMenge(id, delta) {
       const p = produkte.find(p => p.id === id);
+      if (!p) return;
       const match = p.menge.match(/(\d+)(\s*\w*)/);
       if (match) {
         let zahl = parseInt(match[1]);
@@ -155,11 +162,12 @@ const firebaseConfig = {
         if (zahl <= 0) {
           zuletztGeloescht = p;
           produkte = produkte.filter(prod => prod.id !== id);
+          speichereProdukte();
           zeigeUndo();
         } else {
           p.menge = `${zahl}${einheit}`.trim();
+          speichereProdukte();
         }
-        speichereProdukte();
       }
     }
 
