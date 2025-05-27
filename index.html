@@ -245,15 +245,19 @@
         }
       }
     }
+function toggleErledigt(id) {
+  const p = produkte.find(p => p.id === id);
+  if (p) {
+    p.erledigt = !p.erledigt;
+    speichereProdukte();
 
-    function toggleErledigt(id) {
-      const p = produkte.find(p => p.id === id);
-      if (p) {
-        p.erledigt = !p.erledigt;
-        speichereProdukte();
-      }
+    // Prüfen, ob alle erledigt sind
+    if (einkaufsmodusAktiv && produkte.length > 0 && produkte.every(p => p.erledigt)) {
+      zeigeErledigtPopup();
     }
-
+  }
+}
+    
     function zeigeUndo() {
       const popup = document.getElementById("undoPopup");
       popup.style.display = "block";
@@ -316,10 +320,51 @@ function pruefeAntwort() {
 function abbrechenLoeschen() {
   document.getElementById("loeschPopup").style.display = "none";
 }
+
+    function zeigeErledigtPopup() {
+  const popup = document.getElementById("erledigtPopup");
+  popup.style.display = "block";
+  starteFeuerwerk();
+
+  setTimeout(() => {
+    popup.style.display = "none";
+    stopFeuerwerk();
+  }, 5000);
+    }
+
+    let interval;
+
+function starteFeuerwerk() {
+  const canvas = document.getElementById("feuerwerk");
+  const ctx = canvas.getContext("2d");
+
+  interval = setInterval(() => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < 30; i++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const r = Math.random() * 3 + 2;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `hsl(${Math.random() * 360}, 100%, 60%)`;
+      ctx.fill();
+    }
+  }, 100);
+}
+
+function stopFeuerwerk() {
+  clearInterval(interval);
+}
     
   </script>
 
+<div id="erledigtPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+background:white; border-radius:10px; padding:2rem; box-shadow:0 0 15px rgba(0,0,0,0.3); text-align:center; z-index:1000;">
+  <canvas id="feuerwerk" width="300" height="150" style="display:block; margin:auto;"></canvas>
+  <h3>Super, alles erledigt!</h3>
+</div>
 
+  
   <div id="loeschPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
 background:#fff; border:1px solid #ccc; padding:1rem; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.2); z-index:1000;">
   <p id="matheFrage"></p>
