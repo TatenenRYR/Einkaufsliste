@@ -4,107 +4,104 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einkaufsliste</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <style>
     :root {
-      --gruen-hell: #e0f7e9;
-      --gruen: #4CAF50;
-      --gruen-dunkel: #388e3c;
-      --text: #333;
-      --border-radius: 12px;
-    }
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 2rem;
-      background: var(--gruen-hell);
-      color: var(--text);
-    }
-    h1 {
-      text-align: center;
-      color: var(--gruen-dunkel);
-      margin-bottom: 2rem;
-    }
-    input, button, select {
-      width: 100%;
-      padding: 0.8rem;
-      margin: 0.4rem 0;
-      border: 1px solid #ccc;
-      border-radius: var(--border-radius);
-      box-sizing: border-box;
-      font-size: 1rem;
-      transition: all 0.3s ease;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: var(--gruen);
-      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-    }
-    button {
-      background-color: var(--gruen);
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: var(--gruen-dunkel);
-    }
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    li {
-      background: white;
-      margin-bottom: 1rem;
-      padding: 1rem;
-      border-radius: var(--border-radius);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      animation: fadeIn 0.4s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .aktionen button {
-      margin-left: 0.4rem;
-      padding: 0.4rem 0.7rem;
-      border-radius: var(--border-radius);
-    }
-    .kategorie {
-      font-style: italic;
-      font-size: 0.9rem;
-      color: #777;
-    }
-    .produkt-info {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      cursor: pointer;
-    }
-    .produkt-info i {
-      font-size: 1.4rem;
-      color: var(--gruen-dunkel);
-    }
-    .erledigt {
-      text-decoration: line-through;
-      opacity: 0.5;
-    }
-    #undoPopup {
-      position: fixed;
-      bottom: 1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff3cd;
-      border: 1px solid #ffeeba;
-      padding: 1rem;
-      border-radius: var(--border-radius);
-      display: none;
-      z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
+      --gruen: #2e7d32;
+      --gruen-hell: #e8f5e9;
+    }body {
+  font-family: system-ui, sans-serif;
+  margin: 1rem;
+  background: #fff;
+  color: #222;
+}
+
+h1 {
+  text-align: center;
+  font-size: 1.5rem;
+  color: var(--gruen);
+  margin-bottom: 1rem;
+}
+
+input, button, select {
+  width: 100%;
+  padding: 0.5rem;
+  margin: 0.3rem 0;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+button {
+  background-color: var(--gruen);
+  color: white;
+  border: none;
+}
+
+button:hover {
+  background-color: #27642b;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+li {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.produkt-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  flex: 1;
+}
+
+.produkt-info i {
+  color: var(--gruen);
+}
+
+.erledigt {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.aktionen button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+  margin-left: 0.3rem;
+}
+
+.kategorie {
+  font-style: italic;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+#undoPopup {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fefefe;
+  border: 1px solid #ccc;
+  padding: 0.8rem;
+  border-radius: 4px;
+  display: none;
+  z-index: 1000;
+  font-size: 0.9rem;
+}
+
   </style>
 </head>
 <body>
@@ -115,21 +112,157 @@
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
   <ul id="liste"></ul>
-  <button onclick="teileURL()">Link teilen</button>
   <button onclick="teileListe()">Per WhatsApp teilen</button>
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
     <button onclick="undoLoeschen()">Rückgängig</button>
-  </div>
-  <script>
-    function teileURL() {
-      const url = window.location.href;
-      if (navigator.share) {
-        navigator.share({ title: 'Einkaufsliste', url });
-      } else {
-        prompt("URL kopieren:", url);
+  </div>  <script>
+    const firebaseConfig = { /* ... deine Firebase-Konfiguration ... */ };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const params = new URLSearchParams(window.location.search);
+    const LISTEN_ID = params.get("list") || params.get("liste") || "standardliste";
+
+    let produkte = [];
+    let zuletztGeloescht = null;
+
+    db.collection("einkaufslisten").doc(LISTEN_ID)
+      .onSnapshot((doc) => {
+        if (doc.exists) {
+          produkte = doc.data().produkte || [];
+          aktualisiereKategorienDropdown();
+          renderListe();
+        }
+      });
+
+    function erkenneKategorieUndIcon(name) {
+      const n = name.toLowerCase();
+      const kategorien = [
+        { kategorie: "Aufschnitt", icon: "bi-list-ul", keywords: ["salami", "wurst", "aufschnitt", "schinken"] },
+        { kategorie: "Hygiene", icon: "bi-heart-pulse", keywords: ["weichspüler", "seife", "shampoo", "deo"] },
+        { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft", "bier"] },
+        { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane", "birne"] },
+        { kategorie: "Milchprodukte", icon: "bi-box", keywords: ["milch", "käse", "joghurt"] },
+        { kategorie: "Sonstiges", icon: "bi-bag", keywords: [] }
+      ];
+
+      for (const kat of kategorien) {
+        if (kat.keywords.some(kw => n.includes(kw))) {
+          return { kategorie: kat.kategorie, icon: kat.icon };
+        }
+      }
+      return { kategorie: "Sonstiges", icon: "bi-bag" };
+    }
+
+    function hinzufuegen() {
+      const name = document.getElementById('produktInput').value.trim();
+      let menge = document.getElementById('mengeInput').value.trim();
+      const markt = document.getElementById('marktInput').value.trim();
+      if (!name) return;
+      if (!menge) menge = "1 Stück";
+
+      const existierendes = produkte.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (existierendes) {
+        aendereMenge(existierendes.id, 1);
+        return;
+      }
+
+      const { kategorie, icon } = erkenneKategorieUndIcon(name);
+      const id = Date.now();
+      produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
+      speichereProdukte();
+
+      document.getElementById('produktInput').value = '';
+      document.getElementById('mengeInput').value = '';
+      document.getElementById('marktInput').value = '';
+    }
+
+    function speichereProdukte() {
+      db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
+    }
+
+    function aktualisiereKategorienDropdown() {
+      const katSet = new Set(produkte.map(p => p.kategorie).filter(k => k));
+      const sortKategorie = document.getElementById("sortKategorie");
+      sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
+      Array.from(katSet).sort().forEach(k => {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = k;
+        sortKategorie.appendChild(opt);
+      });
+    }
+
+    function renderListe() {
+      const kat = document.getElementById("sortKategorie").value;
+      const ul = document.getElementById("liste");
+      ul.innerHTML = '';
+      const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
+      gefiltert.forEach(p => {
+        const li = document.createElement("li");
+        const span = document.createElement("span");
+        span.className = `produkt-info ${p.erledigt ? 'erledigt' : ''}`;
+        span.onclick = () => toggleErledigt(p.id);
+        span.innerHTML = `<i class="bi ${p.icon}"></i> <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>`;
+
+        const aktionen = document.createElement("span");
+        aktionen.className = 'aktionen';
+        aktionen.innerHTML = `<button onclick="aendereMenge(${p.id},1)">+</button><button onclick="aendereMenge(${p.id},-1)">-</button>`;
+
+        li.appendChild(span);
+        li.appendChild(aktionen);
+        ul.appendChild(li);
+      });
+    }
+
+    function aendereMenge(id, delta) {
+      const p = produkte.find(p => p.id === id);
+      if (!p) return;
+      const match = p.menge.match(/(\d+)(\s*\w*)/);
+      if (match) {
+        let zahl = parseInt(match[1]);
+        const einheit = match[2];
+        zahl += delta;
+        if (zahl <= 0) {
+          zuletztGeloescht = p;
+          produkte = produkte.filter(prod => prod.id !== id);
+          speichereProdukte();
+          zeigeUndo();
+        } else {
+          p.menge = `${zahl}${einheit}`.trim();
+          speichereProdukte();
+        }
       }
     }
-  </script>
-</body>
+
+    function toggleErledigt(id) {
+      const p = produkte.find(p => p.id === id);
+      if (p) {
+        p.erledigt = !p.erledigt;
+        speichereProdukte();
+      }
+    }
+
+    function zeigeUndo() {
+      const popup = document.getElementById("undoPopup");
+      popup.style.display = "block";
+      setTimeout(() => popup.style.display = "none", 4000);
+    }
+
+    function undoLoeschen() {
+      if (zuletztGeloescht) {
+        produkte.push(zuletztGeloescht);
+        speichereProdukte();
+        zuletztGeloescht = null;
+        document.getElementById("undoPopup").style.display = "none";
+      }
+    }
+
+    function teileListe() {
+      const text = produkte.map(p => `• ${p.name} (${p.menge})`).join("%0A");
+      const link = `https://wa.me/?text=${text}`;
+      window.open(link, '_blank');
+    }
+  </script></body>
 </html>
