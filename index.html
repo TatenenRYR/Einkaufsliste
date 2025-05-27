@@ -1,119 +1,135 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einkaufsliste</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
-    body { font-family: sans-serif; background: #f6fff6; color: #123; padding: 1em; }
-    input, button { padding: 0.5em; margin: 0.2em; }
-    .produkt { display: flex; align-items: center; gap: 0.5em; padding: 0.5em; border-bottom: 1px solid #ccc; }
-    .erledigt { text-decoration: line-through; opacity: 0.5; }
+    :root {
+      --gruen-hell: #e0f7e9;
+      --gruen: #4CAF50;
+      --gruen-dunkel: #388e3c;
+      --text: #333;
+      --border-radius: 12px;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: var(--gruen-hell);
+      color: var(--text);
+    }
+    h1 {
+      text-align: center;
+      color: var(--gruen-dunkel);
+      margin-bottom: 2rem;
+    }
+    input, button, select {
+      width: 100%;
+      padding: 0.8rem;
+      margin: 0.4rem 0;
+      border: 1px solid #ccc;
+      border-radius: var(--border-radius);
+      box-sizing: border-box;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--gruen);
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+    button {
+      background-color: var(--gruen);
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: var(--gruen-dunkel);
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      background: white;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .aktionen button {
+      margin-left: 0.4rem;
+      padding: 0.4rem 0.7rem;
+      border-radius: var(--border-radius);
+    }
+    .kategorie {
+      font-style: italic;
+      font-size: 0.9rem;
+      color: #777;
+    }
+    .produkt-info {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+    }
+    .produkt-info i {
+      font-size: 1.4rem;
+      color: var(--gruen-dunkel);
+    }
+    .erledigt {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+    #undoPopup {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 1rem;
+      border-radius: var(--border-radius);
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
   <h1>Einkaufsliste</h1>
-  <input id="produktInput" placeholder="Produkt" />
-  <input id="mengeInput" placeholder="Menge" />
-  <input id="marktInput" placeholder="Markt" />
-  <button onclick="hinzufuegen()">Hinzufügen</button>
-  <button onclick="teileURL()">URL teilen</button>
+  <input type="text" id="produktInput" placeholder="Produktname...">
+  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
+  <input type="text" id="marktInput" placeholder="Markt (optional)">
+  <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
-  <div id="liste"></div>
-
+  <ul id="liste"></ul>
+  <button onclick="teileURL()">Link teilen</button>
+  <button onclick="teileListe()">Per WhatsApp teilen</button>
+  <div id="undoPopup">
+    <span>Produkt gelöscht.</span>
+    <button onclick="undoLoeschen()">Rückgängig</button>
+  </div>
   <script>
-    let produkte = JSON.parse(localStorage.getItem("produkte") || "[]");
-
-    function erkenneKategorieUndIcon(name) {
-      const n = name.toLowerCase();
-      const kategorien = [
-        { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft", "bier", "wein", "säfte"] },
-        { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane", "birne", "orange", "traube", "kiwi"] },
-        { kategorie: "Salat", icon: "bi-emoji-smile", keywords: ["salat", "gurke", "tomate", "paprika"] },
-        { kategorie: "Eier", icon: "bi-egg", keywords: ["ei", "eier"] },
-        { kategorie: "Backwaren", icon: "bi-basket", keywords: ["brot", "brötchen", "brote", "croissant"] },
-        { kategorie: "Milchprodukte", icon: "bi-box", keywords: ["milch", "joghurt", "käse", "quark"] },
-        { kategorie: "Aufschnitt", icon: "bi-list-ul", keywords: ["wurst", "aufschnitt", "schinken", "salami"] },
-        { kategorie: "Fleisch", icon: "bi-egg-fried", keywords: ["hackfleisch", "fleisch", "steak", "hähnchen"] },
-        { kategorie: "Körperpflege", icon: "bi-heart-pulse", keywords: ["zahnpasta", "seife", "shampoo", "deo"] },
-        { kategorie: "Haushalt", icon: "bi-house", keywords: ["spülmittel", "reiniger", "putzmittel"] },
-        { kategorie: "Hygieneartikel", icon: "bi-droplet", keywords: ["weichspüler", "toilettenpapier", "taschentücher"] }
-      ];
-
-      for (const kat of kategorien) {
-        if (kat.keywords.some(kw => n.includes(kw))) {
-          return { kategorie: kat.kategorie, icon: kat.icon };
-        }
-      }
-      return { kategorie: "Sonstiges", icon: "bi-bag" };
-    }
-
-    function speichereProdukte() {
-      localStorage.setItem("produkte", JSON.stringify(produkte));
-      zeigeProdukte();
-    }
-
-    function zeigeProdukte() {
-      const liste = document.getElementById("liste");
-      liste.innerHTML = "";
-      produkte.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "produkt" + (p.erledigt ? " erledigt" : "");
-        div.innerHTML = `<i class="bi ${p.icon}"></i> <strong>${p.name}</strong> (${p.menge}) <small>${p.markt}</small>`;
-        div.onclick = () => {
-          p.erledigt = !p.erledigt;
-          speichereProdukte();
-        };
-        liste.appendChild(div);
-      });
-    }
-
-    function hinzufuegen() {
-      const name = document.getElementById('produktInput').value.trim();
-      let menge = document.getElementById('mengeInput').value.trim();
-      const markt = document.getElementById('marktInput').value.trim();
-      if (!name) return;
-      if (!menge) menge = "1 Stück";
-
-      const { kategorie, icon } = erkenneKategorieUndIcon(name);
-      const match = menge.match(/(\d+)(\s*\w*)/);
-      let neueMenge = 1;
-      let einheit = "Stück";
-      if (match) {
-        neueMenge = parseInt(match[1]);
-        einheit = match[2].trim() || "Stück";
-      }
-
-      const vorhandenesProdukt = produkte.find(p => p.name.toLowerCase() === name.toLowerCase() && p.markt === markt);
-
-      if (vorhandenesProdukt) {
-        const vorhandeneMatch = vorhandenesProdukt.menge.match(/(\d+)(\s*\w*)/);
-        let vorhandeneMenge = 1;
-        if (vorhandeneMatch) {
-          vorhandeneMenge = parseInt(vorhandeneMatch[1]);
-        }
-        vorhandenesProdukt.menge = `${vorhandeneMenge + neueMenge} ${einheit}`;
-      } else {
-        const id = Date.now();
-        produkte.push({ id, name, menge: `${neueMenge} ${einheit}`, markt, kategorie, icon, erledigt: false });
-      }
-
-      speichereProdukte();
-      document.getElementById('produktInput').value = '';
-      document.getElementById('mengeInput').value = '';
-      document.getElementById('marktInput').value = '';
-    }
-
     function teileURL() {
+      const url = window.location.href;
       if (navigator.share) {
-        navigator.share({ title: document.title, url: window.location.href }).catch(console.error);
+        navigator.share({ title: 'Einkaufsliste', url });
       } else {
-        alert("Teilen wird von deinem Browser nicht unterstützt.");
+        prompt("URL kopieren:", url);
       }
     }
-
-    zeigeProdukte();
   </script>
 </body>
 </html>
