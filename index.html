@@ -102,17 +102,22 @@
 </head>
 <body>
   <h1>Einkaufsliste</h1>
+  
+<div id="eingabeContainer">
   <input type="text" id="produktInput" placeholder="Produktname...">
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
-
+</div>
 
 <button id="einkaufsmodusBtn" onclick="toggleEinkaufsmodus()">Einkaufsmodus</button>
 
   
   <ul id="liste"></ul>
+  
+<div id="teilenContainer">
   <button id="urlTeilen" onclick="teileURL()">Liste teilen</button>
+</div>
   <button onclick="zeigeLoeschAbfrage()">Alles löschen</button>
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
@@ -287,6 +292,13 @@ function toggleErledigt(id) {
     }
     let einkaufsmodusAktiv = false;
 
+
+    const anzeigen = !einkaufsmodusAktiv;
+  document.getElementById("eingabeContainer").style.display = anzeigen ? "block" : "none";
+  document.getElementById("teilenContainer").style.display = anzeigen ? "block" : "none";
+
+  renderListe(); //
+    
 function toggleEinkaufsmodus() {
   einkaufsmodusAktiv = !einkaufsmodusAktiv;
   const btn = document.getElementById("einkaufsmodusBtn");
