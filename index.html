@@ -9,10 +9,12 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Arial, sans-serif;
-      background: #e8f5e9;
-      color: #222;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0fdf4;
+      color: #1b1b1b;
       padding: 1rem;
+      max-width: 600px;
+      margin: auto;
     }
     h1 {
       text-align: center;
@@ -20,38 +22,36 @@
     }
     input, button, select {
       width: 100%;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      font-size: 1.1rem;
-      border: none;
-      border-radius: 8px;
-    }
-    input, select {
-      background: #fff;
-      border: 1px solid #ccc;
+      padding: 0.8rem;
+      margin-bottom: 0.8rem;
+      border: 1px solid #cce3d3;
+      border-radius: 10px;
+      font-size: 1rem;
+      background-color: #ffffff;
     }
     button {
-      background-color: #4CAF50;
+      background-color: #22c55e;
       color: white;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
+      border: none;
+      font-weight: bold;
+      transition: background 0.3s ease;
     }
     button:hover {
-      background-color: #43a047;
+      background-color: #16a34a;
     }
     ul {
-      list-style: none;
+      list-style-type: none;
       padding: 0;
     }
     li {
-      background: #fff;
-      border-radius: 8px;
-      margin-bottom: 0.8rem;
-      padding: 1rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
     .produkt-info {
       display: flex;
@@ -61,25 +61,20 @@
     }
     .produkt-info i {
       font-size: 1.5rem;
-      color: #4CAF50;
+      color: #16a34a;
     }
     .aktionen button {
-      background-color: #a5d6a7;
-      color: #000;
-      margin-left: 0.3rem;
-      padding: 0.5rem 1rem;
-    }
-    .aktionen button:hover {
-      background-color: #81c784;
-    }
-    .kategorie {
-      font-style: italic;
-      font-size: 0.9rem;
-      color: #666;
+      margin-left: 0.5rem;
+      padding: 0.5rem 0.8rem;
     }
     .erledigt {
       text-decoration: line-through;
-      opacity: 0.5;
+      opacity: 0.6;
+    }
+    .kategorie {
+      display: block;
+      font-size: 0.85rem;
+      color: #666;
     }
     #undoPopup {
       position: fixed;
@@ -87,11 +82,16 @@
       left: 50%;
       transform: translateX(-50%);
       background: #fff3cd;
+      color: #856404;
       border: 1px solid #ffeeba;
       padding: 1rem;
-      border-radius: 8px;
+      border-radius: 5px;
       display: none;
       z-index: 1000;
+    }
+    #urlTeilen {
+      background-color: #16a34a;
+      margin-top: 1rem;
     }
   </style>
 </head>
@@ -102,8 +102,8 @@
   <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
-  <ul id="liste"></ul><button onclick="teileURL()">Liste teilen</button>
-
+  <ul id="liste"></ul>
+  <button id="urlTeilen" onclick="teileURL()">Liste teilen</button>
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
     <button onclick="undoLoeschen()">Rückgängig</button>
@@ -122,40 +122,29 @@
     const db = firebase.firestore();
 
     const params = new URLSearchParams(window.location.search);
-    const LISTEN_ID = params.get("list") ||  params.get("liste") || "standardliste";
+    const LISTEN_ID = params.get("list") || "standardliste";
 
     let produkte = [];
     let zuletztGeloescht = null;
 
-    db.collection("einkaufslisten").doc(LISTEN_ID)
-      .onSnapshot((doc) => {
-        if (doc.exists) {
-          produkte = doc.data().produkte || [];
-          aktualisiereKategorienDropdown();
-          renderListe();
-        }
-      });
+    db.collection("einkaufslisten").doc(LISTEN_ID).onSnapshot(doc => {
+      if (doc.exists) {
+        produkte = doc.data().produkte || [];
+        aktualisiereKategorienDropdown();
+        renderListe();
+      }
+    });
 
     function erkenneKategorieUndIcon(name) {
       const n = name.toLowerCase();
       const kategorien = [
-        { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft", "bier", "wein", "säfte"] },
-        { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane", "birne", "orange", "traube", "kiwi"] },
-        { kategorie: "Salat", icon: "bi-emoji-smile", keywords: ["salat", "gurke", "tomate", "paprika"] },
-        { kategorie: "Eier", icon: "bi-egg", keywords: ["ei", "eier"] },
-        { kategorie: "Backwaren", icon: "bi-basket", keywords: ["brot", "brötchen", "brote", "croissant"] },
-        { kategorie: "Milchprodukte", icon: "bi-box", keywords: ["milch", "joghurt", "käse", "quark"] },
-        { kategorie: "Aufschnitt", icon: "bi-list-ul", keywords: ["wurst", "aufschnitt", "schinken", "salami"] },
-        { kategorie: "Fleisch", icon: "bi-egg-fried", keywords: ["hackfleisch", "fleisch", "steak", "hähnchen"] },
-        { kategorie: "Körperpflege", icon: "bi-heart-pulse", keywords: ["zahnpasta", "seife", "shampoo", "deo"] },
-        { kategorie: "Hygieneartikel", icon: "bi-droplet", keywords: ["weichspüler", "toilettenpapier"] },
-        { kategorie: "Haushalt", icon: "bi-house", keywords: ["spülmittel", "reiniger", "putzmittel"] }
+        { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft", "bier", "wein"] },
+        { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane", "birne"] },
+        { kategorie: "Aufschnitt", icon: "bi-list-ul", keywords: ["salami", "wurst", "aufschnitt"] },
+        { kategorie: "Hygiene", icon: "bi-droplet", keywords: ["weichspüler", "seife", "zahnpasta"] }
       ];
-
       for (const kat of kategorien) {
-        if (kat.keywords.some(kw => n.includes(kw))) {
-          return { kategorie: kat.kategorie, icon: kat.icon };
-        }
+        if (kat.keywords.some(kw => n.includes(kw))) return { kategorie: kat.kategorie, icon: kat.icon };
       }
       return { kategorie: "Sonstiges", icon: "bi-bag" };
     }
@@ -166,23 +155,19 @@
       const markt = document.getElementById('marktInput').value.trim();
       if (!name) return;
       if (!menge) menge = "1 Stück";
-
-      const vorhandenes = produkte.find(p => p.name.toLowerCase() === name.toLowerCase());
-      if (vorhandenes) {
-        const match = vorhandenes.menge.match(/(\d+)(\s*\w*)/);
+      const bestehend = produkte.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (bestehend) {
+        const match = bestehend.menge.match(/(\d+)(.*)/);
         if (match) {
-          const zahl = parseInt(match[1]) + 1;
-          const einheit = match[2];
-          vorhandenes.menge = `${zahl}${einheit}`.trim();
+          bestehend.menge = (parseInt(match[1]) + parseInt(menge)) + match[2];
         }
-      } else {
-        const { kategorie, icon } = erkenneKategorieUndIcon(name);
-        const id = Date.now();
-        produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
+        speichereProdukte();
+        return;
       }
-
+      const { kategorie, icon } = erkenneKategorieUndIcon(name);
+      const id = Date.now();
+      produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
       speichereProdukte();
-
       document.getElementById('produktInput').value = '';
       document.getElementById('mengeInput').value = '';
       document.getElementById('marktInput').value = '';
@@ -211,14 +196,18 @@
       const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
       gefiltert.forEach(p => {
         const li = document.createElement("li");
-        li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
-          <i class="bi ${p.icon}"></i>
-          <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
-        </span>
-        <span class='aktionen'>
-          <button onclick="aendereMenge(${p.id},1)">+</button>
-          <button onclick="aendereMenge(${p.id},-1)">-</button>
-        </span>`;
+        li.innerHTML = `
+          <span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
+            <i class="bi ${p.icon}"></i>
+            <span>
+              <strong>${p.name}</strong> (${p.menge})
+              <span class="kategorie">${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span>
+            </span>
+          </span>
+          <span class="aktionen">
+            <button onclick="aendereMenge(${p.id},1)">+</button>
+            <button onclick="aendereMenge(${p.id},-1)">-</button>
+          </span>`;
         ul.appendChild(li);
       });
     }
@@ -226,7 +215,7 @@
     function aendereMenge(id, delta) {
       const p = produkte.find(p => p.id === id);
       if (!p) return;
-      const match = p.menge.match(/(\d+)(\s*\w*)/);
+      const match = p.menge.match(/(\d+)(.*)/);
       if (match) {
         let zahl = parseInt(match[1]);
         const einheit = match[2];
@@ -267,9 +256,16 @@
     }
 
     function teileURL() {
-      const url = `${window.location.origin}${window.location.pathname}?list=${LISTEN_ID}`;
-      navigator.clipboard.writeText(url);
-      alert("Link kopiert: " + url);
+      const url = `${location.origin}${location.pathname}?list=${LISTEN_ID}`;
+      if (navigator.share) {
+        navigator.share({
+          title: 'Einkaufsliste',
+          text: 'Hier ist unsere gemeinsame Einkaufsliste:',
+          url
+        });
+      } else {
+        navigator.clipboard.writeText(url).then(() => alert("Link kopiert: " + url));
+      }
     }
   </script></body>
 </html>
