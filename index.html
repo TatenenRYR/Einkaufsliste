@@ -293,16 +293,18 @@ function toggleErledigt(id) {
     let einkaufsmodusAktiv = false;
 
 
-    const anzeigen = !einkaufsmodusAktiv;
-  document.getElementById("eingabeContainer").style.display = anzeigen ? "block" : "none";
-  document.getElementById("teilenContainer").style.display = anzeigen ? "block" : "none";
-
-  renderListe(); //
+    
     
 function toggleEinkaufsmodus() {
   einkaufsmodusAktiv = !einkaufsmodusAktiv;
   const btn = document.getElementById("einkaufsmodusBtn");
   btn.classList.toggle("active", einkaufsmodusAktiv);
+  
+  const anzeigen = !einkaufsmodusAktiv;
+  document.getElementById("eingabeContainer").style.display = anzeigen ? "block" : "none";
+  document.getElementById("teilenContainer").style.display = anzeigen ? "block" : "none";
+
+  
   renderListe();
 }
 
