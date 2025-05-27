@@ -7,262 +7,271 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <style>
-    :root {
-      --gruen: #2e7d32;
-      --gruen-hell: #e8f5e9;
-    }body {
-  font-family: system-ui, sans-serif;
-  margin: 1rem;
-  background: #fff;
-  color: #222;
-}
-
-h1 {
-  text-align: center;
-  font-size: 1.5rem;
-  color: var(--gruen);
-  margin-bottom: 1rem;
-}
-
-input, button, select {
-  width: 100%;
-  padding: 0.5rem;
-  margin: 0.3rem 0;
-  box-sizing: border-box;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-button {
-  background-color: var(--gruen);
-  color: white;
-  border: none;
-}
-
-button:hover {
-  background-color: #27642b;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-  margin-top: 1rem;
-}
-
-li {
-  padding: 0.5rem;
-  border-bottom: 1px solid #ddd;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.95rem;
-}
-
-.produkt-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  flex: 1;
-}
-
-.produkt-info i {
-  color: var(--gruen);
-}
-
-.erledigt {
-  text-decoration: line-through;
-  opacity: 0.5;
-}
-
-.aktionen button {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.9rem;
-  margin-left: 0.3rem;
-}
-
-.kategorie {
-  font-style: italic;
-  color: #666;
-  font-size: 0.8rem;
-}
-
-#undoPopup {
-  position: fixed;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #fefefe;
-  border: 1px solid #ccc;
-  padding: 0.8rem;
-  border-radius: 4px;
-  display: none;
-  z-index: 1000;
-  font-size: 0.9rem;
-}
-
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #e8f5e9;
+      color: #1b5e20;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    header {
+      background: #2e7d32;
+      color: white;
+      width: 100%;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    .container {
+      max-width: 500px;
+      width: 100%;
+      padding: 1rem;
+    }
+    input, button, select {
+      width: 100%;
+      padding: 0.8rem;
+      margin: 0.4rem 0;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      font-size: 1rem;
+    }
+    input:focus, select:focus {
+      outline: 2px solid #66bb6a;
+    }
+    button {
+      background-color: #43a047;
+      color: white;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #388e3c;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 1rem;
+    }
+    li {
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      padding: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: transform 0.2s;
+    }
+    li:hover {
+      transform: scale(1.02);
+    }
+    .produkt-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      cursor: pointer;
+    }
+    .kategorie {
+      font-size: 0.8rem;
+      color: #4caf50;
+    }
+    .aktionen button {
+      margin-left: 0.3rem;
+      font-size: 1.2rem;
+    }
+    .erledigt {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+    #undoPopup {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #dcedc8;
+      padding: 1rem;
+      border-radius: 8px;
+      display: none;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    #shareURL {
+      background-color: #1b5e20;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
-  <h1>Einkaufsliste</h1>
-  <input type="text" id="produktInput" placeholder="Produktname...">
-  <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
-  <input type="text" id="marktInput" placeholder="Markt (optional)">
-  <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
+  <header>Einkaufsliste</header>
+  <div class="container">
+    <input type="text" id="produktInput" placeholder="Produktname...">
+    <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
+    <input type="text" id="marktInput" placeholder="Markt (optional)">
+    <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label>
+<select id="sortKategorie" onchange="renderListe()">
+  <option value="">Keine Sortierung</option>
+</select>
 
-  <ul id="liste"></ul>
-  <button onclick="teileListe()">Per WhatsApp teilen</button>
+<ul id="liste"></ul>
+<button id="shareURL" onclick="teileLink()">Liste teilen (URL)</button>
+
+  </div>
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
     <button onclick="undoLoeschen()">Rückgängig</button>
-  </div>  <script>
-    const firebaseConfig = { /* ... deine Firebase-Konfiguration ... */ };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+  </div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
+      authDomain: "einkaufliste-cd5d3.firebaseapp.com",
+      projectId: "einkaufliste-cd5d3",
+    };firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-    const params = new URLSearchParams(window.location.search);
-    const LISTEN_ID = params.get("list") || params.get("liste") || "standardliste";
+const params = new URLSearchParams(window.location.search);
+const LISTEN_ID = params.get("list") ||  params.get("liste") || "standardliste";
 
-    let produkte = [];
-    let zuletztGeloescht = null;
+let produkte = [];
+let zuletztGeloescht = null;
 
-    db.collection("einkaufslisten").doc(LISTEN_ID)
-      .onSnapshot((doc) => {
-        if (doc.exists) {
-          produkte = doc.data().produkte || [];
-          aktualisiereKategorienDropdown();
-          renderListe();
-        }
-      });
-
-    function erkenneKategorieUndIcon(name) {
-      const n = name.toLowerCase();
-      const kategorien = [
-        { kategorie: "Aufschnitt", icon: "bi-list-ul", keywords: ["salami", "wurst", "aufschnitt", "schinken"] },
-        { kategorie: "Hygiene", icon: "bi-heart-pulse", keywords: ["weichspüler", "seife", "shampoo", "deo"] },
-        { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft", "bier"] },
-        { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane", "birne"] },
-        { kategorie: "Milchprodukte", icon: "bi-box", keywords: ["milch", "käse", "joghurt"] },
-        { kategorie: "Sonstiges", icon: "bi-bag", keywords: [] }
-      ];
-
-      for (const kat of kategorien) {
-        if (kat.keywords.some(kw => n.includes(kw))) {
-          return { kategorie: kat.kategorie, icon: kat.icon };
-        }
-      }
-      return { kategorie: "Sonstiges", icon: "bi-bag" };
+db.collection("einkaufslisten").doc(LISTEN_ID)
+  .onSnapshot((doc) => {
+    if (doc.exists) {
+      produkte = doc.data().produkte || [];
+      aktualisiereKategorienDropdown();
+      renderListe();
+    } else {
+      db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte: [] });
     }
+  });
 
-    function hinzufuegen() {
-      const name = document.getElementById('produktInput').value.trim();
-      let menge = document.getElementById('mengeInput').value.trim();
-      const markt = document.getElementById('marktInput').value.trim();
-      if (!name) return;
-      if (!menge) menge = "1 Stück";
+function erkenneKategorieUndIcon(name) {
+  const n = name.toLowerCase();
+  const kategorien = [
+    { kategorie: "Aufschnitt", icon: "bi-list-ul", keywords: ["wurst", "aufschnitt", "salami", "schinken"] },
+    { kategorie: "Hygiene", icon: "bi-droplet", keywords: ["weichspüler", "seife", "shampoo", "deo"] },
+    { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft"] },
+    { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane"] },
+    { kategorie: "Fleisch", icon: "bi-egg-fried", keywords: ["fleisch", "hack"] }
+  ];
+  for (const kat of kategorien) {
+    if (kat.keywords.some(kw => n.includes(kw))) {
+      return { kategorie: kat.kategorie, icon: kat.icon };
+    }
+  }
+  return { kategorie: "Sonstiges", icon: "bi-bag" };
+}
 
-      const existierendes = produkte.find(p => p.name.toLowerCase() === name.toLowerCase());
-      if (existierendes) {
-        aendereMenge(existierendes.id, 1);
-        return;
-      }
+function hinzufuegen() {
+  const name = document.getElementById('produktInput').value.trim();
+  let menge = document.getElementById('mengeInput').value.trim();
+  const markt = document.getElementById('marktInput').value.trim();
+  if (!name) return;
+  if (!menge) menge = "1 Stück";
 
-      const { kategorie, icon } = erkenneKategorieUndIcon(name);
-      const id = Date.now();
-      produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
+  const { kategorie, icon } = erkenneKategorieUndIcon(name);
+  const vorhandenes = produkte.find(p => p.name.toLowerCase() === name.toLowerCase());
+  if (vorhandenes) {
+    vorhandenes.menge = `${parseInt(vorhandenes.menge) + parseInt(menge) || menge}`;
+  } else {
+    produkte.push({ id: Date.now(), name, menge, markt, kategorie, icon, erledigt: false });
+  }
+  speichereProdukte();
+
+  document.getElementById('produktInput').value = '';
+  document.getElementById('mengeInput').value = '';
+  document.getElementById('marktInput').value = '';
+}
+
+function speichereProdukte() {
+  db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
+}
+
+function aktualisiereKategorienDropdown() {
+  const katSet = new Set(produkte.map(p => p.kategorie));
+  const sortKategorie = document.getElementById("sortKategorie");
+  sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
+  Array.from(katSet).sort().forEach(k => {
+    const opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = k;
+    sortKategorie.appendChild(opt);
+  });
+}
+
+function renderListe() {
+  const kat = document.getElementById("sortKategorie").value;
+  const ul = document.getElementById("liste");
+  ul.innerHTML = '';
+  const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
+  gefiltert.forEach(p => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
+      <strong>${p.name}</strong> (${p.menge})
+      <span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span>
+    </span>
+    <span class='aktionen'>
+      <button onclick="aendereMenge(${p.id},1)">+</button>
+      <button onclick="aendereMenge(${p.id},-1)">-</button>
+    </span>`;
+    ul.appendChild(li);
+  });
+}
+
+function aendereMenge(id, delta) {
+  const p = produkte.find(p => p.id === id);
+  if (!p) return;
+  const match = p.menge.match(/(\d+)(\s*\w*)/);
+  if (match) {
+    let zahl = parseInt(match[1]);
+    const einheit = match[2];
+    zahl += delta;
+    if (zahl <= 0) {
+      zuletztGeloescht = p;
+      produkte = produkte.filter(prod => prod.id !== id);
       speichereProdukte();
-
-      document.getElementById('produktInput').value = '';
-      document.getElementById('mengeInput').value = '';
-      document.getElementById('marktInput').value = '';
+      zeigeUndo();
+    } else {
+      p.menge = `${zahl}${einheit}`.trim();
+      speichereProdukte();
     }
+  }
+}
 
-    function speichereProdukte() {
-      db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
-    }
+function toggleErledigt(id) {
+  const p = produkte.find(p => p.id === id);
+  if (p) {
+    p.erledigt = !p.erledigt;
+    speichereProdukte();
+  }
+}
 
-    function aktualisiereKategorienDropdown() {
-      const katSet = new Set(produkte.map(p => p.kategorie).filter(k => k));
-      const sortKategorie = document.getElementById("sortKategorie");
-      sortKategorie.innerHTML = '<option value="">Keine Sortierung</option>';
-      Array.from(katSet).sort().forEach(k => {
-        const opt = document.createElement("option");
-        opt.value = k;
-        opt.textContent = k;
-        sortKategorie.appendChild(opt);
-      });
-    }
+function zeigeUndo() {
+  const popup = document.getElementById("undoPopup");
+  popup.style.display = "block";
+  setTimeout(() => popup.style.display = "none", 5000);
+}
 
-    function renderListe() {
-      const kat = document.getElementById("sortKategorie").value;
-      const ul = document.getElementById("liste");
-      ul.innerHTML = '';
-      const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
-      gefiltert.forEach(p => {
-        const li = document.createElement("li");
-        const span = document.createElement("span");
-        span.className = `produkt-info ${p.erledigt ? 'erledigt' : ''}`;
-        span.onclick = () => toggleErledigt(p.id);
-        span.innerHTML = `<i class="bi ${p.icon}"></i> <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>`;
+function undoLoeschen() {
+  if (zuletztGeloescht) {
+    produkte.push(zuletztGeloescht);
+    speichereProdukte();
+    zuletztGeloescht = null;
+    document.getElementById("undoPopup").style.display = "none";
+  }
+}
 
-        const aktionen = document.createElement("span");
-        aktionen.className = 'aktionen';
-        aktionen.innerHTML = `<button onclick="aendereMenge(${p.id},1)">+</button><button onclick="aendereMenge(${p.id},-1)">-</button>`;
+function teileLink() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url);
+  alert("Link zur Einkaufsliste wurde in die Zwischenablage kopiert!");
+}
 
-        li.appendChild(span);
-        li.appendChild(aktionen);
-        ul.appendChild(li);
-      });
-    }
-
-    function aendereMenge(id, delta) {
-      const p = produkte.find(p => p.id === id);
-      if (!p) return;
-      const match = p.menge.match(/(\d+)(\s*\w*)/);
-      if (match) {
-        let zahl = parseInt(match[1]);
-        const einheit = match[2];
-        zahl += delta;
-        if (zahl <= 0) {
-          zuletztGeloescht = p;
-          produkte = produkte.filter(prod => prod.id !== id);
-          speichereProdukte();
-          zeigeUndo();
-        } else {
-          p.menge = `${zahl}${einheit}`.trim();
-          speichereProdukte();
-        }
-      }
-    }
-
-    function toggleErledigt(id) {
-      const p = produkte.find(p => p.id === id);
-      if (p) {
-        p.erledigt = !p.erledigt;
-        speichereProdukte();
-      }
-    }
-
-    function zeigeUndo() {
-      const popup = document.getElementById("undoPopup");
-      popup.style.display = "block";
-      setTimeout(() => popup.style.display = "none", 4000);
-    }
-
-    function undoLoeschen() {
-      if (zuletztGeloescht) {
-        produkte.push(zuletztGeloescht);
-        speichereProdukte();
-        zuletztGeloescht = null;
-        document.getElementById("undoPopup").style.display = "none";
-      }
-    }
-
-    function teileListe() {
-      const text = produkte.map(p => `• ${p.name} (${p.menge})`).join("%0A");
-      const link = `https://wa.me/?text=${text}`;
-      window.open(link, '_blank');
-    }
-  </script></body>
+  </script>
+</body>
 </html>
