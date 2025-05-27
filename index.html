@@ -93,6 +93,11 @@
       background-color: #16a34a;
       margin-top: 1rem;
     }
+    #einkaufsmodusBtn.active {
+      background-color: #2e7d32;
+      color: white;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -102,6 +107,10 @@
   <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
+
+<button id="einkaufsmodusBtn" onclick="toggleEinkaufsmodus()">Einkaufsmodus</button>
+
+  
   <ul id="liste"></ul>
   <button id="urlTeilen" onclick="teileURL()">Liste teilen</button>
   <div id="undoPopup">
@@ -193,7 +202,11 @@
       const kat = document.getElementById("sortKategorie").value;
       const ul = document.getElementById("liste");
       ul.innerHTML = '';
-      const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
+      //const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
+      let gefiltert = produkte;
+      if (kat) gefiltert = gefiltert.filter(p => p.kategorie === kat);
+      if (einkaufsmodusAktiv) gefiltert = gefiltert.filter(p => !p.erledigt);
+      
       gefiltert.forEach(p => {
         const li = document.createElement("li");
         li.innerHTML = `
@@ -267,5 +280,13 @@
         navigator.clipboard.writeText(url).then(() => alert("Link kopiert: " + url));
       }
     }
+    let einkaufsmodusAktiv = false;
+
+function toggleEinkaufsmodus() {
+  einkaufsmodusAktiv = !einkaufsmodusAktiv;
+  const btn = document.getElementById("einkaufsmodusBtn");
+  btn.classList.toggle("active", einkaufsmodusAktiv);
+  renderListe();
+}
   </script></body>
 </html>
