@@ -7,20 +7,92 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #e9f5ec; color: #222; margin: 0; padding: 1rem; }
-    h1 { text-align: center; color: #2e7d32; margin-bottom: 1rem; }
-    input, button, select { width: 100%; padding: 0.75rem; margin: 0.5rem 0; border: none; border-radius: 6px; box-sizing: border-box; }
-    input, select { background: #f0f0f0; }
-    button { background-color: #2e7d32; color: white; cursor: pointer; font-weight: bold; transition: background-color 0.2s ease; }
-    button:hover { background-color: #256928; }
-    ul { list-style-type: none; padding: 0; }
-    li { background: white; margin-bottom: 0.5rem; padding: 1rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .produkt-info { display: flex; align-items: center; gap: 1rem; flex-grow: 1; cursor: pointer; }
-    .produkt-info i { font-size: 1.5rem; color: #2e7d32; }
-    .aktionen button { margin-left: 0.3rem; padding: 0.5rem; font-size: 1rem; }
-    .erledigt { text-decoration: line-through; opacity: 0.5; }
-    .kategorie { display: block; font-style: italic; font-size: 0.85rem; color: #666; margin-top: 0.2rem; }
-    #undoPopup { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: #fff3cd; border: 1px solid #ffeeba; padding: 1rem; border-radius: 5px; display: none; z-index: 1000; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #e8f5e9;
+      color: #222;
+      padding: 1rem;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    input, button, select {
+      width: 100%;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 8px;
+    }
+    input, select {
+      background: #fff;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #43a047;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: #fff;
+      border-radius: 8px;
+      margin-bottom: 0.8rem;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .produkt-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex: 1;
+    }
+    .produkt-info i {
+      font-size: 1.5rem;
+      color: #4CAF50;
+    }
+    .aktionen button {
+      background-color: #a5d6a7;
+      color: #000;
+      margin-left: 0.3rem;
+      padding: 0.5rem 1rem;
+    }
+    .aktionen button:hover {
+      background-color: #81c784;
+    }
+    .kategorie {
+      font-style: italic;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .erledigt {
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+    #undoPopup {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 1rem;
+      border-radius: 8px;
+      display: none;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
@@ -30,8 +102,8 @@
   <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach Kategorie sortieren:</label> <select id="sortKategorie" onchange="renderListe()"> <option value="">Keine Sortierung</option> </select>
 
-  <ul id="liste"></ul>
-  <button onclick="teileURL()">Liste teilen</button>
+  <ul id="liste"></ul><button onclick="teileURL()">Liste teilen</button>
+
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
     <button onclick="undoLoeschen()">Rückgängig</button>
@@ -50,7 +122,7 @@
     const db = firebase.firestore();
 
     const params = new URLSearchParams(window.location.search);
-    const LISTEN_ID = params.get("list") || params.get("liste") || "standardliste";
+    const LISTEN_ID = params.get("list") ||  params.get("liste") || "standardliste";
 
     let produkte = [];
     let zuletztGeloescht = null;
@@ -67,16 +139,17 @@
     function erkenneKategorieUndIcon(name) {
       const n = name.toLowerCase();
       const kategorien = [
-        { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft", "bier", "wein"] },
-        { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane", "birne", "orange", "traube"] },
-        { kategorie: "Salat", icon: "bi-emoji-smile", keywords: ["salat", "gurke", "tomate"] },
+        { kategorie: "Getränke", icon: "bi-cup-straw", keywords: ["cola", "wasser", "saft", "bier", "wein", "säfte"] },
+        { kategorie: "Obst", icon: "bi-apple", keywords: ["apfel", "banane", "birne", "orange", "traube", "kiwi"] },
+        { kategorie: "Salat", icon: "bi-emoji-smile", keywords: ["salat", "gurke", "tomate", "paprika"] },
         { kategorie: "Eier", icon: "bi-egg", keywords: ["ei", "eier"] },
-        { kategorie: "Backwaren", icon: "bi-basket", keywords: ["brot", "brötchen", "croissant"] },
-        { kategorie: "Milchprodukte", icon: "bi-box", keywords: ["milch", "joghurt", "käse"] },
+        { kategorie: "Backwaren", icon: "bi-basket", keywords: ["brot", "brötchen", "brote", "croissant"] },
+        { kategorie: "Milchprodukte", icon: "bi-box", keywords: ["milch", "joghurt", "käse", "quark"] },
         { kategorie: "Aufschnitt", icon: "bi-list-ul", keywords: ["wurst", "aufschnitt", "schinken", "salami"] },
         { kategorie: "Fleisch", icon: "bi-egg-fried", keywords: ["hackfleisch", "fleisch", "steak", "hähnchen"] },
-        { kategorie: "Hygiene", icon: "bi-droplet", keywords: ["weichspüler", "zahnpasta", "seife", "shampoo", "deo"] },
-        { kategorie: "Haushalt", icon: "bi-house", keywords: ["spülmittel", "reiniger"] }
+        { kategorie: "Körperpflege", icon: "bi-heart-pulse", keywords: ["zahnpasta", "seife", "shampoo", "deo"] },
+        { kategorie: "Hygieneartikel", icon: "bi-droplet", keywords: ["weichspüler", "toilettenpapier"] },
+        { kategorie: "Haushalt", icon: "bi-house", keywords: ["spülmittel", "reiniger", "putzmittel"] }
       ];
 
       for (const kat of kategorien) {
@@ -96,7 +169,12 @@
 
       const vorhandenes = produkte.find(p => p.name.toLowerCase() === name.toLowerCase());
       if (vorhandenes) {
-        vorhandenes.menge = menge;
+        const match = vorhandenes.menge.match(/(\d+)(\s*\w*)/);
+        if (match) {
+          const zahl = parseInt(match[1]) + 1;
+          const einheit = match[2];
+          vorhandenes.menge = `${zahl}${einheit}`.trim();
+        }
       } else {
         const { kategorie, icon } = erkenneKategorieUndIcon(name);
         const id = Date.now();
@@ -104,6 +182,7 @@
       }
 
       speichereProdukte();
+
       document.getElementById('produktInput').value = '';
       document.getElementById('mengeInput').value = '';
       document.getElementById('marktInput').value = '';
@@ -132,19 +211,14 @@
       const gefiltert = kat ? produkte.filter(p => p.kategorie === kat) : produkte;
       gefiltert.forEach(p => {
         const li = document.createElement("li");
-        li.innerHTML = `
-          <span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
-            <i class="bi ${p.icon}"></i>
-            <span>
-              <strong>${p.name}</strong> (${p.menge})
-              <span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span>
-            </span>
-          </span>
-          <span class='aktionen'>
-            <button onclick="aendereMenge(${p.id},1)">+</button>
-            <button onclick="aendereMenge(${p.id},-1)">-</button>
-          </span>
-        `;
+        li.innerHTML = `<span class="produkt-info ${p.erledigt ? 'erledigt' : ''}" onclick="toggleErledigt(${p.id})">
+          <i class="bi ${p.icon}"></i>
+          <span><strong>${p.name}</strong> (${p.menge})<br><span class='kategorie'>${p.kategorie}${p.markt ? ' @ ' + p.markt : ''}</span></span>
+        </span>
+        <span class='aktionen'>
+          <button onclick="aendereMenge(${p.id},1)">+</button>
+          <button onclick="aendereMenge(${p.id},-1)">-</button>
+        </span>`;
         ul.appendChild(li);
       });
     }
@@ -193,9 +267,9 @@
     }
 
     function teileURL() {
-      const url = new URL(window.location.href);
-      url.searchParams.set("list", LISTEN_ID);
-      navigator.clipboard.writeText(url.href).then(() => alert("Link kopiert: " + url.href));
+      const url = `${window.location.origin}${window.location.pathname}?list=${LISTEN_ID}`;
+      navigator.clipboard.writeText(url);
+      alert("Link kopiert: " + url);
     }
   </script></body>
 </html>
