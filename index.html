@@ -113,6 +113,7 @@
   
   <ul id="liste"></ul>
   <button id="urlTeilen" onclick="teileURL()">Liste teilen</button>
+  <button onclick="zeigeLoeschAbfrage()">Alles löschen</button>
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
     <button onclick="undoLoeschen()">Rückgängig</button>
@@ -288,5 +289,48 @@ function toggleEinkaufsmodus() {
   btn.classList.toggle("active", einkaufsmodusAktiv);
   renderListe();
 }
-  </script></body>
+
+let richtigeAntwort = 0;
+
+function zeigeLoeschAbfrage() {
+  const a = Math.floor(Math.random() * 10 + 1);
+  const b = Math.floor(Math.random() * 10 + 1);
+  richtigeAntwort = a + b;
+  document.getElementById("matheFrage").textContent = `Was ist ${a} + ${b}?`;
+  document.getElementById("matheAntwort").value = "";
+  document.getElementById("loeschPopup").style.display = "block";
+}
+
+function pruefeAntwort() {
+  const eingabe = parseInt(document.getElementById("matheAntwort").value);
+  if (eingabe === richtigeAntwort) {
+    produkte = [];
+    speichereProdukte();
+    renderListe();
+    document.getElementById("loeschPopup").style.display = "none";
+  } else {
+    alert("Falsche Antwort. Liste wird nicht gelöscht.");
+  }
+}
+
+function abbrechenLoeschen() {
+  document.getElementById("loeschPopup").style.display = "none";
+}
+    
+  </script>
+
+
+  <div id="loeschPopup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+background:#fff; border:1px solid #ccc; padding:1rem; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.2); z-index:1000;">
+  <p id="matheFrage"></p>
+  <input type="text" id="matheAntwort" placeholder="Antwort eingeben">
+  <button onclick="pruefeAntwort()">Bestätigen</button>
+  <button onclick="abbrechenLoeschen()">Abbrechen</button>
+</div>
+
+</body>
+
+
+
+  
 </html>
