@@ -163,8 +163,42 @@
       }
       return { kategorie: "Sonstiges", icon: "bi-bag" };
     }
+function findeProduktVorlage(eingabe) {
+  const n = eingabe.toLowerCase();
+  // Einfacher Fuzzy-Match
+  return produktVorlagen.find(p =>
+    p.name.toLowerCase() === n ||
+    n.includes(p.name.toLowerCase()) ||
+    p.name.toLowerCase().includes(n)
+  );
+}
 
-    function hinzufuegen() {
+function hinzufuegen() {
+  let name = document.getElementById('produktInput').value.trim();
+  let menge = document.getElementById('mengeInput').value.trim();
+  const markt = document.getElementById('marktInput').value.trim();
+  if (!name) return;
+
+  const vorlage = findeProduktVorlage(name);
+  if (vorlage) {
+    name = vorlage.name;
+    menge = menge || vorlage.menge;
+    var { kategorie, icon } = vorlage;
+  } else {
+    const erkannt = erkenneKategorieUndIcon(name);
+    menge = menge || "1 Stück";
+    var { kategorie, icon } = erkannt;
+  }
+
+  const id = Date.now();
+  produkte.push({ id, name, menge, markt, kategorie, icon, erledigt: false });
+  speichereProdukte();
+
+  document.getElementById('produktInput').value = '';
+  document.getElementById('mengeInput').value = '';
+  document.getElementById('marktInput').value = '';
+}
+    /*function hinzufuegen() {
       const name = document.getElementById('produktInput').value.trim();
       let menge = document.getElementById('mengeInput').value.trim();
       const markt = document.getElementById('marktInput').value.trim();
@@ -186,7 +220,7 @@
       document.getElementById('produktInput').value = '';
       document.getElementById('mengeInput').value = '';
       document.getElementById('marktInput').value = '';
-    }
+    }*/
 
     function speichereProdukte() {
       db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
