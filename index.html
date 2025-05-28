@@ -98,13 +98,36 @@
       color: white;
       font-weight: bold;
     }
+    .autocomplete-list {
+  position: absolute;
+  background-color: white;
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  z-index: 1000;
+}
+
+.autocomplete-list li {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.autocomplete-list li:hover,
+.autocomplete-list li.active {
+  background-color: #eee;
+}
   </style>
 </head>
 <body>
   <h1>Einkaufsliste</h1>
   
 <div id="eingabeContainer">
-  <input type="text" id="produktInput" placeholder="Produktname...">
+  <input type="text" id="productInput" placeholder="Produkt eingeben">
+  <ul id="autocompleteList" class="autocomplete-list"></ul>
   <input type="text" id="mengeInput" placeholder="Menge (z. B. 2 Stück)">
   <input type="text" id="marktInput" placeholder="Markt (optional)">
   <button onclick="hinzufuegen()">Hinzufügen</button><label for="sortKategorie">Nach</div>
@@ -458,6 +481,70 @@ function starteFeuerwerk() {
 function stopFeuerwerk() {
   clearInterval(interval);
 }
+
+    const input = document.getElementById("productInput");
+const list = document.getElementById("autocompleteList");
+
+// Beispielhafte Produktliste – du kannst hier deine Firebase-Daten oder lokale Vorlagen einbauen
+const products = [
+  "Milch", "Mehl", "Butter", "Bananen", "Brot", "Birnen",
+  "Müsli", "Marmelade", "Mineralwasser", "Mandeln", "Mozzarella"
+];
+
+let currentFocus = -1;
+
+input.addEventListener("input", function () {
+  const val = this.value.toLowerCase();
+  list.innerHTML = "";
+  if (!val) return;
+
+  const filtered = products.filter(p => p.toLowerCase().startsWith(val));
+  filtered.forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    li.addEventListener("click", () => {
+      input.value = item;
+      list.innerHTML = "";
+    });
+    list.appendChild(li);
+  });
+});
+
+input.addEventListener("keydown", function (e) {
+  const items = list.getElementsByTagName("li");
+  if (e.key === "ArrowDown") {
+    currentFocus++;
+    addActive(items);
+  } else if (e.key === "ArrowUp") {
+    currentFocus--;
+    addActive(items);
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (currentFocus > -1 && items[currentFocus]) {
+      items[currentFocus].click();
+    }
+  }
+});
+
+function addActive(items) {
+  if (!items) return;
+  removeActive(items);
+  if (currentFocus >= items.length) currentFocus = 0;
+  if (currentFocus < 0) currentFocus = items.length - 1;
+  items[currentFocus].classList.add("active");
+}
+
+function removeActive(items) {
+  for (let i = 0; i < items.length; i++) {
+    items[i].classList.remove("active");
+  }
+}
+
+document.addEventListener("click", function (e) {
+  if (e.target !== input) {
+    list.innerHTML = "";
+  }
+});
     
   </script>
 
