@@ -6,6 +6,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="produktVorlagen.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -226,7 +227,7 @@ function hinzufuegen() {
 
     const produktVorlagen = [
   // Aufschnitt
-  { name: "Salami", kategorie: "Aufschnitt", icon: "bi-list-ul", menge: "1 Pck." },
+  /*{ name: "Salami", kategorie: "Aufschnitt", icon: "bi-list-ul", menge: "1 Pck." },
   { name: "Schinken", kategorie: "Aufschnitt", icon: "bi-list-ul", menge: "1 Pck." },
   { name: "Wurst", kategorie: "Aufschnitt", icon: "bi-list-ul", menge: "1 Pck." },
 
@@ -275,7 +276,7 @@ function hinzufuegen() {
   { name: "Öl", kategorie: "Sonstiges", icon: "bi-droplet", menge: "1 Flasche" },
   { name: "Mehl", kategorie: "Sonstiges", icon: "bi-droplet", menge: "1 kg" },
   { name: "Zucker", kategorie: "Sonstiges", icon: "bi-droplet", menge: "1 kg" },
-];
+];*/
     
     function speichereProdukte() {
       db.collection("einkaufslisten").doc(LISTEN_ID).set({ produkte });
