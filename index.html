@@ -501,15 +501,17 @@
 
 <script>
     // --- FIREBASE KONFIGURATION ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
-      authDomain: "einkaufliste-cd5d3.firebaseapp.com",
-      projectId: "einkaufliste-cd5d3",
-      storageBucket: "einkaufliste-cd5d3.appspot.com",
-      messagingSenderId: "36721747923",
-      appId: "1:36721747923:web:dbe48ff974c80435eff126",
-      measurementId: "G-37TDK0257N"
-    };
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
+  authDomain: "einkaufliste-cd5d3.firebaseapp.com",
+  databaseURL: "https://einkaufliste-cd5d3-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "einkaufliste-cd5d3",
+  storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
+  messagingSenderId: "36721747923",
+  appId: "1:36721747923:web:dbe48ff974c80435eff126",
+  measurementId: "G-37TDK0257N"
+};
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
