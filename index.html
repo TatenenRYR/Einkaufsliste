@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Einkaufs-Assistent</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <!-- Firebase-Skripte (müssen weiterhin von extern geladen werden) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <!-- Diese beiden Dateien musst du im selben Ordner haben -->
-  <script src="produktVorlagen.js"></script>
-  <script src="gemini-api.js"></script>
+  
+  <!-- Die 'produktVorlagen.js' und 'gemini-api.js' Links sind jetzt entfernt -->
+  
   <style>
     :root {
       --bg-color: #f0fdf4;
@@ -314,7 +315,6 @@
       display: block;
       margin: auto;
     }
-
   </style>
 </head>
 <body>
@@ -367,7 +367,6 @@
   <div id="vorratsContainer" class="tab-content">
     <div class="controls">
       <input type="text" id="vorratFilterInput" onkeyup="renderVorratskammer()" placeholder="Vorratskammer durchsuchen..." class="control-item" style="flex-basis: 100%;">
-      <!-- NEUER BUTTON: KI-Koch-Assistent -->
       <button class="control-item secondary" onclick="starteVorratAnalyse()">
           <i class="bi bi-lightbulb"></i> Was kochen? (KI)
       </button>
@@ -471,7 +470,7 @@
     </div>
   </div>
 
-  <!-- NEUES MODAL: Benutzername -->
+  <!-- Modal 5: Benutzername -->
   <div id="benutzerModal" class="modal" style="display: none;">
     <div class="modal-content">
       <h3>Willkommen!</h3>
@@ -500,55 +499,247 @@
   </div>
 
 <script>
-    // --- FIREBASE KONFIGURATION ---
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
-  authDomain: "einkaufliste-cd5d3.firebaseapp.com",
-  databaseURL: "https://einkaufliste-cd5d3-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "einkaufliste-cd5d3",
-  storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
-  messagingSenderId: "36721747923",
-  appId: "1:36721747923:web:dbe48ff974c80435eff126",
-  measurementId: "G-37TDK0257N"
-};
+    // ######################################################################
+    // ###   INTEGRIERTER CODE: produktVorlagen.js                        ###
+    // ######################################################################
+    
+    // Dies ist die Liste aller bekannten Produkte.
+    // 'favorit: true' fügt das Produkt zu den Quick-Add-Buttons hinzu.
+    const produktVorlagen = [
+      // Favoriten (für Quick-Add)
+      { name: "Milch", kategorie: "Milchprodukte", icon: "bi-box", menge: "1 L", favorit: true },
+      { name: "Eier", kategorie: "Grundnahrungsmittel", icon: "bi-egg-fill", menge: "10 Stück", favorit: true },
+      { name: "Brot", kategorie: "Backwaren", icon: "bi-view-list", menge: "1 Laib", favorit: true },
+      { name: "Butter", kategorie: "Milchprodukte", icon: "bi-droplet-half", menge: "1 Stück", favorit: true },
+      { name: "Käse", kategorie: "Milchprodukte", icon: "bi-grid", menge: "1 Pck.", favorit: true },
+      { name: "Wasser", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Kasten", favorit: true },
+      { name: "Aufbackbrötchen", kategorie: "Backwaren", icon: "bi-view-list", menge: "1 Pck.", favorit: true },
+      { name: "Wurst", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck.", favorit: true },
+      { name: "Kartoffeln", kategorie: "Obst & Gemüse", icon: "bi-node-plus", menge: "1 Netz", favorit: true },
+      { name: "Toilettenpapier", kategorie: "Haushalt", icon: "bi-layers", menge: "1 Pck.", favorit: true },
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+      // --- Obst & Gemüse ---
+      { name: "Äpfel", kategorie: "Obst & Gemüse", icon: "bi-apple", menge: "1 Netz" },
+      { name: "Bananen", kategorie: "Obst & Gemüse", icon: "bi-grip-horizontal", menge: "1 Bund" },
+      { name: "Tomaten", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Rispe" },
+      { name: "Gurke", kategorie: "Obst & Gemüse", icon: "bi-dash-lg", menge: "1 Stück" },
+      { name: "Salat", kategorie: "Obst & Gemüse", icon: "bi-flower1", menge: "1 Kopf" },
+      { name: "Zwiebeln", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Netz" },
+      { name: "Karotten", kategorie: "Obst & Gemüse", icon: "bi-dash-lg", menge: "1 Bund" },
+      { name: "Paprika", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Netz" },
 
-    const params = new URLSearchParams(window.location.search);
-    const LISTEN_ID = params.get("list") || "standardliste";
-    const listenRef = db.collection("einkaufslisten").doc(LISTEN_ID);
+      // --- Fleisch & Wurst ---
+      { name: "Hackfleisch", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "500 g" },
+      { name: "Hähnchenbrust", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
+      { name: "Salami", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
+      { name: "Schinken", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
+
+      // --- Milchprodukte ---
+      { name: "Joghurt", kategorie: "Milchprodukte", icon: "bi-cup", menge: "4er Pack" },
+      { name: "Sahne", kategorie: "Milchprodukte", icon: "bi-cup-fill", menge: "1 Becher" },
+      { name: "Quark", kategorie: "Milchprodukte", icon: "bi-cup", menge: "1 Becher" },
+      { name: "Frischkäse", kategorie: "Milchprodukte", icon: "bi-box", menge: "1 Pck." },
+
+      // --- Grundnahrungsmittel ---
+      { name: "Nudeln", kategorie: "Grundnahrungsmittel", icon: "bi-stack", menge: "1 Pck." },
+      { name: "Reis", kategorie: "Grundnahrungsmittel", icon: "bi-record-fill", menge: "1 Pck." },
+      { name: "Mehl", kategorie: "Grundnahrungsmittel", icon: "bi-box-seam", menge: "1 kg" },
+      { name: "Zucker", kategorie: "Grundnahrungsmittel", icon: "bi-box-seam", menge: "1 kg" },
+      { name: "Salz", kategorie: "Grundnahrungsmittel", icon: "bi-box-seam", menge: "1 Pck." },
+      { name: "Öl", kategorie: "Grundnahrungsmittel", icon: "bi-droplet", menge: "1 Flasche" },
+      { name: "Tomatensauce", kategorie: "Grundnahrungsmittel", icon: "bi-box", menge: "1 Glas" },
+      { name: "Ketchup", kategorie: "Grundnahrungsmittel", icon: "bi-droplet-fill", menge: "1 Flasche" },
+      { name: "Senf", kategorie: "Grundnahrungsmittel", icon: "bi-droplet-fill", menge: "1 Glas" },
+      { name: "Kaffee", kategorie: "Getränke", icon: "bi-cup-hot-fill", menge: "1 Pfund" },
+      { name: "Tee", kategorie: "Getränke", icon: "bi-cup-hot", menge: "1 Pck." },
+
+      // --- Getränke ---
+      { name: "Cola", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Flasche" },
+      { name: "Saft", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Flasche" },
+      { name: "Bier", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Kasten" },
+
+      // --- Haushalt ---
+      { name: "Küchenrolle", kategorie: "Haushalt", icon: "bi-layers", menge: "1 Pck." },
+      { name: "Waschmittel", kategorie: "Haushalt", icon: "bi-box-seam", menge: "1 Flasche" },
+      { name: "Spülmittel", kategorie: "Haushalt", icon: "bi-droplet", menge: "1 Flasche" },
+      { name: "Müllbeutel", kategorie: "Haushalt", icon: "bi-trash", menge: "1 Rolle" },
+
+      // --- Hygiene ---
+      { name: "Zahnpasta", kategorie: "Hygiene", icon: "bi-activity", menge: "1 Tube" },
+      { name: "Shampoo", kategorie: "Hygiene", icon: "bi-droplet", menge: "1 Flasche" },
+      { name: "Seife", kategorie: "Hygiene", icon: "bi-activity", menge: "1 Stück" },
+    ];
+    // --- ENDE: produktVorlagen.js ---
+
+
+    // ######################################################################
+    // ###   INTEGRIERTER CODE: gemini-api.js                             ###
+    // ######################################################################
+    
+    /**
+     * WICHTIG: Ersetze 'DEIN_API_KEY' mit deinem
+     * echten Google AI Studio (Gemini) API Key.
+     */
+    const GEMINI_API_KEY = "AIzaSyAqpZeKexgzO-8uo4rJx8g6NAE4boFBbp8"; // <--- HIER DEINEN KEY EINFÜGEN
+
+    /**
+     * Ruft die Gemini API auf.
+     * @param {string} prompt Der Text-Prompt für die KI.
+     * @returns {Promise<string>} Die Text-Antwort von der KI.
+     */
+    async function callGeminiApi(prompt) {
+      
+      if (GEMINI_API_KEY === "DEIN_API_KEY") {
+          console.error("Gemini API Key fehlt.");
+          alert("KI-Fehler: API-Key nicht in der Datei eingetragen.");
+          throw new Error("API-Key nicht eingetragen.");
+      }
+      
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+
+      const requestBody = {
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        // Sicherheitseinstellungen niedrig ansetzen, um JSON-Antworten nicht zu blockieren
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ],
+        generationConfig: {
+          temperature: 0.1, // Kreativität niedrig halten für präzise JSON-Antworten
+          topK: 1,
+          topP: 1,
+          maxOutputTokens: 2048,
+        }
+      };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json();
+          console.error("API-Fehler (Antwort):", errorBody);
+          throw new Error(`API-Fehler: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.promptFeedback && data.promptFeedback.blockReason) {
+          console.error("API-Anfrage blockiert:", data.promptFeedback.blockReason);
+          throw new Error(`Anfrage blockiert: ${data.promptFeedback.blockReason}`);
+        }
+
+        if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+            console.error("Unerwartete API-Antwortstruktur:", data);
+            throw new Error("Konnte keine gültige Antwort von der KI extrahieren.");
+        }
+        
+        // Bereinige die Antwort (oft in Markdown-Code-Blöcken)
+        let textResponse = data.candidates[0].content.parts[0].text;
+        textResponse = textResponse.replace(/^```json\s*/, '').replace(/```$/, '');
+        
+        return textResponse.trim();
+
+      } catch (error) {
+        console.error("Fehler beim Aufrufen der Gemini API:", error);
+        throw error;
+      }
+    }
+    // --- ENDE: gemini-api.js ---
+
+
+    // ######################################################################
+    // ###   HAUPT-SKRIPT (Stabilisiert)                                  ###
+    // ######################################################################
+
+    // Wir packen die gesamte App-Logik in eine Funktion
+    // und starten sie erst, wenn die HTML-Seite komplett geladen ist.
+    
+    window.addEventListener('DOMContentLoaded', (event) => {
+        mainApp();
+    });
 
     // --- GLOBALE VARIABLEN ---
+    // (Einige müssen global sein, damit onclick-Handler sie finden)
     let produkte = [];
     let vorrat = [];
     let zuletztGeloescht = null;
     let einkaufsmodusAktiv = false;
     let recognition = null; // Für Spracheingabe
-    let benutzerName = "Gast"; // NEU: Benutzername
+    let benutzerName = "Gast";
+    let benutzerInitialisiert = false;
+    let db, listenRef; // Firebase-Referenzen
 
-    // --- DATENBANK-LISTENER ---
-    listenRef.onSnapshot(doc => {
-      if (doc.exists) {
-        const data = doc.data();
-        produkte = data.produkte || [];
-        vorrat = data.vorrat || [];
-        
-        // Benutzer initialisieren (nur einmal)
-        initialisiereBenutzer(); 
-        
-        aktualisiereDropdowns();
-        renderListe();
-        renderVorratskammer();
-      } else {
-        console.log("Neues Dokument wird erstellt.");
-        initialisiereBenutzer(); // Auch hier aufrufen
-        speichereAlles(); // Erstellt das Dokument, falls nicht vorhanden
-      }
-    });
+    function mainApp() {
+        // --- FIREBASE KONFIGURATION ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
+          authDomain: "einkaufliste-cd5d3.firebaseapp.com",
+          projectId: "einkaufliste-cd5d3",
+          storageBucket: "einkaufliste-cd5d3.appspot.com",
+          messagingSenderId: "36721747923",
+          appId: "1:36721747923:web:dbe48ff974c80435eff126",
+          measurementId: "G-37TDK0257N"
+        };
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+        } catch (e) {
+            console.error("Firebase Initialisierung fehlgeschlagen:", e);
+            alert("Fehler: Firebase konnte nicht gestartet werden. Sind die Firebase-Skripte blockiert?");
+            return; // App-Start abbrechen
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const LISTEN_ID = params.get("list") || "standardliste";
+        listenRef = db.collection("einkaufslisten").doc(LISTEN_ID);
+
+        // --- DATENBANK-LISTENER ---
+        listenRef.onSnapshot(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            produkte = data.produkte || [];
+            vorrat = data.vorrat || [];
+            
+            initialisiereBenutzer(); 
+            
+            aktualisiereDropdowns();
+            renderListe();
+            renderVorratskammer();
+          } else {
+            console.log("Neues Dokument wird erstellt.");
+            initialisiereBenutzer();
+            speichereAlles(); 
+          }
+        }, err => {
+            console.error("Firebase Snapshot-Fehler:", err);
+            alert("Fehler: Konnte nicht mit der Datenbank verbinden. Prüfe die Firebase-Regeln oder die Internetverbindung.");
+        });
+
+        // Dark Mode beim Start prüfen
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            // Wir rufen die *globale* Funktion auf
+            toggleDarkMode();
+        }
+    } // --- Ende von mainApp() ---
+
+
+    // --- FUNKTIONEN (müssen im globalen Scope sein für onclick) ---
 
     function speichereAlles() {
+      if (!listenRef) return; // Verhindert Fehler, falls Firebase noch nicht bereit ist
       const zuSpeicherndeProdukte = produkte.map(p => ({
         id: p.id,
         name: p.name,
@@ -558,7 +749,7 @@ const firebaseConfig = {
         kategorie: p.kategorie,
         icon: p.icon,
         erledigt: p.erledigt,
-        hinzugefuegtVon: p.hinzugefuegtVon || "Gast" // NEU: Benutzer mitspeichern
+        hinzugefuegtVon: p.hinzugefuegtVon || "Gast"
       }));
       listenRef.set({ 
         produkte: zuSpeicherndeProdukte, 
@@ -576,6 +767,13 @@ const firebaseConfig = {
       event.currentTarget.classList.add('active');
       
       document.getElementById('fab').style.display = (tabName === 'liste' && !einkaufsmodusAktiv) ? 'block' : 'none';
+      
+      // Beim Tab-Wechsel explizit neu rendern
+      if (tabName === 'liste') {
+        renderListe();
+      } else if (tabName === 'vorrat') {
+        renderVorratskammer();
+      }
     }
 
     function zeigeHinzufuegenTab(event, tabName) {
@@ -612,10 +810,6 @@ const firebaseConfig = {
       }
     }
     
-    if (localStorage.getItem('darkMode') === 'enabled') {
-      toggleDarkMode();
-    }
-    
     function toggleEinkaufsmodus() {
       einkaufsmodusAktiv = !einkaufsmodusAktiv;
       document.body.classList.toggle("einkaufsmodus", einkaufsmodusAktiv);
@@ -628,21 +822,20 @@ const firebaseConfig = {
       document.getElementById("shopping-controls").style.display = einkaufsmodusAktiv ? "flex" : "none";
       document.getElementById("fab").style.display = einkaufsmodusAktiv ? "none" : "block";
       
-      renderListe(); // Moduswechsel erfordert Neurenderung
+      renderListe();
     }
 
-    // --- NEU: BENUTZER-FUNKTIONEN ---
-    let benutzerInitialisiert = false;
+    // --- BENUTZER-FUNKTIONEN ---
     function initialisiereBenutzer() {
-      if (benutzerInitialisiert) return; // Nur einmal ausführen
+      if (benutzerInitialisiert) return;
       
       const lokalerName = localStorage.getItem('benutzerName');
       if (lokalerName) {
         benutzerName = lokalerName;
       } else {
-        // Verzögerung, damit die App erst laden kann
         setTimeout(() => {
-            document.getElementById('benutzerModal').style.display = 'flex';
+            const modal = document.getElementById('benutzerModal');
+            if (modal) modal.style.display = 'flex';
         }, 500);
       }
       benutzerInitialisiert = true;
@@ -688,7 +881,6 @@ const firebaseConfig = {
       gefiltert.forEach(p => {
         const li = document.createElement("li");
         li.className = p.erledigt ? 'erledigt' : '';
-        // NEU: .von-benutzer Span hinzugefügt
         li.innerHTML = `
           <span class="produkt-info" onclick="toggleErledigt(${p.id})">
             <i class="bi ${p.icon || 'bi-bag'}"></i>
@@ -741,16 +933,20 @@ const firebaseConfig = {
       const marktSet = new Set(produkte.map(p => p.markt).filter(m => m));
       
       const sortKategorie = document.getElementById("sortKategorie");
-      sortKategorie.innerHTML = '<option value="">Nach Kategorie sortieren</option>';
-      Array.from(katSet).sort().forEach(k => {
-        sortKategorie.innerHTML += `<option value="${k}">${k}</option>`;
-      });
+      if (sortKategorie) {
+          sortKategorie.innerHTML = '<option value="">Nach Kategorie sortieren</option>';
+          Array.from(katSet).sort().forEach(k => {
+            sortKategorie.innerHTML += `<option value="${k}">${k}</option>`;
+          });
+      }
       
       const marktFilter = document.getElementById("marktFilter");
-      marktFilter.innerHTML = '<option value="">Alle Märkte filtern</option>';
-      Array.from(marktSet).sort().forEach(m => {
-        marktFilter.innerHTML += `<option value="${m}">${m}</option>`;
-      });
+      if (marktFilter) {
+          marktFilter.innerHTML = '<option value="">Alle Märkte filtern</option>';
+          Array.from(marktSet).sort().forEach(m => {
+            marktFilter.innerHTML += `<option value="${m}">${m}</option>`;
+          });
+      }
     }
 
     // --- PRODUKT-LOGIK (HINZUFÜGEN, BEARBEITEN, LÖSCHEN) ---
@@ -802,7 +998,6 @@ const firebaseConfig = {
         let bestZahl = parseFloat(bestMatch[1].replace(',', '.'));
         bestehend.menge = `${bestZahl + zahl} ${einheit}`;
         if (notiz) bestehend.notiz = (bestehend.notiz ? bestehend.notiz + "; " : "") + notiz;
-        // NEU: Benutzer aktualisieren, falls ein anderer hinzufügt
         bestehend.hinzugefuegtVon = benutzerName; 
       } else {
         const vorlage = findeProduktVorlage(name);
@@ -819,7 +1014,6 @@ const firebaseConfig = {
         }
 
         const id = Date.now();
-        // NEU: 'hinzugefuegtVon' beim Erstellen setzen
         produkte.push({ id, name, menge, markt, notiz, kategorie, icon, erledigt: false, hinzugefuegtVon: benutzerName });
       }
       
@@ -834,15 +1028,23 @@ const firebaseConfig = {
     }
 
     function findeProduktVorlage(eingabe) {
-      if (typeof produktVorlagen === 'undefined') return null;
+      if (typeof produktVorlagen === 'undefined') {
+          console.warn("produktVorlagen-Array ist nicht definiert.");
+          return null;
+      }
       const n = eingabe.toLowerCase();
       return produktVorlagen.find(p => p.name.toLowerCase() === n);
     }
     
     function ladeFavoriten() {
       const grid = document.getElementById('favoritenGrid');
+      if (!grid) return;
       grid.innerHTML = '';
-      if (typeof produktVorlagen === 'undefined') return;
+      if (typeof produktVorlagen === 'undefined') {
+          console.warn("produktVorlagen-Array ist nicht definiert.");
+          grid.innerHTML = "<p>Favoriten-Definitionen fehlen.</p>";
+          return;
+      }
       
       produktVorlagen.filter(p => p.favorit).forEach(p => {
         const btn = document.createElement('button');
@@ -922,8 +1124,6 @@ const firebaseConfig = {
       const vorlage = findeProduktVorlage(p.name);
       p.icon = vorlage ? vorlage.icon : 'bi-bag';
       
-      // Benutzername beim Bearbeiten nicht ändern
-      
       speichereAlles();
       schliesseAlleModals(); 
     }
@@ -974,7 +1174,6 @@ const firebaseConfig = {
             menge: p.menge,
             kategorie: p.kategorie,
             icon: p.icon
-            // 'hinzugefuegtVon' wird nicht im Vorrat benötigt
           });
         }
       }
@@ -986,7 +1185,7 @@ const firebaseConfig = {
     // --- KI-FUNKTIONEN (Erfordert gemini-api.js) ---
     async function starteKiAnalyse() {
       if (typeof callGeminiApi !== 'function') {
-        alert("KI-Modul (gemini-api.js) nicht geladen.");
+        alert("KI-Modul (gemini-api.js) nicht geladen oder API-Key fehlt.");
         return;
       }
       
@@ -1031,14 +1230,13 @@ const firebaseConfig = {
         });
       } catch (err) {
         console.error("KI-Analyse-Fehler: ", err);
-        modalInhalt.innerHTML = "<p>Fehler bei der KI-Analyse. Hast du deinen API-Key in `gemini-api.js` eingetragen?</p>";
+        modalInhalt.innerHTML = "<p>Fehler bei der KI-Analyse. Hast du deinen API-Key eingetragen?</p>";
       }
     }
     
-    // NEU: KI-KOCH-ASSISTENT
     async function starteVorratAnalyse() {
       if (typeof callGeminiApi !== 'function') {
-        alert("KI-Modul (gemini-api.js) nicht geladen.");
+        alert("KI-Modul (gemini-api.js) nicht geladen oder API-Key fehlt.");
         return;
       }
       
@@ -1081,13 +1279,13 @@ const firebaseConfig = {
         });
       } catch (err) {
         console.error("KI-Vorratsanalyse-Fehler: ", err);
-        modalInhalt.innerHTML = "<p>Fehler bei der Rezept-Analyse. Hast du deinen API-Key in `gemini-api.js` eingetragen?</p>";
+        modalInhalt.innerHTML = "<p>Fehler bei der Rezept-Analyse. Hast du deinen API-Key eingetragen?</p>";
       }
     }
     
     async function starteRezeptAnalyse() {
       if (typeof callGeminiApi !== 'function') {
-        alert("KI-Modul (gemini-api.js) nicht geladen.");
+        alert("KI-Modul (gemini-api.js) nicht geladen oder API-Key fehlt.");
         return;
       }
       
