@@ -7,6 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <!-- Diese beiden Dateien musst du im selben Ordner haben -->
   <script src="produktVorlagen.js"></script>
   <script src="gemini-api.js"></script>
   <style>
@@ -99,7 +100,7 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    /* --- Bedienelemente (Filter, Budget etc.) --- */
+    /* --- Bedienelemente (Filter, etc.) --- */
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -144,20 +145,6 @@
       background-color: var(--disabled-color);
       cursor: not-allowed;
     }
-
-    #budgetAnzeige {
-      background-color: var(--card-bg);
-      border: 1px dashed var(--primary-color);
-      border-radius: 10px;
-      padding: 0.8rem;
-      text-align: center;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      font-size: 0.9rem;
-    }
-    #budgetAnzeige span { display: block; }
-    #budgetAnzeige .verbraucht { color: var(--primary-color); }
-    #budgetAnzeige .offen { color: #f59e0b; }
 
     /* --- Produkt Liste --- */
     ul { list-style-type: none; padding: 0; }
@@ -282,6 +269,23 @@
       padding: 0.5rem;
       font-size: 0.9rem;
     }
+    
+    /* Checkbox-Styling */
+    .checkbox-label {
+      display: flex; 
+      align-items: center; 
+      gap: 0.5rem; 
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: auto; 
+      margin: 0;
+      height: 1.2em;
+      width: 1.2em;
+    }
+
 
     /* --- Popups (Undo, etc.) --- */
     #undoPopup, #loeschPopup, #erledigtPopup {
@@ -326,16 +330,12 @@
     <button class="tab-button" onclick="zeigeTab('vorrat')">Vorratskammer</button>
   </nav>
 
+  <!-- ======================== -->
+  <!-- TAB: EINKAUFSLISTE       -->
+  <!-- ======================== -->
   <div id="listenContainer" class="tab-content active">
     
-    <div id="budgetAnzeige">
-      <span>Budget: <strong id="budgetTotal">0,00 €</strong></span>
-      <span class="verbraucht">Verbraucht: <strong id="budgetVerbraucht">0,00 €</strong></span>
-      <span class="offen">Offen: <strong id="budgetOffen">0,00 €</strong></span>
-    </div>
-
     <div class="controls">
-      <button class="control-item secondary" onclick="oeffneBudgetModal()"><i class="bi bi-piggy-bank"></i> Budget</button>
       <button id="einkaufsmodusBtn" class="control-item" onclick="toggleEinkaufsmodus()">Einkaufsmodus</button>
     </div>
     
@@ -360,6 +360,9 @@
     <ul id="liste"></ul>
   </div>
 
+  <!-- ======================== -->
+  <!-- TAB: VORRATSKAMMER       -->
+  <!-- ======================== -->
   <div id="vorratsContainer" class="tab-content">
     <div class="controls">
       <input type="text" id="vorratFilterInput" onkeyup="renderVorratskammer()" placeholder="Vorratskammer durchsuchen...">
@@ -367,9 +370,17 @@
     <ul id="vorratListe"></ul>
   </div>
 
+  <!-- ======================== -->
+  <!-- FAB - HINZUFÜGEN BUTTON  -->
+  <!-- ======================== -->
   <button id="fab" onclick="oeffneHinzufuegenModal()"><i class="bi bi-plus-lg"></i></button>
 
 
+  <!-- ======================== -->
+  <!-- MODALS (Pop-ups)         -->
+  <!-- ======================== -->
+
+  <!-- Modal 1: Hinzufügen-Zentrale -->
   <div id="hinzufuegenModal" class="modal">
     <div class="modal-content">
       <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
@@ -381,6 +392,7 @@
         <button id="tabBtnRezept" class="tab-button" onclick="zeigeHinzufuegenTab('rezept')">Rezept-KI</button>
       </nav>
 
+      <!-- Manuell Tab -->
       <div id="tabManuell" class="tab-content active">
         <input type="text" id="produktInput" placeholder="Produktname...">
         <input type="text" id="mengeInput" placeholder="Menge (z.B. 2 Stück)">
@@ -389,6 +401,7 @@
         <button onclick="hinzufuegen()">Hinzufügen</button>
       </div>
       
+      <!-- Sprache Tab -->
       <div id="tabSprache" class="tab-content">
         <button onclick="starteSpracheingabe()" id="spracheBtn">
           <i class="bi bi-mic-fill"></i> Aufnahme starten
@@ -396,6 +409,7 @@
         <p id="spracheStatus" style="text-align: center; margin-top: 1rem;"></p>
       </div>
 
+      <!-- Rezept-KI Tab -->
       <div id="tabRezept" class="tab-content">
         <textarea id="rezeptInput" placeholder="Hier ein Rezept oder eine Zutatenliste einfügen..."></textarea>
         <button onclick="starteRezeptAnalyse()" id="rezeptKiBtn">
@@ -406,24 +420,27 @@
       <hr style="margin: 1.5rem 0;">
       <h3>Favoriten</h3>
       <div class="favoriten-grid" id="favoritenGrid">
-        </div>
+        <!-- Favoriten werden per JS geladen -->
+      </div>
 
     </div>
   </div>
 
-  <div id="preisModal" class="modal">
+  <!-- Modal 2: Abhaken & Vorrat (NEU) -->
+  <div id="checkoffModal" class="modal">
     <div class="modal-content">
-      <h3>Produkt erfasst</h3>
-      <p>Was hat <strong id="preisProduktName"></strong> gekostet?</p>
-      <input type="number" id="preisInput" placeholder="Preis (z.B. 1.99)" step="0.01">
-      <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-        <input type="checkbox" id="inVorratCheckbox" style="width: auto; margin: 0;">
+      <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
+      <h3>Produkt abhaken</h3>
+      <p>Produkt <strong id="checkoffProduktName"></strong> als erledigt markieren.</p>
+      <label class="checkbox-label">
+        <input type="checkbox" id="inVorratCheckbox">
         In die Vorratskammer verschieben?
       </label>
-      <button id="preisSpeichernBtn">Speichern</button>
+      <button id="checkoffSpeichernBtn">Speichern</button>
     </div>
   </div>
   
+  <!-- Modal 3: Produkt bearbeiten -->
   <div id="editModal" class="modal">
     <div class="modal-content">
       <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
@@ -437,16 +454,8 @@
       <button onclick="speichereEdit()">Änderungen speichern</button>
     </div>
   </div>
-  
-  <div id="budgetModal" class="modal">
-    <div class="modal-content">
-      <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
-      <h3>Budget festlegen</h3>
-      <input type="number" id="budgetInput" placeholder="Gesamtbudget (z.B. 50.00)" step="0.01">
-      <button onclick="speichereBudget()">Budget speichern</button>
-    </div>
-  </div>
 
+  <!-- Modal 4: KI Analyse Ergebnisse -->
   <div id="kiAnalyseModal" class="modal">
     <div class="modal-content">
       <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
@@ -457,6 +466,7 @@
     </div>
   </div>
 
+  <!-- Andere Popups -->
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
     <button onclick="undoLoeschen()" class="secondary">Rückgängig</button>
@@ -496,7 +506,6 @@
     // --- GLOBALE VARIABLEN ---
     let produkte = [];
     let vorrat = [];
-    let budget = { total: 0, verbraucht: 0 };
     let zuletztGeloescht = null;
     let einkaufsmodusAktiv = false;
     let recognition = null; // Für Spracheingabe
@@ -507,8 +516,6 @@
         const data = doc.data();
         produkte = data.produkte || [];
         vorrat = data.vorrat || [];
-        budget = data.budget || { total: 0, verbraucht: 0 };
-        aktualisiereBudgetAnzeige();
         aktualisiereDropdowns();
         renderListe();
         renderVorratskammer();
@@ -519,7 +526,7 @@
     });
 
     function speichereAlles() {
-      // Nur geänderte Produkte speichern (z.B. ohne Preis)
+      // Nur die Kerndaten speichern
       const zuSpeicherndeProdukte = produkte.map(p => ({
         id: p.id,
         name: p.name,
@@ -529,12 +536,10 @@
         kategorie: p.kategorie,
         icon: p.icon,
         erledigt: p.erledigt
-        // 'preis' wird bewusst nicht gespeichert, da er temporär ist
       }));
       listenRef.set({ 
         produkte: zuSpeicherndeProdukte, 
-        vorrat: vorrat,
-        budget: budget 
+        vorrat: vorrat
       }).catch(err => console.error("Fehler beim Speichern: ", err));
     }
 
@@ -596,15 +601,6 @@
       document.getElementById("shopping-controls").style.display = einkaufsmodusAktiv ? "flex" : "none";
       document.getElementById("fab").style.display = einkaufsmodusAktiv ? "none" : "block";
       
-      if(einkaufsmodusAktiv) {
-        // Im Einkaufsmodus das Budget zurücksetzen (nur verbraucht)
-        budget.verbraucht = 0;
-        produkte.forEach(p => { 
-          p.preis = 0; // Preise für diese Sitzung zurücksetzen
-          if(p.erledigt) budget.verbraucht += p.preis || 0; // Neu berechnen, falls man es öffnet
-        });
-        aktualisiereBudgetAnzeige();
-      }
       renderListe();
     }
 
@@ -630,7 +626,7 @@
         gefiltert = gefiltert.filter(p => p.kategorie === kat);
       }
       
-      if (gefiltert.length === 0 && einkaufsmodusAktiv && produkte.length > 0) {
+      if (gefiltert.length === 0 && einkaufsmodusAktiv && produkte.length > 0 && produkte.some(p=> p.erledigt)) {
         zeigeErledigtPopup();
       }
 
@@ -759,7 +755,7 @@
         }
 
         const id = Date.now();
-        produkte.push({ id, name, menge, markt, notiz, kategorie, icon, erledigt: false, preis: 0 });
+        produkte.push({ id, name, menge, markt, notiz, kategorie, icon, erledigt: false });
       }
       
       speichereAlles();
@@ -770,9 +766,8 @@
         document.getElementById('mengeInput').value = '';
         document.getElementById('marktInput').value = '';
         document.getElementById('notizInput').value = '';
+        schliesseAlleModals(); // <-- REPARATUR 2
       }
-      // Bei manuellem Hinzufügen Modal nicht schließen, für schnelles Hinzufügen
-      // schliesseAlleModals();
     }
 
     function findeProduktVorlage(eingabe) {
@@ -807,18 +802,14 @@
       if (!p) return;
 
       if (!p.erledigt && einkaufsmodusAktiv) {
-        // Produkt wird ABGEHAKT -> Preis-Modal öffnen
-        oeffnePreisModal(p);
+        // Produkt wird ABGEHAKT -> Neues, einfaches Modal öffnen
+        oeffneCheckoffModal(p);
       } else {
-        // Produkt wird RE-AKTIVIERT
+        // Produkt wird RE-AKTIVIERT (Budget-Logik entfernt)
         p.erledigt = false;
-        if(p.preis) {
-          budget.verbraucht -= p.preis;
-          p.preis = 0;
-        }
         speichereAlles();
-        aktualisiereBudgetAnzeige();
       }
+      renderListe();
     }
 
     function loescheProdukt(id) {
@@ -869,7 +860,7 @@
       p.icon = vorlage ? vorlage.icon : 'bi-bag';
       
       speichereAlles();
-      schliesseAlleModals();
+      schliesseAlleModals(); // <-- REPARATUR 2
     }
     
     // --- VORRATSKAMMER-LOGIK ---
@@ -890,51 +881,23 @@
       speichereAlles();
     }
 
-    // --- BUDGET & PREIS-LOGIK ---
-    function oeffneBudgetModal() {
-      document.getElementById('budgetInput').value = budget.total || '';
-      document.getElementById('budgetModal').style.display = 'flex';
-    }
-    
-    function speichereBudget() {
-      budget.total = parseFloat(document.getElementById('budgetInput').value) || 0;
-      speichereAlles();
-      aktualisiereBudgetAnzeige();
-      schliesseAlleModals();
-    }
-    
-    function aktualisiereBudgetAnzeige() {
-      const format = val => val.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
-      const offen = budget.total - budget.verbraucht;
-      
-      document.getElementById('budgetTotal').textContent = format(budget.total);
-      document.getElementById('budgetVerbraucht').textContent = format(budget.verbraucht);
-      document.getElementById('budgetOffen').textContent = format(offen);
-      
-      const offenEl = document.getElementById('budgetOffen');
-      offenEl.style.color = offen < 0 ? '#ef4444' : '#f59e0b';
-    }
-
-    function oeffnePreisModal(produkt) {
-      document.getElementById('preisProduktName').textContent = produkt.name;
-      document.getElementById('preisInput').value = '';
+    // --- ABHAKEN-MODAL (NEU, statt Preis-Modal) ---
+    function oeffneCheckoffModal(produkt) {
+      document.getElementById('checkoffProduktName').textContent = produkt.name;
       document.getElementById('inVorratCheckbox').checked = false;
-      document.getElementById('preisModal').style.display = 'flex';
+      document.getElementById('checkoffModal').style.display = 'flex';
       
       // Knopf-Event neu binden, um die ID zu übergeben
-      document.getElementById('preisSpeichernBtn').onclick = () => speicherePreis(produkt.id);
+      document.getElementById('checkoffSpeichernBtn').onclick = () => speichereCheckoff(produkt.id);
     }
 
-    function speicherePreis(id) {
+    function speichereCheckoff(id) {
       const p = produkte.find(p => p.id === id);
       if (!p) return;
       
-      const preis = parseFloat(document.getElementById('preisInput').value) || 0;
       const inVorrat = document.getElementById('inVorratCheckbox').checked;
       
       p.erledigt = true;
-      p.preis = preis;
-      budget.verbraucht += preis;
       
       if (inVorrat) {
         // Prüfen ob schon im Vorrat, sonst hinzufügen
@@ -951,8 +914,7 @@
       }
       
       speichereAlles();
-      aktualisiereBudgetAnzeige();
-      schliesseAlleModals();
+      schliesseAlleModals(); // <-- REPARATUR 2
       renderListe(); // Liste neu rendern, um Produkt auszublenden
     }
     
@@ -1141,7 +1103,6 @@
       if (eingabe === richtigeAntwort) {
         produkte = [];
         vorrat = [];
-        budget = { total: 0, verbraucht: 0 };
         speichereAlles();
         document.getElementById("loeschPopup").style.display = "none";
       } else {
@@ -1168,6 +1129,7 @@
     let interval;
     function starteFeuerwerk() {
       const canvas = document.getElementById("feuerwerk");
+      if (!canvas) return;
       const ctx = canvas.getContext("2d");
       interval = setInterval(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1189,3 +1151,4 @@
 </script>
 </body>
 </html>
+
