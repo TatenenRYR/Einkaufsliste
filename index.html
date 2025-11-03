@@ -9,9 +9,10 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   
-  <!-- Die 'produktVorlagen.js' und 'gemini-api.js' Links sind jetzt entfernt -->
-  
   <style>
+    /* ========================================
+      CSS STILE
+    ======================================== */
     :root {
       --bg-color: #f0fdf4;
       --text-color: #1b1b1b;
@@ -160,6 +161,7 @@
       box-shadow: 0 1px 4px var(--shadow-color);
       transition: all 0.3s ease;
     }
+    /* WICHTIG: data-action Attribute werden jetzt für Klicks verwendet */
     .produkt-info {
       display: flex;
       align-items: center;
@@ -171,10 +173,12 @@
     .produkt-info i {
       font-size: 1.5rem;
       color: var(--primary-color);
+      pointer-events: none; /* Verhindert, dass Icon Klicks "stiehlt" */
     }
     .produkt-details {
       flex: 1;
       overflow: hidden;
+      pointer-events: none; /* Verhindert, dass Text Klicks "stiehlt" */
     }
     .produkt-details strong {
       display: block;
@@ -319,121 +323,82 @@
 </head>
 <body>
 
+  <!-- 
+    ========================================
+    HTML-STRUKTUR
+    (Stabil, keine 'onclick'-Attribute)
+    ========================================
+  -->
   <div class="header">
     <h1>Einkaufs-Assistent</h1>
-    <button id="darkModeToggle" onclick="toggleDarkMode()">
-      <i class="bi bi-moon-stars-fill"></i>
-    </button>
+    <button id="darkModeToggle"><i class="bi bi-moon-stars-fill"></i></button>
   </div>
 
   <nav class="tabs">
-    <button class="tab-button active" onclick="zeigeTab(event, 'liste')">Einkaufsliste</button>
-    <button class="tab-button" onclick="zeigeTab(event, 'vorrat')">Vorratskammer</button>
+    <button class="tab-button active" data-tab="liste">Einkaufsliste</button>
+    <button class="tab-button" data-tab="vorrat">Vorratskammer</button>
   </nav>
 
-  <!-- ======================== -->
-  <!-- TAB: EINKAUFSLISTE       -->
-  <!-- ======================== -->
   <div id="listenContainer" class="tab-content active">
-    
     <div class="controls">
-      <button id="einkaufsmodusBtn" class="control-item" onclick="toggleEinkaufsmodus()">Einkaufsmodus</button>
+      <button id="einkaufsmodusBtn" class="control-item">Einkaufsmodus</button>
     </div>
-    
     <div class="controls" id="shopping-controls" style="display: none;">
-      <select id="marktFilter" class="control-item" onchange="renderListe()">
-        <option value="">Alle Märkte</option>
-      </select>
-      <select id="sortKategorie" class="control-item" onchange="renderListe()">
-        <option value="">Sortieren</option>
-      </select>
+      <select id="marktFilter" class="control-item"><option value="">Alle Märkte</option></select>
+      <select id="sortKategorie" class="control-item"><option value="">Sortieren</option></select>
     </div>
-
     <div class="controls" id="edit-controls">
-      <button class="control-item" onclick="starteKiAnalyse()">
-        <i class="bi bi-magic"></i> Liste analysieren
-      </button>
-      <button class="control-item secondary" onclick="raeumeErledigteAuf()">
-        <i class="bi bi-check2-circle"></i> Erledigte aufräumen
-      </button>
+      <button id="kiAnalyseBtn" class="control-item"><i class="bi bi-magic"></i> Liste analysieren</button>
+      <button id="aufräumenBtn" class="control-item secondary"><i class="bi bi-check2-circle"></i> Erledigte aufräumen</button>
+      <button id="allesLoeschenBtn" class="control-item danger"><i class="bi bi-trash"></i> Alles löschen</button>
     </div>
-
-    <ul id="liste"></ul>
+    <ul id="liste"></ul> <!-- Klick-Listener wird hier angehängt -->
   </div>
 
-  <!-- ======================== -->
-  <!-- TAB: VORRATSKAMMER       -->
-  <!-- ======================== -->
   <div id="vorratsContainer" class="tab-content">
     <div class="controls">
-      <input type="text" id="vorratFilterInput" onkeyup="renderVorratskammer()" placeholder="Vorratskammer durchsuchen..." class="control-item" style="flex-basis: 100%;">
-      <button class="control-item secondary" onclick="starteVorratAnalyse()">
-          <i class="bi bi-lightbulb"></i> Was kochen? (KI)
-      </button>
+      <input type="text" id="vorratFilterInput" placeholder="Vorratskammer durchsuchen..." class="control-item" style="flex-basis: 100%;">
+      <button id="vorratKiBtn" class="control-item secondary"><i class="bi bi-lightbulb"></i> Was kochen? (KI)</button>
     </div>
-    <ul id="vorratListe"></ul>
+    <ul id="vorratListe"></ul> <!-- Klick-Listener wird hier angehängt -->
   </div>
 
-  <!-- ======================== -->
-  <!-- FAB - HINZUFÜGEN BUTTON  -->
-  <!-- ======================== -->
-  <button id="fab" onclick="oeffneHinzufuegenModal()"><i class="bi bi-plus-lg"></i></button>
+  <button id="fab"><i class="bi bi-plus-lg"></i></button>
 
-
-  <!-- ======================== -->
-  <!-- MODALS (Pop-ups)         -->
-  <!-- ======================== -->
-
-  <!-- Modal 1: Hinzufügen-Zentrale -->
+  <!-- Modals -->
   <div id="hinzufuegenModal" class="modal">
     <div class="modal-content">
-      <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
+      <span class="modal-close">&times;</span>
       <h3>Neues Produkt</h3>
-      
       <nav class="tabs">
-        <button id="tabBtnManuell" class="tab-button active" onclick="zeigeHinzufuegenTab(event, 'manuell')">Manuell</button>
-        <button id="tabBtnSprache" class="tab-button" onclick="zeigeHinzufuegenTab(event, 'sprache')">Sprache</button>
-        <button id="tabBtnRezept" class="tab-button" onclick="zeigeHinzufuegenTab(event, 'rezept')">Rezept-KI</button>
+        <button class="tab-button active" data-tab="manuell">Manuell</button>
+        <button class="tab-button" data-tab="sprache">Sprache</button>
+        <button class="tab-button" data-tab="rezept">Rezept-KI</button>
       </nav>
-
-      <!-- Manuell Tab -->
       <div id="tabManuell" class="tab-content active">
         <input type="text" id="produktInput" placeholder="Produktname...">
         <input type="text" id="mengeInput" placeholder="Menge (z.B. 2 Stück)">
         <input type="text" id="marktInput" placeholder="Markt (optional)">
         <input type="text" id="notizInput" placeholder="Notiz (optional)">
-        <button onclick="manuellHinzufuegen()">Hinzufügen</button>
+        <button id="manuellHinzufuegenBtn">Hinzufügen</button>
       </div>
-      
-      <!-- Sprache Tab -->
       <div id="tabSprache" class="tab-content">
-        <button onclick="starteSpracheingabe()" id="spracheBtn">
-          <i class="bi bi-mic-fill"></i> Aufnahme starten
-        </button>
+        <button id="spracheBtn"><i class="bi bi-mic-fill"></i> Aufnahme starten</button>
         <p id="spracheStatus" style="text-align: center; margin-top: 1rem;"></p>
       </div>
-
-      <!-- Rezept-KI Tab -->
       <div id="tabRezept" class="tab-content">
         <textarea id="rezeptInput" placeholder="Hier ein Rezept oder eine Zutatenliste einfügen..."></textarea>
-        <button onclick="starteRezeptAnalyse()" id="rezeptKiBtn">
-          <i class="bi bi-card-checklist"></i> Rezept verarbeiten
-        </button>
+        <button id="rezeptKiBtn"><i class="bi bi-card-checklist"></i> Rezept verarbeiten</button>
       </div>
-
       <hr style="margin: 1.5rem 0;">
       <h3>Favoriten</h3>
-      <div class="favoriten-grid" id="favoritenGrid">
-        <!-- Favoriten werden per JS geladen -->
-      </div>
-
+      <div class="favoriten-grid" id="favoritenGrid"></div>
     </div>
   </div>
 
-  <!-- Modal 2: Abhaken & Vorrat (NEU) -->
   <div id="checkoffModal" class="modal">
     <div class="modal-content">
-      <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
+      <span class="modal-close">&times;</span>
       <h3>Produkt abhaken</h3>
       <p>Produkt <strong id="checkoffProduktName"></strong> als erledigt markieren.</p>
       <label class="checkbox-label">
@@ -444,10 +409,9 @@
     </div>
   </div>
   
-  <!-- Modal 3: Produkt bearbeiten -->
   <div id="editModal" class="modal">
     <div class="modal-content">
-      <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
+      <span class="modal-close">&times;</span>
       <h3>Produkt bearbeiten</h3>
       <input type="hidden" id="editIdInput">
       <input type="text" id="editNameInput" placeholder="Produktname">
@@ -455,42 +419,39 @@
       <input type="text" id="editMarktInput" placeholder="Markt">
       <input type="text" id="editNotizInput" placeholder="Notiz">
       <input type="text" id="editKategorieInput" placeholder="Kategorie">
-      <button onclick="speichereEdit()">Änderungen speichern</button>
+      <button id="editSpeichernBtn">Änderungen speichern</button>
     </div>
   </div>
 
-  <!-- Modal 4: KI Analyse Ergebnisse -->
   <div id="kiAnalyseModal" class="modal">
     <div class="modal-content">
-      <span class="modal-close" onclick="schliesseAlleModals()">&times;</span>
+      <span class="modal-close">&times;</span>
       <h3>KI Analyse</h3>
-      <div id="kiAnalyseErgebnis">
-        <p>Analysiere Liste...</p>
-      </div>
+      <div id="kiAnalyseErgebnis"></div>
     </div>
   </div>
 
-  <!-- Modal 5: Benutzername -->
   <div id="benutzerModal" class="modal" style="display: none;">
     <div class="modal-content">
+      <span class="modal-close">&times;</span>
       <h3>Willkommen!</h3>
       <p>Wie ist dein Name? Dieser wird angezeigt, wenn du Produkte zu einer geteilten Liste hinzufügst.</p>
       <input type="text" id="benutzerNameInput" placeholder="Dein Name...">
-      <button onclick="speichereBenutzer()">Speichern</button>
+      <button id="benutzerSpeichernBtn">Speichern</button>
     </div>
   </div>
 
-  <!-- Andere Popups -->
+  <!-- Popups -->
   <div id="undoPopup">
     <span>Produkt gelöscht.</span>
-    <button onclick="undoLoeschen()" class="secondary">Rückgängig</button>
+    <button id="undoBtn" class="secondary">Rückgängig</button>
   </div>
   
   <div id="loeschPopup">
     <p id="matheFrage"></p>
     <input type="number" id="matheAntwort" placeholder="Antwort eingeben">
-    <button onclick="pruefeAntwort()" class="danger">Bestätigen</button>
-    <button onclick="abbrechenLoeschen()" class="secondary">Abbrechen</button>
+    <button id="loeschBestaetigenBtn" class="danger">Bestätigen</button>
+    <button id="loeschAbbrechenBtn" class="secondary">Abbrechen</button>
   </div>
   
   <div id="erledigtPopup">
@@ -502,11 +463,7 @@
     // ######################################################################
     // ###   INTEGRIERTER CODE: produktVorlagen.js                        ###
     // ######################################################################
-    
-    // Dies ist die Liste aller bekannten Produkte.
-    // 'favorit: true' fügt das Produkt zu den Quick-Add-Buttons hinzu.
     const produktVorlagen = [
-      // Favoriten (für Quick-Add)
       { name: "Milch", kategorie: "Milchprodukte", icon: "bi-box", menge: "1 L", favorit: true },
       { name: "Eier", kategorie: "Grundnahrungsmittel", icon: "bi-egg-fill", menge: "10 Stück", favorit: true },
       { name: "Brot", kategorie: "Backwaren", icon: "bi-view-list", menge: "1 Laib", favorit: true },
@@ -517,8 +474,6 @@
       { name: "Wurst", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck.", favorit: true },
       { name: "Kartoffeln", kategorie: "Obst & Gemüse", icon: "bi-node-plus", menge: "1 Netz", favorit: true },
       { name: "Toilettenpapier", kategorie: "Haushalt", icon: "bi-layers", menge: "1 Pck.", favorit: true },
-
-      // --- Obst & Gemüse ---
       { name: "Äpfel", kategorie: "Obst & Gemüse", icon: "bi-apple", menge: "1 Netz" },
       { name: "Bananen", kategorie: "Obst & Gemüse", icon: "bi-grip-horizontal", menge: "1 Bund" },
       { name: "Tomaten", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Rispe" },
@@ -527,20 +482,14 @@
       { name: "Zwiebeln", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Netz" },
       { name: "Karotten", kategorie: "Obst & Gemüse", icon: "bi-dash-lg", menge: "1 Bund" },
       { name: "Paprika", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Netz" },
-
-      // --- Fleisch & Wurst ---
       { name: "Hackfleisch", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "500 g" },
       { name: "Hähnchenbrust", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
       { name: "Salami", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
       { name: "Schinken", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
-
-      // --- Milchprodukte ---
       { name: "Joghurt", kategorie: "Milchprodukte", icon: "bi-cup", menge: "4er Pack" },
       { name: "Sahne", kategorie: "Milchprodukte", icon: "bi-cup-fill", menge: "1 Becher" },
       { name: "Quark", kategorie: "Milchprodukte", icon: "bi-cup", menge: "1 Becher" },
       { name: "Frischkäse", kategorie: "Milchprodukte", icon: "bi-box", menge: "1 Pck." },
-
-      // --- Grundnahrungsmittel ---
       { name: "Nudeln", kategorie: "Grundnahrungsmittel", icon: "bi-stack", menge: "1 Pck." },
       { name: "Reis", kategorie: "Grundnahrungsmittel", icon: "bi-record-fill", menge: "1 Pck." },
       { name: "Mehl", kategorie: "Grundnahrungsmittel", icon: "bi-box-seam", menge: "1 kg" },
@@ -552,19 +501,13 @@
       { name: "Senf", kategorie: "Grundnahrungsmittel", icon: "bi-droplet-fill", menge: "1 Glas" },
       { name: "Kaffee", kategorie: "Getränke", icon: "bi-cup-hot-fill", menge: "1 Pfund" },
       { name: "Tee", kategorie: "Getränke", icon: "bi-cup-hot", menge: "1 Pck." },
-
-      // --- Getränke ---
       { name: "Cola", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Flasche" },
       { name: "Saft", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Flasche" },
       { name: "Bier", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Kasten" },
-
-      // --- Haushalt ---
       { name: "Küchenrolle", kategorie: "Haushalt", icon: "bi-layers", menge: "1 Pck." },
       { name: "Waschmittel", kategorie: "Haushalt", icon: "bi-box-seam", menge: "1 Flasche" },
       { name: "Spülmittel", kategorie: "Haushalt", icon: "bi-droplet", menge: "1 Flasche" },
       { name: "Müllbeutel", kategorie: "Haushalt", icon: "bi-trash", menge: "1 Rolle" },
-
-      // --- Hygiene ---
       { name: "Zahnpasta", kategorie: "Hygiene", icon: "bi-activity", menge: "1 Tube" },
       { name: "Shampoo", kategorie: "Hygiene", icon: "bi-droplet", menge: "1 Flasche" },
       { name: "Seife", kategorie: "Hygiene", icon: "bi-activity", menge: "1 Stück" },
@@ -576,23 +519,18 @@
     // ###   INTEGRIERTER CODE: gemini-api.js                             ###
     // ######################################################################
     
-    /**
-     * WICHTIG: Ersetze 'DEIN_API_KEY' mit deinem
-     * echten Google AI Studio (Gemini) API Key.
-     */
-    const GEMINI_API_KEY = "AIzaSyAqpZeKexgzO-8uo4rJx8g6NAE4boFBbp8"; // <--- HIER DEINEN KEY EINFÜGEN
+    // API-Key von deiner Eingabe
+    const GEMINI_API_KEY = "AIzaSyAqpZeKexgzO-8uo4rJx8g6NAE4boFBbp8";
 
     /**
      * Ruft die Gemini API auf.
-     * @param {string} prompt Der Text-Prompt für die KI.
-     * @returns {Promise<string>} Die Text-Antwort von der KI.
      */
     async function callGeminiApi(prompt) {
       
-      if (GEMINI_API_KEY === "DEIN_API_KEY") {
-          console.error("Gemini API Key fehlt.");
-          alert("KI-Fehler: API-Key nicht in der Datei eingetragen.");
-          throw new Error("API-Key nicht eingetragen.");
+      if (GEMINI_API_KEY === "DEIN_API_KEY" || !GEMINI_API_KEY || GEMINI_API_KEY === "AIzaSyAqpZeKexgzO-8uo4rJx8g6NAE4boFBbp8" && GEMINI_API_KEY.length < 30) { 
+          console.error("Gemini API Key fehlt oder ist ungültig.");
+          // Wir werfen einen Fehler, den die aufrufende Funktion fangen kann
+          throw new Error("API-Key nicht eingetragen oder ungültig.");
       }
       
       const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
@@ -603,7 +541,6 @@
             text: prompt
           }]
         }],
-        // Sicherheitseinstellungen niedrig ansetzen, um JSON-Antworten nicht zu blockieren
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -611,7 +548,7 @@
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ],
         generationConfig: {
-          temperature: 0.1, // Kreativität niedrig halten für präzise JSON-Antworten
+          temperature: 0.1, 
           topK: 1,
           topP: 1,
           maxOutputTokens: 2048,
@@ -645,7 +582,6 @@
             throw new Error("Konnte keine gültige Antwort von der KI extrahieren.");
         }
         
-        // Bereinige die Antwort (oft in Markdown-Code-Blöcken)
         let textResponse = data.candidates[0].content.parts[0].text;
         textResponse = textResponse.replace(/^```json\s*/, '').replace(/```$/, '');
         
@@ -653,812 +589,1053 @@
 
       } catch (error) {
         console.error("Fehler beim Aufrufen der Gemini API:", error);
-        throw error;
+        throw error; // Fehler weitergeben
       }
     }
     // --- ENDE: gemini-api.js ---
 
 
     // ######################################################################
-    // ###   HAUPT-SKRIPT (Stabilisiert)                                  ###
+    // ###   HAUPT-SKRIPT (Rekonstruiert & Stabilisiert)                  ###
     // ######################################################################
 
-    // Wir packen die gesamte App-Logik in eine Funktion
-    // und starten sie erst, wenn die HTML-Seite komplett geladen ist.
-    
+    // Wartet, bis die HTML-Seite vollständig geladen ist.
     window.addEventListener('DOMContentLoaded', (event) => {
-        mainApp();
-    });
+        
+        // --- App-Zustand (State) ---
+        // Alle "lebenden" Daten der App
+        let produkte = [];
+        let vorrat = [];
+        let zuletztGeloescht = null;
+        let einkaufsmodusAktiv = false;
+        let recognition = null; 
+        let benutzerName = "Gast";
+        let benutzerInitialisiert = false;
+        let db, listenRef;
+        let richtigeAntwort = 0; // Für "Alles löschen"-Sicherheitsabfrage
+        let feuerwerkInterval;
 
-    // --- GLOBALE VARIABLEN ---
-    // (Einige müssen global sein, damit onclick-Handler sie finden)
-    let produkte = [];
-    let vorrat = [];
-    let zuletztGeloescht = null;
-    let einkaufsmodusAktiv = false;
-    let recognition = null; // Für Spracheingabe
-    let benutzerName = "Gast";
-    let benutzerInitialisiert = false;
-    let db, listenRef; // Firebase-Referenzen
+        // --- DOM-Elemente (Cache) ---
+        // Wir speichern alle wichtigen HTML-Elemente einmalig beim Start.
+        const ui = {
+            darkModeToggle: document.getElementById('darkModeToggle'),
+            tabsContainer: document.querySelector('.tabs'),
+            listenContainer: document.getElementById('listenContainer'),
+            vorratsContainer: document.getElementById('vorratsContainer'),
+            einkaufsmodusBtn: document.getElementById('einkaufsmodusBtn'),
+            shoppingControls: document.getElementById('shopping-controls'),
+            editControls: document.getElementById('edit-controls'),
+            marktFilter: document.getElementById('marktFilter'),
+            sortKategorie: document.getElementById('sortKategorie'),
+            kiAnalyseBtn: document.getElementById('kiAnalyseBtn'),
+            aufräumenBtn: document.getElementById('aufräumenBtn'),
+            allesLoeschenBtn: document.getElementById('allesLoeschenBtn'),
+            listeUl: document.getElementById('liste'),
+            vorratFilterInput: document.getElementById('vorratFilterInput'),
+            vorratKiBtn: document.getElementById('vorratKiBtn'),
+            vorratListeUl: document.getElementById('vorratListe'),
+            fab: document.getElementById('fab'),
+            
+            // Modals
+            hinzufuegenModal: document.getElementById('hinzufuegenModal'),
+            checkoffModal: document.getElementById('checkoffModal'),
+            editModal: document.getElementById('editModal'),
+            kiAnalyseModal: document.getElementById('kiAnalyseModal'),
+            benutzerModal: document.getElementById('benutzerModal'),
+            
+            // Hinzufügen-Modal
+            hinzufuegenTabs: document.getElementById('hinzufuegenModal').querySelector('.tabs'),
+            manuellHinzufuegenBtn: document.getElementById('manuellHinzufuegenBtn'),
+            spracheBtn: document.getElementById('spracheBtn'),
+            spracheStatus: document.getElementById('spracheStatus'),
+            rezeptKiBtn: document.getElementById('rezeptKiBtn'),
+            favoritenGrid: document.getElementById('favoritenGrid'),
+            
+            // Bearbeiten-Modal
+            editSpeichernBtn: document.getElementById('editSpeichernBtn'),
+            
+            // Checkoff-Modal
+            checkoffSpeichernBtn: document.getElementById('checkoffSpeichernBtn'),
+            
+            // Benutzer-Modal
+            benutzerSpeichernBtn: document.getElementById('benutzerSpeichernBtn'),
 
-    function mainApp() {
-        // --- FIREBASE KONFIGURATION ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
-          authDomain: "einkaufliste-cd5d3.firebaseapp.com",
-          projectId: "einkaufliste-cd5d3",
-          storageBucket: "einkaufliste-cd5d3.appspot.com",
-          messagingSenderId: "36721747923",
-          appId: "1:36721747923:web:dbe48ff974c80435eff126",
-          measurementId: "G-37TDK0257N"
+            // Popups
+            undoPopup: document.getElementById('undoPopup'),
+            undoBtn: document.getElementById('undoBtn'),
+            loeschPopup: document.getElementById('loeschPopup'),
+            loeschBestaetigenBtn: document.getElementById('loeschBestaetigenBtn'),
+            loeschAbbrechenBtn: document.getElementById('loeschAbbrechenBtn'),
+            erledigtPopup: document.getElementById('erledigtPopup'),
+            feuerwerkCanvas: document.getElementById('feuerwerk'),
+            
+            // Globale Modal-Schließ-Buttons
+            modalCloseBtns: document.querySelectorAll('.modal-close')
         };
+        
+        // --- 1. App-Initialisierung (Startpunkt) ---
+        
+        function mainApp() {
+            // Firebase-Konfiguration von deiner Eingabe
+            const firebaseConfig = {
+              apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
+              authDomain: "einkaufliste-cd5d3.firebaseapp.com",
+              // databaseURL ist für Realtime Database, wir nutzen Firestore
+              projectId: "einkaufliste-cd5d3",
+              storageBucket: "einkaufliste-cd5d3.firebasestorage.app", // Korrigierter Storage Bucket
+              messagingSenderId: "36721747923",
+              appId: "1:36721747923:web:dbe48ff974c80435eff126",
+              measurementId: "G-37TDK0257N"
+            };
 
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-        } catch (e) {
-            console.error("Firebase Initialisierung fehlgeschlagen:", e);
-            alert("Fehler: Firebase konnte nicht gestartet werden. Sind die Firebase-Skripte blockiert?");
-            return; // App-Start abbrechen
+            try {
+                // Prüfen ob Firebase schon initialisiert ist
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                db = firebase.firestore();
+            } catch (e) {
+                console.error("Firebase Initialisierung fehlgeschlagen:", e);
+                alert("Fehler: Firebase konnte nicht gestartet werden. Sind die Firebase-Skripte blockiert?");
+                return;
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            const LISTEN_ID = params.get("list") || "standardliste";
+            listenRef = db.collection("einkaufslisten").doc(LISTEN_ID);
+
+            // --- Datenbank-Listener (Die "Single Source of Truth") ---
+            // Diese Funktion wird bei JEDER Änderung in der Datenbank aufgerufen
+            // und ist die EINZIGE, die 'renderListe' und 'renderVorratskammer' aufruft.
+            listenRef.onSnapshot(doc => {
+              if (doc.exists) {
+                const data = doc.data();
+                produkte = data.produkte || [];
+                vorrat = data.vorrat || [];
+                
+                initialisiereBenutzer(); // Prüft, ob wir den Benutzer nach dem Namen fragen müssen
+                
+                aktualisiereDropdowns(); // Füllt die Filter-Dropdowns
+                renderListe(); // Zeichnet die Einkaufsliste neu
+                renderVorratskammer(); // Zeichnet die Vorratskammer neu
+              } else {
+                // Wenn die Listen-ID neu ist, wird hier ein leeres Dokument erstellt
+                console.log("Neues Dokument wird erstellt.");
+                initialisiereBenutzer();
+                speichereAlles(); 
+              }
+            }, err => {
+                // Fehlerbehandlung, falls Firebase blockiert ist
+                console.error("Firebase Snapshot-Fehler:", err);
+                alert("Fehler: Konnte nicht mit der Datenbank verbinden. Prüfe die Firebase-Regeln oder die Internetverbindung.");
+            });
+
+            // Dark Mode beim Start prüfen
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                toggleDarkMode();
+            }
+            
+            // Alle statischen Event-Listener (Knopfdrücke etc.) binden
+            bindEventListeners();
+            
+        } // --- Ende von mainApp() ---
+
+
+        // --- 2. Event-Listener (Die Steuerzentrale) ---
+        
+        /**
+         * Weist allen statischen HTML-Elementen ihre Klick-Funktionen zu.
+         */
+        function bindEventListeners() {
+            // Header
+            ui.darkModeToggle.addEventListener('click', toggleDarkMode);
+            
+            // Tabs (Hauptnavigation & Hinzufügen-Modal)
+            ui.tabsContainer.addEventListener('click', handleTabClick);
+            ui.hinzufuegenTabs.addEventListener('click', handleTabClick);
+            
+            // Haupt-Kontroll-Buttons
+            ui.einkaufsmodusBtn.addEventListener('click', toggleEinkaufsmodus);
+            ui.kiAnalyseBtn.addEventListener('click', starteKiAnalyse);
+            ui.aufräumenBtn.addEventListener('click', raeumeErledigteAuf);
+            ui.allesLoeschenBtn.addEventListener('click', zeigeLoeschAbfrage); // Button für "Alles löschen"
+            ui.vorratKiBtn.addEventListener('click', starteVorratAnalyse);
+            ui.fab.addEventListener('click', oeffneHinzufuegenModal);
+
+            // Filter (reagieren auf 'change' oder 'keyup')
+            ui.marktFilter.addEventListener('change', renderListe);
+            ui.sortKategorie.addEventListener('change', renderListe);
+            ui.vorratFilterInput.addEventListener('keyup', renderVorratskammer);
+
+            // WICHTIG: Event Delegation für dynamische Listen
+            // Diese "hören" auf Klicks innerhalb der gesamten Liste (<ul>)
+            ui.listeUl.addEventListener('click', handleListenKlick);
+            ui.vorratListeUl.addEventListener('click', handleVorratsKlick);
+
+            // Modal-Buttons
+            ui.manuellHinzufuegenBtn.addEventListener('click', manuellHinzufuegen);
+            ui.spracheBtn.addEventListener('click', starteSpracheingabe);
+            ui.rezeptKiBtn.addEventListener('click', starteRezeptAnalyse);
+            ui.checkoffSpeichernBtn.addEventListener('click', speichereCheckoff);
+            ui.editSpeichernBtn.addEventListener('click', speichereEdit);
+            ui.benutzerSpeichernBtn.addEventListener('click', speichereBenutzer);
+
+            // Popup-Buttons
+            ui.undoBtn.addEventListener('click', undoLoeschen);
+            ui.loeschBestaetigenBtn.addEventListener('click', pruefeAntwort);
+            ui.loeschAbbrechenBtn.addEventListener('click', abbrechenLoeschen);
+
+            // Alle Schließen-Buttons (Modals)
+            ui.modalCloseBtns.forEach(btn => btn.addEventListener('click', schliesseAlleModals));
         }
 
-        const params = new URLSearchParams(window.location.search);
-        const LISTEN_ID = params.get("list") || "standardliste";
-        listenRef = db.collection("einkaufslisten").doc(LISTEN_ID);
+        // --- 3. Event-Handler (Was passiert bei Klicks) ---
 
-        // --- DATENBANK-LISTENER ---
-        listenRef.onSnapshot(doc => {
-          if (doc.exists) {
-            const data = doc.data();
-            produkte = data.produkte || [];
-            vorrat = data.vorrat || [];
+        /**
+         * Fängt alle Klicks innerhalb der Haupt-Einkaufsliste ab.
+         * Findet heraus, welches Produkt (data-id) und welche Aktion (data-action) geklickt wurde.
+         * Dies behebt den "Buttons gehen nicht"-Fehler.
+         */
+        function handleListenKlick(event) {
+            const li = event.target.closest('li[data-id]'); // Das LI-Element mit der ID finden
+            if (!li) return; // Klick ins Leere
             
-            initialisiereBenutzer(); 
+            const id = parseInt(li.dataset.id);
+            const actionTarget = event.target.closest('[data-action]'); // Das Element mit der Aktion (kann li selbst sein)
+            if (!actionTarget) return;
+
+            const action = actionTarget.dataset.action;
             
-            aktualisiereDropdowns();
-            renderListe();
-            renderVorratskammer();
-          } else {
-            console.log("Neues Dokument wird erstellt.");
-            initialisiereBenutzer();
-            speichereAlles(); 
+            // Führt die entsprechende Aktion aus
+            if (action === 'toggle') {
+                toggleErledigt(id);
+            } else if (action === 'edit') {
+                oeffneEditModal(id);
+            } else if (action === 'delete') {
+                loescheProdukt(id);
+            }
+        }
+        
+        /**
+         * Fängt alle Klicks innerhalb der Vorratskammer-Liste ab.
+         */
+        function handleVorratsKlick(event) {
+            const li = event.target.closest('li[data-id]');
+            if (!li) return;
+            
+            const id = parseInt(li.dataset.id);
+            verschiebeInListe(id); // Jedes Klicken hier bedeutet "verschieben"
+        }
+
+        /**
+         * Fängt Klicks auf Tab-Reiter ab (sowohl Haupt-Tabs als auch Modal-Tabs).
+         * Dies behebt den "leere Liste nach Tab-Wechsel"-Fehler.
+         */
+        function handleTabClick(event) {
+            const target = event.target.closest('.tab-button');
+            if (!target || target.classList.contains('active')) return;
+            
+            const tabName = target.dataset.tab;
+            
+            // Findet den Container (entweder Haupt-Tabs oder Modal-Tabs)
+            const tabContainer = target.closest('.tabs');
+            const contentContainer = tabContainer.nextElementSibling.parentElement; 
+            
+            // Alle Tabs im selben Container deaktivieren
+            tabContainer.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+            contentContainer.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            // Ziel-Tab aktivieren
+            target.classList.add('active');
+            
+            // Logik für Haupt-Tabs (Einkaufsliste/Vorrat)
+            if (tabName === 'liste') {
+                ui.listenContainer.classList.add('active');
+                ui.fab.style.display = einkaufsmodusAktiv ? 'none' : 'block';
+            } else if (tabName === 'vorrat') {
+                ui.vorratsContainer.classList.add('active');
+                ui.fab.style.display = 'none';
+            }
+            // Logik für Hinzufügen-Modal-Tabs
+            else if (tabName === 'manuell') {
+                document.getElementById('tabManuell').classList.add('active');
+            } else if (tabName === 'sprache') {
+                document.getElementById('tabSprache').classList.add('active');
+            } else if (tabName === 'rezept') {
+                document.getElementById('tabRezept').classList.add('active');
+            }
+        }
+
+
+        // --- 4. Kern-Funktionen (Daten & UI-Logik) ---
+
+        /**
+         * Speichert den aktuellen Zustand von 'produkte' und 'vorrat' in Firebase.
+         */
+        function speichereAlles() {
+          if (!listenRef) {
+              console.warn("Speichern fehlgeschlagen: listenRef ist noch nicht bereit.");
+              return; 
           }
-        }, err => {
-            console.error("Firebase Snapshot-Fehler:", err);
-            alert("Fehler: Konnte nicht mit der Datenbank verbinden. Prüfe die Firebase-Regeln oder die Internetverbindung.");
-        });
-
-        // Dark Mode beim Start prüfen
-        if (localStorage.getItem('darkMode') === 'enabled') {
-            // Wir rufen die *globale* Funktion auf
-            toggleDarkMode();
+          const zuSpeicherndeProdukte = produkte.map(p => ({
+            id: p.id, name: p.name, menge: p.menge, markt: p.markt,
+            notiz: p.notiz, kategorie: p.kategorie, icon: p.icon,
+            erledigt: p.erledigt, hinzugefuegtVon: p.hinzugefuegtVon || "Gast"
+          }));
+          listenRef.set({ 
+            produkte: zuSpeicherndeProdukte, 
+            vorrat: vorrat
+          }).catch(err => console.error("Fehler beim Speichern: ", err));
         }
-    } // --- Ende von mainApp() ---
 
+        /**
+         * Öffnet das "Produkt hinzufügen"-Modal.
+         */
+        function oeffneHinzufuegenModal() {
+          ui.hinzufuegenModal.style.display = 'flex';
+          ladeFavoriten();
+        }
+        
+        /**
+         * Schließt ALLE offenen Modals.
+         */
+        function schliesseAlleModals() {
+          document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+          if (recognition) {
+            recognition.stop();
+            recognition = null;
+          }
+        }
 
-    // --- FUNKTIONEN (müssen im globalen Scope sein für onclick) ---
+        /**
+         * Schaltet den Dark Mode um und speichert die Wahl.
+         */
+        function toggleDarkMode() {
+          document.body.classList.toggle('dark-mode');
+          const icon = ui.darkModeToggle.querySelector('i');
+          if (document.body.classList.contains('dark-mode')) {
+            icon.classList.remove('bi-moon-stars-fill');
+            icon.classList.add('bi-sun-fill');
+            localStorage.setItem('darkMode', 'enabled');
+          } else {
+            icon.classList.remove('bi-sun-fill');
+            icon.classList.add('bi-moon-stars-fill');
+            localStorage.setItem('darkMode', 'disabled');
+          }
+        }
+        
+        /**
+         * Schaltet den Einkaufsmodus um (blendet UI-Elemente ein/aus).
+         */
+        function toggleEinkaufsmodus() {
+          einkaufsmodusAktiv = !einkaufsmodusAktiv;
+          document.body.classList.toggle("einkaufsmodus", einkaufsmodusAktiv);
+          
+          ui.einkaufsmodusBtn.classList.toggle("active", einkaufsmodusAktiv);
+          ui.einkaufsmodusBtn.innerHTML = einkaufsmodusAktiv ? "Bearbeiten-Modus" : "Einkaufsmodus";
+          
+          ui.editControls.style.display = einkaufsmodusAktiv ? "none" : "flex";
+          ui.shoppingControls.style.display = einkaufsmodusAktiv ? "flex" : "none";
+          ui.fab.style.display = einkaufsmodusAktiv ? "none" : "block";
+          
+          renderListe(); // Modus-Wechsel erfordert Neurenderung
+        }
 
-    function speichereAlles() {
-      if (!listenRef) return; // Verhindert Fehler, falls Firebase noch nicht bereit ist
-      const zuSpeicherndeProdukte = produkte.map(p => ({
-        id: p.id,
-        name: p.name,
-        menge: p.menge,
-        markt: p.markt,
-        notiz: p.notiz,
-        kategorie: p.kategorie,
-        icon: p.icon,
-        erledigt: p.erledigt,
-        hinzugefuegtVon: p.hinzugefuegtVon || "Gast"
-      }));
-      listenRef.set({ 
-        produkte: zuSpeicherndeProdukte, 
-        vorrat: vorrat
-      }).catch(err => console.error("Fehler beim Speichern: ", err));
-    }
+        /**
+         * Prüft, ob ein Benutzername lokal gespeichert ist, sonst wird das Modal gezeigt.
+         */
+        function initialisiereBenutzer() {
+          if (benutzerInitialisiert) return;
+          
+          const lokalerName = localStorage.getItem('benutzerName');
+          if (lokalerName) {
+            benutzerName = lokalerName;
+          } else {
+            setTimeout(() => {
+                if (ui.benutzerModal) ui.benutzerModal.style.display = 'flex';
+            }, 500);
+          }
+          benutzerInitialisiert = true;
+        }
 
-    // --- UI FUNKTIONEN (TABS, MODALS, DARK MODE) ---
+        /**
+         * Speichert den eingegebenen Benutzernamen lokal.
+         */
+        function speichereBenutzer() {
+          const nameInput = document.getElementById('benutzerNameInput').value.trim();
+          if (nameInput) {
+            benutzerName = nameInput;
+            localStorage.setItem('benutzerName', benutzerName);
+            schliesseAlleModals();
+          } else {
+            alert("Bitte gib einen Namen ein.");
+          }
+        }
 
-    function zeigeTab(event, tabName) {
-      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-      document.querySelectorAll('.tabs .tab-button').forEach(tb => tb.classList.remove('active'));
-      
-      document.getElementById(`${tabName}Container`).classList.add('active');
-      event.currentTarget.classList.add('active');
-      
-      document.getElementById('fab').style.display = (tabName === 'liste' && !einkaufsmodusAktiv) ? 'block' : 'none';
-      
-      // Beim Tab-Wechsel explizit neu rendern
-      if (tabName === 'liste') {
-        renderListe();
-      } else if (tabName === 'vorrat') {
-        renderVorratskammer();
-      }
-    }
+        /**
+         * Zeichnet die Haupt-Einkaufsliste basierend auf Filtern und Modus.
+         */
+        function renderListe() {
+          const ul = ui.listeUl;
+          if (!ul) return; 
+          ul.innerHTML = '';
+          
+          const kat = ui.sortKategorie.value;
+          const markt = ui.marktFilter.value;
 
-    function zeigeHinzufuegenTab(event, tabName) {
-      document.querySelectorAll('#hinzufuegenModal .tab-content').forEach(tc => tc.classList.remove('active'));
-      document.querySelectorAll('#hinzufuegenModal .tab-button').forEach(tb => tb.classList.remove('active'));
-      document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
-      event.currentTarget.classList.add('active');
-    }
+          let gefiltert = [...produkte];
+          
+          if (einkaufsmodusAktiv) {
+            gefiltert = gefiltert.filter(p => !p.erledigt);
+            if (markt) gefiltert = gefiltert.filter(p => p.markt === markt);
+          } else {
+            gefiltert.sort((a, b) => a.erledigt - b.erledigt);
+          }
 
-    function oeffneHinzufuegenModal() {
-      document.getElementById('hinzufuegenModal').style.display = 'flex';
-      ladeFavoriten();
-    }
-    
-    function schliesseAlleModals() {
-      document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-      if (recognition) {
-        recognition.stop();
-        recognition = null;
-      }
-    }
+          if (kat) {
+            gefiltert = gefiltert.filter(p => p.kategorie === kat);
+          }
+          
+          if (gefiltert.length === 0 && einkaufsmodusAktiv && produkte.length > 0 && produkte.some(p=> p.erledigt)) {
+            zeigeErledigtPopup();
+          }
 
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark-mode');
-      const icon = document.getElementById('darkModeToggle').querySelector('i');
-      if (document.body.classList.contains('dark-mode')) {
-        icon.classList.remove('bi-moon-stars-fill');
-        icon.classList.add('bi-sun-fill');
-        localStorage.setItem('darkMode', 'enabled');
-      } else {
-        icon.classList.remove('bi-sun-fill');
-        icon.classList.add('bi-moon-stars-fill');
-        localStorage.setItem('darkMode', 'disabled');
-      }
-    }
-    
-    function toggleEinkaufsmodus() {
-      einkaufsmodusAktiv = !einkaufsmodusAktiv;
-      document.body.classList.toggle("einkaufsmodus", einkaufsmodusAktiv);
-      
-      const btn = document.getElementById("einkaufsmodusBtn");
-      btn.classList.toggle("active", einkaufsmodusAktiv);
-      btn.innerHTML = einkaufsmodusAktiv ? "Bearbeiten-Modus" : "Einkaufsmodus";
-      
-      document.getElementById("edit-controls").style.display = einkaufsmodusAktiv ? "none" : "flex";
-      document.getElementById("shopping-controls").style.display = einkaufsmodusAktiv ? "flex" : "none";
-      document.getElementById("fab").style.display = einkaufsmodusAktiv ? "none" : "block";
-      
-      renderListe();
-    }
-
-    // --- BENUTZER-FUNKTIONEN ---
-    function initialisiereBenutzer() {
-      if (benutzerInitialisiert) return;
-      
-      const lokalerName = localStorage.getItem('benutzerName');
-      if (lokalerName) {
-        benutzerName = lokalerName;
-      } else {
-        setTimeout(() => {
-            const modal = document.getElementById('benutzerModal');
-            if (modal) modal.style.display = 'flex';
-        }, 500);
-      }
-      benutzerInitialisiert = true;
-    }
-
-    function speichereBenutzer() {
-      const nameInput = document.getElementById('benutzerNameInput').value.trim();
-      if (nameInput) {
-        benutzerName = nameInput;
-        localStorage.setItem('benutzerName', benutzerName);
-        schliesseAlleModals();
-      } else {
-        alert("Bitte gib einen Namen ein.");
-      }
-    }
-
-    // --- RENDER FUNKTIONEN (LISTE & VORRAT) ---
-    function renderListe() {
-      const ul = document.getElementById("liste");
-      if (!ul) return; 
-      ul.innerHTML = '';
-      
-      const kat = document.getElementById("sortKategorie").value;
-      const markt = document.getElementById("marktFilter").value;
-
-      let gefiltert = [...produkte];
-      
-      if (einkaufsmodusAktiv) {
-        gefiltert = gefiltert.filter(p => !p.erledigt);
-        if (markt) gefiltert = gefiltert.filter(p => p.markt === markt);
-      } else {
-        gefiltert.sort((a, b) => a.erledigt - b.erledigt);
-      }
-
-      if (kat) {
-        gefiltert = gefiltert.filter(p => p.kategorie === kat);
-      }
-      
-      if (gefiltert.length === 0 && einkaufsmodusAktiv && produkte.length > 0 && produkte.some(p=> p.erledigt)) {
-        zeigeErledigtPopup();
-      }
-
-      gefiltert.forEach(p => {
-        const li = document.createElement("li");
-        li.className = p.erledigt ? 'erledigt' : '';
-        li.innerHTML = `
-          <span class="produkt-info" onclick="toggleErledigt(${p.id})">
-            <i class="bi ${p.icon || 'bi-bag'}"></i>
-            <div class="produkt-details">
-              <strong>${p.name}</strong>
-              <span class="kategorie">${p.menge} ${p.markt ? '• ' + p.markt : ''} ${p.kategorie ? '• ' + p.kategorie : ''}</span>
-              ${p.notiz ? `<span class="notiz">${p.notiz}</span>` : ''}
-              ${p.hinzugefuegtVon && p.hinzugefuegtVon !== "Gast" ? `<span class="von-benutzer"><i>Von: ${p.hinzugefuegtVon}</i></span>` : ''}
-            </div>
-          </span>
-          <span class="aktionen">
-            ${!einkaufsmodusAktiv ? `
-              <button class="secondary" onclick="event.stopPropagation(); oeffneEditModal(${p.id})"><i class="bi bi-pencil"></i></button>
-              <button class="danger" onclick="event.stopPropagation(); loescheProdukt(${p.id})"><i class="bi bi-trash"></i></button>
-            ` : ''}
-          </span>`;
-        ul.appendChild(li);
-      });
-    }
-    
-    function renderVorratskammer() {
-      const ul = document.getElementById("vorratListe");
-      if (!ul) return; 
-      const filter = document.getElementById("vorratFilterInput").value.toLowerCase();
-      ul.innerHTML = '';
-      
-      vorrat
-        .filter(p => p.name.toLowerCase().includes(filter))
-        .sort((a,b) => a.name.localeCompare(b.name))
-        .forEach(p => {
-          const li = document.createElement("li");
-          li.className = 'vorrat-item';
-          li.innerHTML = `
-            <span class="produkt-info">
-              <i class="bi ${p.icon || 'bi-box-seam'}"></i>
-              <div class="produkt-details">
-                <strong>${p.name}</strong>
-                <span class="kategorie">${p.menge || ''}</span>
-              </div>
-            </span>
-            <span class="aktionen">
-              <button onclick="verschiebeInListe(${p.id})"><i class="bi bi-arrow-up-left-circle"></i></button>
-            </span>`;
-          ul.appendChild(li);
-        });
-    }
-
-    function aktualisiereDropdowns() {
-      const katSet = new Set(produkte.map(p => p.kategorie).filter(k => k));
-      const marktSet = new Set(produkte.map(p => p.markt).filter(m => m));
-      
-      const sortKategorie = document.getElementById("sortKategorie");
-      if (sortKategorie) {
-          sortKategorie.innerHTML = '<option value="">Nach Kategorie sortieren</option>';
-          Array.from(katSet).sort().forEach(k => {
-            sortKategorie.innerHTML += `<option value="${k}">${k}</option>`;
+          // Erstellt die HTML-Elemente für jedes Produkt
+          gefiltert.forEach(p => {
+            const li = document.createElement("li");
+            li.dataset.id = p.id; // WICHTIG: ID am LI speichern
+            li.className = p.erledigt ? 'erledigt' : '';
+            
+            // data-action Attribute steuern die Klick-Handler
+            li.innerHTML = `
+              <span class="produkt-info" data-action="toggle">
+                <i class="bi ${p.icon || 'bi-bag'}"></i>
+                <div class="produkt-details">
+                  <strong>${p.name}</strong>
+                  <span class="kategorie">${p.menge} ${p.markt ? '• ' + p.markt : ''} ${p.kategorie ? '• ' + p.kategorie : ''}</span>
+                  ${p.notiz ? `<span class="notiz">${p.notiz}</span>` : ''}
+                  ${p.hinzugefuegtVon && p.hinzugefuegtVon !== "Gast" ? `<span class="von-benutzer"><i>Von: ${p.hinzugefuegtVon}</i></span>` : ''}
+                </div>
+              </span>
+              <span class="aktionen">
+                ${!einkaufsmodusAktiv ? `
+                  <button class="secondary" data-action="edit"><i class="bi bi-pencil"></i></button>
+                  <button class="danger" data-action="delete"><i class="bi bi-trash"></i></button>
+                ` : ''}
+              </span>`;
+            ul.appendChild(li);
           });
-      }
-      
-      const marktFilter = document.getElementById("marktFilter");
-      if (marktFilter) {
-          marktFilter.innerHTML = '<option value="">Alle Märkte filtern</option>';
-          Array.from(marktSet).sort().forEach(m => {
-            marktFilter.innerHTML += `<option value="${m}">${m}</option>`;
+        }
+        
+        /**
+         * Zeichnet die Vorratskammer-Liste basierend auf dem Suchfilter.
+         */
+        function renderVorratskammer() {
+          const ul = ui.vorratListeUl;
+          if (!ul) return; 
+          const filter = ui.vorratFilterInput.value.toLowerCase();
+          ul.innerHTML = '';
+          
+          vorrat
+            .filter(p => p.name.toLowerCase().includes(filter))
+            .sort((a,b) => a.name.localeCompare(b.name))
+            .forEach(p => {
+              const li = document.createElement("li");
+              li.dataset.id = p.id; // WICHTIG: ID am LI speichern
+              li.className = 'vorrat-item';
+              li.dataset.action = "move"; // Klick auf das ganze LI ist "move"
+              
+              li.innerHTML = `
+                <span class="produkt-info" data-action="move">
+                  <i class="bi ${p.icon || 'bi-box-seam'}"></i>
+                  <div class="produkt-details">
+                    <strong>${p.name}</strong>
+                    <span class="kategorie">${p.menge || ''}</span>
+                  </div>
+                </span>
+                <span class="aktionen">
+                  <button data-action="move"><i class="bi bi-arrow-up-left-circle"></i></button>
+                </span>`;
+              ul.appendChild(li);
+            });
+        }
+
+        /**
+         * Füllt die Dropdown-Filter (Kategorie, Markt) basierend auf den aktuellen Produkten.
+         */
+        function aktualisiereDropdowns() {
+          const katSet = new Set(produkte.map(p => p.kategorie).filter(k => k));
+          const marktSet = new Set(produkte.map(p => p.markt).filter(m => m));
+          
+          if (ui.sortKategorie) {
+              const alterWert = ui.sortKategorie.value;
+              ui.sortKategorie.innerHTML = '<option value="">Nach Kategorie sortieren</option>';
+              Array.from(katSet).sort().forEach(k => {
+                ui.sortKategorie.innerHTML += `<option value="${k}">${k}</option>`;
+              });
+              ui.sortKategorie.value = alterWert; // Auswahl beibehalten
+          }
+          
+          if (ui.marktFilter) {
+              const alterWert = ui.marktFilter.value;
+              ui.marktFilter.innerHTML = '<option value="">Alle Märkte filtern</option>';
+              Array.from(marktSet).sort().forEach(m => {
+                ui.marktFilter.innerHTML += `<option value="${m}">${m}</option>`;
+              });
+              ui.marktFilter.value = alterWert; // Auswahl beibehalten
+          }
+        }
+
+        /**
+         * Wrapper für den manuellen Hinzufügen-Button. Prüft Eingabe und schließt Modal.
+         */
+        function manuellHinzufuegen() {
+            const name = document.getElementById('produktInput').value.trim();
+            if (!name) {
+                alert("Bitte gib einen Produktnamen ein.");
+                return; 
+            }
+            hinzufuegen(); // Ruft Kern-Hinzufügen-Funktion auf
+            schliesseAlleModals();
+        }
+        
+        /**
+         * Kernfunktion zum Hinzufügen von Produkten. Wird von manuell, KI, Sprache etc. genutzt.
+         * Kombiniert Mengen, wenn Produkt schon existiert.
+         */
+        function hinzufuegen(produktObj = null) {
+          let name, menge, markt, notiz, kategorie, icon;
+
+          if (produktObj) { // Hinzufügen per KI, Favorit oder Sprache
+            name = produktObj.name.trim();
+            menge = produktObj.menge || "1 Stück";
+            markt = produktObj.markt || "";
+            notiz = produktObj.notiz || "";
+          } else { // Hinzufügen per manuellem Formular
+            name = document.getElementById('produktInput').value.trim();
+            menge = document.getElementById('mengeInput').value.trim() || "1 Stück";
+            markt = document.getElementById('marktInput').value.trim();
+            notiz = document.getElementById('notizInput').value.trim();
+          }
+
+          if (!name) return; // Sollte nicht passieren, aber sicher ist sicher
+
+          // Mengen-Logik
+          const mengenMatch = menge.match(/^(\d+[\.,]?\d*)\s*(.*)/);
+          let zahl = 1;
+          let einheit = menge;
+          if (mengenMatch) {
+            zahl = parseFloat(mengenMatch[1].replace(',', '.'));
+            einheit = mengenMatch[2].trim() || "Stück";
+          }
+
+          const bestehend = produkte.find(p => 
+            !p.erledigt &&
+            p.name.toLowerCase() === name.toLowerCase() &&
+            p.markt === markt &&
+            p.menge.toLowerCase().endsWith(einheit.toLowerCase())
+          );
+
+          if (bestehend) { // Produkt existiert -> Menge erhöhen
+            const bestMatch = bestehend.menge.match(/^(\d+[\.,]?\d*)\s*(.*)/);
+            let bestZahl = parseFloat(bestMatch[1].replace(',', '.'));
+            bestehend.menge = `${bestZahl + zahl} ${einheit}`;
+            if (notiz) bestehend.notiz = (bestehend.notiz ? bestehend.notiz + "; " : "") + notiz;
+            bestehend.hinzugefuegtVon = benutzerName; 
+          } else { // Produkt ist neu -> Hinzufügen
+            const vorlage = findeProduktVorlage(name);
+            if (vorlage && !produktObj) { // Manuell -> Vorlage nutzen
+              kategorie = vorlage.kategorie;
+              icon = vorlage.icon;
+              menge = menge === "1 Stück" ? (vorlage.menge || menge) : menge; 
+            } else if (produktObj && produktObj.kategorie) { // KI/Favorit -> Daten übernehmen
+              kategorie = produktObj.kategorie;
+              icon = produktObj.icon || 'bi-bag';
+            } else { // Unbekannt
+              kategorie = "Sonstiges";
+              icon = "bi-bag";
+            }
+
+            const id = Date.now();
+            produkte.push({ id, name, menge, markt, notiz, kategorie, icon, erledigt: false, hinzugefuegtVon: benutzerName });
+          }
+          
+          speichereAlles(); // Speichern. 'onSnapshot' kümmert sich ums Neuzeichnen.
+          
+          if (!produktObj) { // Formularfelder leeren
+            document.getElementById('produktInput').value = '';
+            document.getElementById('mengeInput').value = '';
+            document.getElementById('marktInput').value = '';
+            document.getElementById('notizInput').value = '';
+          }
+        }
+
+        /**
+         * Sucht eine passende Vorlage aus der 'produktVorlagen'-Liste.
+         */
+        function findeProduktVorlage(eingabe) {
+          if (typeof produktVorlagen === 'undefined') {
+              console.warn("produktVorlagen-Array ist nicht definiert.");
+              return null;
+          }
+          const n = eingabe.toLowerCase();
+          return produktVorlagen.find(p => p.name.toLowerCase() === n);
+        }
+        
+        /**
+         * Füllt das Favoriten-Grid im Hinzufügen-Modal.
+         */
+        function ladeFavoriten() {
+          const grid = ui.favoritenGrid;
+          if (!grid) return;
+          grid.innerHTML = '';
+          if (typeof produktVorlagen === 'undefined') {
+              console.warn("produktVorlagen-Array ist nicht definiert.");
+              grid.innerHTML = "<p>Favoriten-Definitionen fehlen.</p>";
+              return;
+          }
+          
+          produktVorlagen.filter(p => p.favorit).forEach(p => {
+            const btn = document.createElement('button');
+            btn.className = 'secondary';
+            btn.innerHTML = `<i class="bi ${p.icon || 'bi-bag'}"></i> ${p.name}`;
+            btn.onclick = () => { // onclick ist hier OK, da es dynamisch erzeugt wird
+              hinzufuegen({
+                name: p.name,
+                menge: p.menge,
+                kategorie: p.kategorie,
+                icon: p.icon
+              });
+              // schließt das Modal nicht, für schnelles Hinzufügen
+            };
+            grid.appendChild(btn);
           });
-      }
-    }
-
-    // --- PRODUKT-LOGIK (HINZUFÜGEN, BEARBEITEN, LÖSCHEN) ---
-
-    function manuellHinzufuegen() {
-        const name = document.getElementById('produktInput').value.trim();
-        if (!name) {
-            alert("Bitte gib einen Produktnamen ein.");
-            return; 
-        }
-        hinzufuegen(); 
-        schliesseAlleModals();
-    }
-    
-    function hinzufuegen(produktObj = null) {
-      let name, menge, markt, notiz, kategorie, icon;
-
-      if (produktObj) {
-        name = produktObj.name.trim();
-        menge = produktObj.menge || "1 Stück";
-        markt = produktObj.markt || "";
-        notiz = produktObj.notiz || "";
-      } else {
-        name = document.getElementById('produktInput').value.trim();
-        menge = document.getElementById('mengeInput').value.trim() || "1 Stück";
-        markt = document.getElementById('marktInput').value.trim();
-        notiz = document.getElementById('notizInput').value.trim();
-      }
-
-      if (!name) return;
-
-      const mengenMatch = menge.match(/^(\d+[\.,]?\d*)\s*(.*)/);
-      let zahl = 1;
-      let einheit = menge;
-      if (mengenMatch) {
-        zahl = parseFloat(mengenMatch[1].replace(',', '.'));
-        einheit = mengenMatch[2].trim() || "Stück";
-      }
-
-      const bestehend = produkte.find(p => 
-        !p.erledigt &&
-        p.name.toLowerCase() === name.toLowerCase() &&
-        p.markt === markt &&
-        p.menge.toLowerCase().endsWith(einheit.toLowerCase())
-      );
-
-      if (bestehend) {
-        const bestMatch = bestehend.menge.match(/^(\d+[\.,]?\d*)\s*(.*)/);
-        let bestZahl = parseFloat(bestMatch[1].replace(',', '.'));
-        bestehend.menge = `${bestZahl + zahl} ${einheit}`;
-        if (notiz) bestehend.notiz = (bestehend.notiz ? bestehend.notiz + "; " : "") + notiz;
-        bestehend.hinzugefuegtVon = benutzerName; 
-      } else {
-        const vorlage = findeProduktVorlage(name);
-        if (vorlage && !produktObj) { 
-          kategorie = vorlage.kategorie;
-          icon = vorlage.icon;
-          menge = menge === "1 Stück" ? (vorlage.menge || menge) : menge; 
-        } else if (produktObj && produktObj.kategorie) {
-          kategorie = produktObj.kategorie;
-          icon = produktObj.icon || 'bi-bag';
-        } else {
-          kategorie = "Sonstiges";
-          icon = "bi-bag";
         }
 
-        const id = Date.now();
-        produkte.push({ id, name, menge, markt, notiz, kategorie, icon, erledigt: false, hinzugefuegtVon: benutzerName });
-      }
-      
-      speichereAlles();
-      
-      if (!produktObj) {
-        document.getElementById('produktInput').value = '';
-        document.getElementById('mengeInput').value = '';
-        document.getElementById('marktInput').value = '';
-        document.getElementById('notizInput').value = '';
-      }
-    }
+        /**
+         * Schaltet den "erledigt"-Status eines Produkts um.
+         */
+        function toggleErledigt(id) {
+          const p = produkte.find(p => p.id === id);
+          if (!p) return;
 
-    function findeProduktVorlage(eingabe) {
-      if (typeof produktVorlagen === 'undefined') {
-          console.warn("produktVorlagen-Array ist nicht definiert.");
-          return null;
-      }
-      const n = eingabe.toLowerCase();
-      return produktVorlagen.find(p => p.name.toLowerCase() === n);
-    }
-    
-    function ladeFavoriten() {
-      const grid = document.getElementById('favoritenGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-      if (typeof produktVorlagen === 'undefined') {
-          console.warn("produktVorlagen-Array ist nicht definiert.");
-          grid.innerHTML = "<p>Favoriten-Definitionen fehlen.</p>";
-          return;
-      }
-      
-      produktVorlagen.filter(p => p.favorit).forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = 'secondary';
-        btn.innerHTML = `<i class="bi ${p.icon || 'bi-bag'}"></i> ${p.name}`;
-        btn.onclick = () => {
+          if (!p.erledigt && einkaufsmodusAktiv) {
+            oeffneCheckoffModal(p); // Im Einkaufsmodus: Erst Modal zeigen
+          } else {
+            p.erledigt = !p.erledigt; // Im Bearbeiten-Modus: Direkt umschalten
+            speichereAlles();
+          }
+        }
+
+        /**
+         * Löscht ein Produkt (mit Undo-Möglichkeit).
+         */
+        function loescheProdukt(id) {
+          zuletztGeloescht = produkte.find(p => p.id === id);
+          produkte = produkte.filter(p => p.id !== id);
+          speichereAlles();
+          zeigeUndo();
+        }
+        
+        /**
+         * Entfernt alle als "erledigt" markierten Produkte.
+         */
+        function raeumeErledigteAuf() {
+          const erledigte = produkte.filter(p => p.erledigt);
+          if (erledigte.length === 0) {
+            alert("Es gibt keine erledigten Produkte zum Aufräumen.");
+            return;
+          }
+          if (confirm(`Möchtest du ${erledigte.length} erledigte Produkte entfernen?`)) {
+            produkte = produkte.filter(p => !p.erledigt);
+            speichereAlles();
+          }
+        }
+
+        /**
+         * Öffnet das "Produkt bearbeiten"-Modal mit den Daten des Produkts.
+         */
+        function oeffneEditModal(id) {
+          const p = produkte.find(p => p.id === id);
+          if (!p) return;
+          document.getElementById('editIdInput').value = p.id;
+          document.getElementById('editNameInput').value = p.name;
+          document.getElementById('editMengeInput').value = p.menge;
+          document.getElementById('editMarktInput').value = p.markt || '';
+          document.getElementById('editNotizInput').value = p.notiz || '';
+          document.getElementById('editKategorieInput').value = p.kategorie || '';
+          ui.editModal.style.display = 'flex';
+        }
+
+        /**
+         * Speichert die Änderungen aus dem "Bearbeiten"-Modal.
+         */
+        function speichereEdit() {
+          const id = parseInt(document.getElementById('editIdInput').value);
+          const p = produkte.find(p => p.id === id);
+
+          if (!p) {
+            schliesseAlleModals();
+            return;
+          }
+          
+          p.name = document.getElementById('editNameInput').value;
+          p.menge = document.getElementById('editMengeInput').value;
+          p.markt = document.getElementById('editMarktInput').value;
+          p.notiz = document.getElementById('editNotizInput').value;
+          p.kategorie = document.getElementById('editKategorieInput').value;
+          
+          const vorlage = findeProduktVorlage(p.name);
+          p.icon = vorlage ? vorlage.icon : 'bi-bag';
+          
+          speichereAlles();
+          schliesseAlleModals(); 
+        }
+        
+        /**
+         * Verschiebt ein Produkt von der Vorratskammer zurück zur Einkaufsliste.
+         */
+        function verschiebeInListe(vorratId) {
+          const p = vorrat.find(p => p.id === vorratId);
+          if (!p) return;
+          
           hinzufuegen({
             name: p.name,
             menge: p.menge,
             kategorie: p.kategorie,
             icon: p.icon
           });
-        };
-        grid.appendChild(btn);
-      });
-    }
-
-    function toggleErledigt(id) {
-      const p = produkte.find(p => p.id === id);
-      if (!p) return;
-
-      if (!p.erledigt && einkaufsmodusAktiv) {
-        oeffneCheckoffModal(p);
-      } else {
-        p.erledigt = false;
-        speichereAlles();
-      }
-    }
-
-    function loescheProdukt(id) {
-      zuletztGeloescht = produkte.find(p => p.id === id);
-      produkte = produkte.filter(p => p.id !== id);
-      speichereAlles();
-      zeigeUndo();
-    }
-    
-    function raeumeErledigteAuf() {
-      const erledigte = produkte.filter(p => p.erledigt);
-      if (erledigte.length === 0) {
-        alert("Es gibt keine erledigten Produkte zum Aufräumen.");
-        return;
-      }
-      if (confirm(`Möchtest du ${erledigte.length} erledigte Produkte entfernen?`)) {
-        produkte = produkte.filter(p => !p.erledigt);
-        speichereAlles();
-      }
-    }
-
-    // --- BEARBEITEN-MODAL ---
-    function oeffneEditModal(id) {
-      const p = produkte.find(p => p.id === id);
-      if (!p) return;
-      document.getElementById('editIdInput').value = p.id;
-      document.getElementById('editNameInput').value = p.name;
-      document.getElementById('editMengeInput').value = p.menge;
-      document.getElementById('editMarktInput').value = p.markt || '';
-      document.getElementById('editNotizInput').value = p.notiz || '';
-      document.getElementById('editKategorieInput').value = p.kategorie || '';
-      document.getElementById('editModal').style.display = 'flex';
-    }
-
-    function speichereEdit() {
-      const id = parseInt(document.getElementById('editIdInput').value);
-      const p = produkte.find(p => p.id === id);
-
-      if (!p) {
-        schliesseAlleModals();
-        return;
-      }
-      
-      p.name = document.getElementById('editNameInput').value;
-      p.menge = document.getElementById('editMengeInput').value;
-      p.markt = document.getElementById('editMarktInput').value;
-      p.notiz = document.getElementById('editNotizInput').value;
-      p.kategorie = document.getElementById('editKategorieInput').value;
-      
-      const vorlage = findeProduktVorlage(p.name);
-      p.icon = vorlage ? vorlage.icon : 'bi-bag';
-      
-      speichereAlles();
-      schliesseAlleModals(); 
-    }
-    
-    // --- VORRATSKAMMER-LOGIK ---
-    function verschiebeInListe(vorratId) {
-      const p = vorrat.find(p => p.id === vorratId);
-      if (!p) return;
-      
-      hinzufuegen({
-        name: p.name,
-        menge: p.menge,
-        kategorie: p.kategorie,
-        icon: p.icon
-      });
-      
-      vorrat = vorrat.filter(v => v.id !== vorratId);
-      speichereAlles();
-    }
-
-    // --- ABHAKEN-MODAL ---
-    function oeffneCheckoffModal(produkt) {
-      document.getElementById('checkoffProduktName').textContent = produkt.name;
-      document.getElementById('inVorratCheckbox').checked = false;
-      document.getElementById('checkoffModal').style.display = 'flex';
-      
-      document.getElementById('checkoffSpeichernBtn').onclick = () => speichereCheckoff(produkt.id);
-    }
-
-    function speichereCheckoff(id) {
-      const p = produkte.find(p => p.id === id);
-
-      if (!p) {
-        schliesseAlleModals();
-        return;
-      }
-      
-      const inVorrat = document.getElementById('inVorratCheckbox').checked;
-      
-      p.erledigt = true;
-      
-      if (inVorrat) {
-        const vorratExistiert = vorrat.find(v => v.name.toLowerCase() === p.name.toLowerCase());
-        if (!vorratExistiert) {
-          vorrat.push({
-            id: p.id,
-            name: p.name,
-            menge: p.menge,
-            kategorie: p.kategorie,
-            icon: p.icon
-          });
+          
+          vorrat = vorrat.filter(v => v.id !== vorratId);
+          speichereAlles();
         }
-      }
-      
-      speichereAlles();
-      schliesseAlleModals(); 
-    }
-    
-    // --- KI-FUNKTIONEN (Erfordert gemini-api.js) ---
-    async function starteKiAnalyse() {
-      if (typeof callGeminiApi !== 'function') {
-        alert("KI-Modul (gemini-api.js) nicht geladen oder API-Key fehlt.");
-        return;
-      }
-      
-      const unerledigteProdukte = produkte
-        .filter(p => !p.erledigt)
-        .map(p => `${p.name} (${p.menge})`);
-        
-      if (unerledigteProdukte.length < 2) {
-        alert("Füge mindestens 2 Produkte hinzu, damit die KI die Liste analysieren kann.");
-        return;
-      }
 
-      const modalInhalt = document.getElementById('kiAnalyseErgebnis');
-      modalInhalt.innerHTML = "<p>Analysiere Liste... <i class='bi bi-robot'></i></p>";
-      document.getElementById('kiAnalyseModal').style.display = 'flex';
-      
-      const prompt = `
-        Hier ist eine Einkaufsliste: ${unerledigteProdukte.join(', ')}.
-        Analysiere diese Liste. Was fehlt wahrscheinlich? 
-        Beispiel: Wenn "Nudeln, Hackfleisch" da sind, fehlt "Tomatensauce".
-        Gib mir 3-5 Vorschläge für Produkte, die logisch dazu passen.
-        Antworte NUR mit einer JSON-Liste von Objekten im Format:
-        [{"name": "Produkt A"}, {"name": "Produkt B"}]
-        Kein Text davor oder danach.
-      `;
-      
-      try {
-        const kiAntwort = await callGeminiApi(prompt);
-        const vorschlaege = JSON.parse(kiAntwort);
-        
-        modalInhalt.innerHTML = "<h4>Vorschläge (Was fehlt?):</h4>";
-        if (vorschlaege.length === 0) {
-          modalInhalt.innerHTML += "<p>Sieht vollständig aus!</p>";
+        /**
+         * Öffnet das "Abhaken"-Modal (fragt nach "In Vorrat verschieben?").
+         */
+        function oeffneCheckoffModal(produkt) {
+          document.getElementById('checkoffProduktName').textContent = produkt.name;
+          document.getElementById('inVorratCheckbox').checked = false;
+          ui.checkoffModal.style.display = 'flex';
+          
+          // ID für den Speicher-Button zwischenspeichern
+          ui.checkoffSpeichernBtn.dataset.id = produkt.id; 
+        }
+
+        /**
+         * Speichert das Ergebnis des "Abhaken"-Modals.
+         */
+        function speichereCheckoff() {
+          // ID aus dem data-Attribut des Buttons holen
+          const id = parseInt(ui.checkoffSpeichernBtn.dataset.id);
+          const p = produkte.find(p => p.id === id);
+
+          if (!p) {
+            schliesseAlleModals();
+            return;
+          }
+          
+          const inVorrat = document.getElementById('inVorratCheckbox').checked;
+          
+          p.erledigt = true;
+          
+          if (inVorrat) {
+            const vorratExistiert = vorrat.find(v => v.name.toLowerCase() === p.name.toLowerCase());
+            if (!vorratExistiert) {
+              vorrat.push({
+                id: p.id, name: p.name, menge: p.menge,
+                kategorie: p.kategorie, icon: p.icon
+              });
+            }
+          }
+          
+          speichereAlles();
+          schliesseAlleModals(); 
         }
         
-        vorschlaege.forEach(v => {
-          modalInhalt.innerHTML += `
-            <button class="secondary" style="margin-bottom: 0.5rem;" onclick="hinzufuegen({name: '${v.name}'}); this.disabled=true; this.textContent='Hinzugefügt'">
-              <i class="bi bi-plus-lg"></i> ${v.name}
-            </button>
+        // --- 5. KI-Funktionen ---
+
+        /**
+         * Ruft Gemini API auf, um die aktuelle Liste zu analysieren ("Was fehlt?").
+         */
+        async function starteKiAnalyse() {
+          const unerledigteProdukte = produkte
+            .filter(p => !p.erledigt)
+            .map(p => `${p.name} (${p.menge})`);
+            
+          if (unerledigteProdukte.length < 2) {
+            alert("Füge mindestens 2 Produkte hinzu, damit die KI die Liste analysieren kann.");
+            return;
+          }
+
+          const modalInhalt = document.getElementById('kiAnalyseErgebnis');
+          modalInhalt.innerHTML = "<p>Analysiere Liste... <i class='bi bi-robot'></i></p>";
+          ui.kiAnalyseModal.style.display = 'flex';
+          
+          const prompt = `
+            Hier ist eine Einkaufsliste: ${unerledigteProdukte.join(', ')}.
+            Analysiere diese Liste. Was fehlt wahrscheinlich? 
+            Beispiel: Wenn "Nudeln, Hackfleisch" da sind, fehlt "Tomatensauce".
+            Gib mir 3-5 Vorschläge für Produkte, die logisch dazu passen.
+            Antworte NUR mit einer JSON-Liste von Objekten im Format:
+            [{"name": "Produkt A"}, {"name": "Produkt B"}]
+            Kein Text davor oder danach.
           `;
-        });
-      } catch (err) {
-        console.error("KI-Analyse-Fehler: ", err);
-        modalInhalt.innerHTML = "<p>Fehler bei der KI-Analyse. Hast du deinen API-Key eingetragen?</p>";
-      }
-    }
-    
-    async function starteVorratAnalyse() {
-      if (typeof callGeminiApi !== 'function') {
-        alert("KI-Modul (gemini-api.js) nicht geladen oder API-Key fehlt.");
-        return;
-      }
-      
-      if (vorrat.length < 2) {
-        alert("Füge mindestens 2 Produkte in deine Vorratskammer ein, damit die KI ein Rezept vorschlagen kann.");
-        return;
-      }
-
-      const vorratListe = vorrat.map(p => p.name).join(', ');
-
-      const modalInhalt = document.getElementById('kiAnalyseErgebnis');
-      modalInhalt.innerHTML = "<p>Suche Rezept basierend auf Vorrat... <i class='bi bi-robot'></i></p>";
-      document.getElementById('kiAnalyseModal').style.display = 'flex';
-      
-      const prompt = `
-        Hier ist mein aktueller Vorrat: ${vorratListe}.
-        Schlage mir ein einfaches Rezept (1-2 Portionen) vor, das viele dieser Zutaten nutzt.
-        Liste 1-3 wichtige Zutaten auf, die mir WAHRSCHEINLICH FEHLEN, um das Rezept zu kochen.
-        Ignoriere Standardzutaten wie Salz, Pfeffer, Öl, es sei denn, es ist eine spezielle Sorte (z.B. Olivenöl).
-        Antworte NUR mit einer JSON-Antwort im Format:
-        {"rezeptName": "Name des Rezepts", "fehlendeZutaten": [{"name": "Fehlende Zutat A", "menge": "z.B. 100g"}, {"name": "Fehlende Zutat B", "menge": "z.B. 1 Stk"}]}
-      `;
-      
-      try {
-        const kiAntwort = await callGeminiApi(prompt);
-        const vorschlag = JSON.parse(kiAntwort);
-        
-        modalInhalt.innerHTML = `<h4>Rezeptvorschlag:</h4><p><strong>${vorschlag.rezeptName}</strong></p><hr><p>Fehlende Zutaten (zur Liste hinzufügen):</p>`;
-        
-        if (vorschlag.fehlendeZutaten.length === 0) {
-          modalInhalt.innerHTML += "<p>Du scheinst alles zu haben!</p>";
+          
+          try {
+            const kiAntwort = await callGeminiApi(prompt); // Ruft die integrierte Funktion auf
+            const vorschlaege = JSON.parse(kiAntwort);
+            
+            modalInhalt.innerHTML = "<h4>Vorschläge (Was fehlt?):</h4>";
+            if (vorschlaege.length === 0) {
+              modalInhalt.innerHTML += "<p>Sieht vollständig aus!</p>";
+            }
+            
+            // Erstellt die klickbaren Vorschlags-Buttons
+            vorschlaege.forEach(v => {
+              const btn = document.createElement('button');
+              btn.className = 'secondary';
+              btn.style.marginBottom = '0.5rem';
+              btn.innerHTML = `<i class="bi bi-plus-lg"></i> ${v.name}`;
+              btn.onclick = () => {
+                  hinzufuegen({name: v.name});
+                  btn.disabled = true;
+                  btn.textContent = 'Hinzugefügt';
+              };
+              modalInhalt.appendChild(btn);
+            });
+          } catch (err) {
+            console.error("KI-Analyse-Fehler: ", err);
+            // Zeigt dem Benutzer die Fehlermeldung (z.B. "API-Key nicht eingetragen")
+            modalInhalt.innerHTML = `<p>Fehler bei der KI-Analyse: ${err.message}</p>`;
+          }
         }
         
-        vorschlag.fehlendeZutaten.forEach(z => {
-          modalInhalt.innerHTML += `
-            <button class="secondary" style="margin-bottom: 0.5rem;" onclick="hinzufuegen({name: '${z.name}', menge: '${z.menge}'}); this.disabled=true; this.textContent='Hinzugefügt'">
-              <i class="bi bi-plus-lg"></i> ${z.name} (${z.menge})
-            </button>
+        /**
+         * Ruft Gemini API auf, um die Vorratskammer zu analysieren ("Was kochen?").
+         */
+        async function starteVorratAnalyse() {
+          if (vorrat.length < 2) {
+            alert("Füge mindestens 2 Produkte in deine Vorratskammer ein, damit die KI ein Rezept vorschlagen kann.");
+            return;
+          }
+
+          const vorratListe = vorrat.map(p => p.name).join(', ');
+
+          const modalInhalt = document.getElementById('kiAnalyseErgebnis');
+          modalInhalt.innerHTML = "<p>Suche Rezept basierend auf Vorrat... <i class='bi bi-robot'></i></p>";
+          ui.kiAnalyseModal.style.display = 'flex';
+          
+          const prompt = `
+            Hier ist mein aktueller Vorrat: ${vorratListe}.
+            Schlage mir ein einfaches Rezept (1-2 Portionen) vor, das viele dieser Zutaten nutzt.
+            Liste 1-3 wichtige Zutaten auf, die mir WAHRSCHEINLICH FEHLEN, um das Rezept zu kochen.
+            Ignoriere Standardzutaten wie Salz, Pfeffer, Öl.
+            Antworte NUR mit einer JSON-Antwort im Format:
+            {"rezeptName": "Name des Rezepts", "fehlendeZutaten": [{"name": "Fehlende Zutat A", "menge": "z.B. 100g"}, {"name": "Fehlende Zutat B", "menge": "z.B. 1 Stk"}]}
           `;
-        });
-      } catch (err) {
-        console.error("KI-Vorratsanalyse-Fehler: ", err);
-        modalInhalt.innerHTML = "<p>Fehler bei der Rezept-Analyse. Hast du deinen API-Key eingetragen?</p>";
-      }
-    }
-    
-    async function starteRezeptAnalyse() {
-      if (typeof callGeminiApi !== 'function') {
-        alert("KI-Modul (gemini-api.js) nicht geladen oder API-Key fehlt.");
-        return;
-      }
-      
-      const rezeptText = document.getElementById('rezeptInput').value;
-      if (!rezeptText) {
-        alert("Bitte füge ein Rezept ein.");
-        return;
-      }
-      
-      const btn = document.getElementById('rezeptKiBtn');
-      btn.disabled = true;
-      btn.innerHTML = "<i class='bi bi-hourglass-split'></i> Verarbeite...";
-      
-      const prompt = `
-        Extrahiere die Zutaten aus diesem Text. 
-        Ignoriere Mengenangaben, die bereits vorhanden sein sollten (z.B. "Salz", "Pfeffer", "Öl").
-        Erstelle eine JSON-Liste von Objekten. Nutze die 'produktVorlagen.js', um die korrekte Kategorie und Icon zu finden.
-        Das Format muss sein:
-        [
-          {"name": "Tomaten", "menge": "500 g", "kategorie": "Gemüse", "icon": "bi-egg"},
-          {"name": "Hackfleisch", "menge": "1 Pfund", "kategorie": "Fleisch", "icon": "bi-list-ul"}
-        ]
-        Text: "${rezeptText}"
-      `;
-      
-      try {
-        const kiAntwort = await callGeminiApi(prompt);
-        const zutaten = JSON.parse(kiAntwort);
-        
-        zutaten.forEach(z => {
-          hinzufuegen(z);
-        });
-        
-        schliesseAlleModals();
-        alert(`${zutaten.length} Zutaten wurden zur Liste hinzugefügt.`);
-      } catch (err) {
-        console.error("Rezept-KI-Fehler: ", err);
-        alert("Fehler bei der Rezept-Analyse. Bitte prüfe die Konsole und deinen API-Key.");
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = "<i class='bi bi-card-checklist'></i> Rezept verarbeiten";
-      }
-    }
-
-    // --- SPRACHEINGABE ---
-    function starteSpracheingabe() {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert("Spracherkennung wird von diesem Browser nicht unterstützt.");
-        return;
-      }
-      
-      recognition = new webkitSpeechRecognition();
-      recognition.lang = 'de-DE';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      
-      const status = document.getElementById('spracheStatus');
-      const btn = document.getElementById('spracheBtn');
-      
-      recognition.onstart = () => {
-        status.textContent = "Höre zu...";
-        btn.disabled = true;
-      };
-      
-      recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        status.textContent = `Erkannt: "${text}"`;
-        hinzufuegen({ name: text });
-      };
-      
-      recognition.onerror = (event) => {
-        status.textContent = "Fehler bei der Erkennung. Nochmal versuchen.";
-        console.error("Spracherkennungsfehler: ", event.error);
-      };
-      
-      recognition.onend = () => {
-        status.textContent = "";
-        btn.disabled = false;
-      };
-      
-      recognition.start();
-    }
-    
-    // --- SONSTIGE HILFSFUNKTIONEN ---
-    function zeigeUndo() {
-      const popup = document.getElementById("undoPopup");
-      popup.style.display = "block";
-      setTimeout(() => popup.style.display = "none", 5000);
-    }
-
-    function undoLoeschen() {
-      if (zuletztGeloescht) {
-        produkte.push(zuletztGeloescht);
-        speichereAlles(); 
-        zuletztGeloescht = null;
-        document.getElementById("undoPopup").style.display = "none";
-      }
-    }
-
-    function teileURL() {
-      const url = `${location.origin}${location.pathname}?list=${LISTEN_ID}`;
-      if (navigator.share) {
-        navigator.share({
-          title: 'Einkaufs-Assistent',
-          text: 'Hier ist unsere gemeinsame Einkaufsliste:',
-          url
-        });
-      } else {
-        navigator.clipboard.writeText(url).then(() => alert("Link kopiert: " + url));
-      }
-    }
-
-    // "Alles Löschen"-Sicherheitsabfrage
-    let richtigeAntwort = 0;
-    function zeigeLoeschAbfrage() {
-      const a = Math.floor(Math.random() * 10 + 1);
-      const b = Math.floor(Math.random() * 10 + 1);
-      richtigeAntwort = a + b;
-      document.getElementById("matheFrage").textContent = `Sicher? Was ist ${a} + ${b}?`;
-      document.getElementById("matheAntwort").value = "";
-      document.getElementById("loeschPopup").style.display = "block";
-    }
-
-    function pruefeAntwort() {
-      const eingabe = parseInt(document.getElementById("matheAntwort").value);
-      if (eingabe === richtigeAntwort) {
-        produkte = [];
-        vorrat = [];
-        speichereAlles();
-        document.getElementById("loeschPopup").style.display = "none";
-      } else {
-        alert("Falsche Antwort.");
-      }
-    }
-
-    function abbrechenLoeschen() {
-      document.getElementById("loeschPopup").style.display = "none";
-    }
-    
-    // "Alles erledigt"-Feuerwerk
-    function zeigeErledigtPopup() {
-      const popup = document.getElementById("erledigtPopup");
-      if (!popup) return;
-      popup.style.display = "block";
-      starteFeuerwerk();
-
-      setTimeout(() => {
-        popup.style.display = "none";
-        stopFeuerwerk();
-      }, 5000);
-    }
-
-    let interval;
-    function starteFeuerwerk() {
-      const canvas = document.getElementById("feuerwerk");
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      interval = setInterval(() => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < 30; i++) {
-          const x = Math.random() * canvas.width;
-          const y = Math.random() * canvas.height;
-          const r = Math.random() * 3 + 2;
-          ctx.beginPath();
-          ctx.arc(x, y, r, 0, Math.PI * 2);
-          ctx.fillStyle = `hsl(${Math.random() * 360}, 100%, 60%)`;
-          ctx.fill();
+          
+          try {
+            const kiAntwort = await callGeminiApi(prompt);
+            const vorschlag = JSON.parse(kiAntwort);
+            
+            modalInhalt.innerHTML = `<h4>Rezeptvorschlag:</h4><p><strong>${vorschlag.rezeptName}</strong></p><hr><p>Fehlende Zutaten (zur Liste hinzufügen):</p>`;
+            
+            if (vorschlag.fehlendeZutaten.length === 0) {
+              modalInhalt.innerHTML += "<p>Du scheinst alles zu haben!</p>";
+            }
+            
+            vorschlag.fehlendeZutaten.forEach(z => {
+              const btn = document.createElement('button');
+              btn.className = 'secondary';
+              btn.style.marginBottom = '0.5rem';
+              btn.innerHTML = `<i class="bi bi-plus-lg"></i> ${z.name} (${z.menge})`;
+              btn.onclick = () => {
+                  hinzufuegen({name: z.name, menge: z.menge});
+                  btn.disabled = true;
+                  btn.textContent = 'Hinzugefügt';
+              };
+              modalInhalt.appendChild(btn);
+            });
+          } catch (err) {
+            console.error("KI-Vorratsanalyse-Fehler: ", err);
+            modalInhalt.innerHTML = `<p>Fehler bei der Rezept-Analyse: ${err.message}</p>`;
+          }
         }
-      }, 100);
-    }
-    function stopFeuerwerk() {
-      clearInterval(interval);
-    }
+        
+        /**
+         * Ruft Gemini API auf, um einen Rezept-Text zu parsen.
+         */
+        async function starteRezeptAnalyse() {
+          const rezeptText = document.getElementById('rezeptInput').value;
+          if (!rezeptText) {
+            alert("Bitte füge ein Rezept ein.");
+            return;
+          }
+          
+          const btn = ui.rezeptKiBtn;
+          btn.disabled = true;
+          btn.innerHTML = "<i class='bi bi-hourglass-split'></i> Verarbeite...";
+          
+          const prompt = `
+            Extrahiere die Zutaten aus diesem Text. 
+            Ignoriere Standardzutaten (Salz, Pfeffer, Öl, Wasser).
+            Erstelle eine JSON-Liste von Objekten. Nutze 'produktVorlagen.js', um die korrekte Kategorie und Icon zu finden.
+            Das Format muss sein:
+            [
+              {"name": "Tomaten", "menge": "500 g", "kategorie": "Gemüse", "icon": "bi-egg"},
+              {"name": "Hackfleisch", "menge": "1 Pfund", "kategorie": "Fleisch", "icon": "bi-list-ul"}
+            ]
+            Text: "${rezeptText}"
+          `;
+          
+          try {
+            const kiAntwort = await callGeminiApi(prompt);
+            const zutaten = JSON.parse(kiAntwort);
+            
+            zutaten.forEach(z => {
+              hinzufuegen(z);
+            });
+            
+            schliesseAlleModals();
+            alert(`${zutaten.length} Zutaten wurden zur Liste hinzugefügt.`);
+          } catch (err) {
+            console.error("Rezept-KI-Fehler: ", err);
+            alert(`Fehler bei der Rezept-Analyse. (Fehler: ${err.message})`);
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = "<i class='bi bi-card-checklist'></i> Rezept verarbeiten";
+          }
+        }
+
+        /**
+         * Startet die Browser-Spracherkennung.
+         */
+        function starteSpracheingabe() {
+          if (!('webkitSpeechRecognition' in window)) {
+            alert("Spracherkennung wird von diesem Browser nicht unterstützt.");
+            return;
+          }
+          
+          if (recognition) { // Falls sie schon läuft, stoppen
+            recognition.stop();
+            return;
+          }
+          
+          recognition = new webkitSpeechRecognition();
+          recognition.lang = 'de-DE';
+          recognition.interimResults = false;
+          recognition.maxAlternatives = 1;
+          
+          const status = ui.spracheStatus;
+          const btn = ui.spracheBtn;
+          
+          recognition.onstart = () => {
+            status.textContent = "Höre zu...";
+            btn.disabled = true;
+            btn.innerHTML = "<i class='bi bi-mic-fill'></i> Aufnahme stoppen";
+          };
+          
+          recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+            status.textContent = `Erkannt: "${text}"`;
+            hinzufuegen({ name: text });
+          };
+          
+          recognition.onerror = (event) => {
+            status.textContent = "Fehler bei der Erkennung. Nochmal versuchen.";
+            console.error("Spracherkennungsfehler: ", event.error);
+          };
+          
+          recognition.onend = () => {
+            status.textContent = "";
+            btn.disabled = false;
+            btn.innerHTML = "<i class='bi bi-mic-fill'></i> Aufnahme starten";
+            recognition = null;
+          };
+          
+          recognition.start();
+        }
+        
+        // --- 6. Hilfsfunktionen (Popups, etc.) ---
+        
+        function zeigeUndo() {
+          ui.undoPopup.style.display = "block";
+          setTimeout(() => { ui.undoPopup.style.display = "none"; }, 5000);
+        }
+
+        function undoLoeschen() {
+          if (zuletztGeloescht) {
+            produkte.push(zuletztGeloescht);
+            speichereAlles(); 
+            zuletztGeloescht = null;
+            ui.undoPopup.style.display = "none";
+          }
+        }
+
+        function zeigeLoeschAbfrage() {
+          const a = Math.floor(Math.random() * 10 + 1);
+          const b = Math.floor(Math.random() * 10 + 1);
+          richtigeAntwort = a + b;
+          document.getElementById("matheFrage").textContent = `Sicher? Was ist ${a} + ${b}?`;
+          document.getElementById("matheAntwort").value = "";
+          ui.loeschPopup.style.display = "block";
+        }
+
+        function pruefeAntwort() {
+          const eingabe = parseInt(document.getElementById("matheAntwort").value);
+          if (eingabe === richtigeAntwort) {
+            produkte = [];
+            vorrat = [];
+            speichereAlles();
+            ui.loeschPopup.style.display = "none";
+          } else {
+            alert("Falsche Antwort.");
+          }
+        }
+
+        function abbrechenLoeschen() {
+          ui.loeschPopup.style.display = "none";
+        }
+        
+        function zeigeErledigtPopup() {
+          const popup = ui.erledigtPopup;
+          if (!popup) return;
+          popup.style.display = "block";
+          starteFeuerwerk();
+
+          setTimeout(() => {
+            popup.style.display = "none";
+            stopFeuerwerk();
+          }, 5000);
+        }
+
+        function starteFeuerwerk() {
+          const canvas = ui.feuerwerkCanvas;
+          if (!canvas) return;
+          const ctx = canvas.getContext("2d");
+          feuerwerkInterval = setInterval(() => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < 30; i++) {
+              const x = Math.random() * canvas.width;
+              const y = Math.random() * canvas.height;
+              const r = Math.random() * 3 + 2;
+              ctx.beginPath();
+              ctx.arc(x, y, r, 0, Math.PI * 2);
+              ctx.fillStyle = `hsl(${Math.random() * 360}, 100%, 60%)`;
+              ctx.fill();
+            }
+          }, 100);
+        }
+        function stopFeuerwerk() {
+          clearInterval(feuerwerkInterval);
+        }
+
+        // --- 7. App-Start ---
+        // Ruft die mainApp() Funktion auf, um alles zu starten.
+        mainApp();
+        
+    }); // Ende von DOMContentLoaded
     
 </script>
 </body>
