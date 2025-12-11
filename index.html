@@ -3,54 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V15 💎</title>
-    <!-- Confetti Library für den "Fertig"-Effekt -->
+    <title>SmartEinkauf V10 💎</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        /* --- Root Variables (Light Mode Default) --- */
         :root {
             --primary: #4f46e5; --primary-dark: #4338ca; --accent: #10b981;
             --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --text-light: #64748b;
             --border: #e2e8f0; --price-color: #059669;
         }
-        /* --- Dark Mode (System Preference) --- */
         @media (prefers-color-scheme: dark) {
             :root {
                 --primary: #6366f1; --bg: #0f172a; --card: #1e293b;
                 --text: #f8fafc; --text-light: #94a3b8; --border: #334155; --price-color: #34d399;
             }
         }
-        /* --- Dark Mode (Manual Override) --- */
-        body.dark-mode-override {
-            --primary: #6366f1; --bg: #0f172a; --card: #1e293b;
-            --text: #f8fafc; --text-light: #94a3b8; --border: #334155; --price-color: #34d399;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 140px; }
 
-        /* --- Header & Progress --- */
+        /* --- Header --- */
         .header {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;
             padding: 15px 20px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
             position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 4px 15px -3px rgba(0,0,0,0.2);
-        }
-        /* Progress Bar Styles */
-        .progress-container {
-            height: 4px;
-            width: 100%;
-            background: rgba(0,0,0,0.1); /* Lighter background for the bar itself */
-            position: sticky;
-            top: 60px; /* Right below the header */
-            z-index: 40;
-        }
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: var(--accent);
-            transition: width 0.3s ease-out;
-            border-radius: 0 4px 4px 0;
         }
         .header-content { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
@@ -87,7 +62,7 @@
         .magic-chip:active { background: var(--primary); color: white; border-color: var(--primary); }
         .magic-chip.fav { border-color: var(--accent); color: var(--accent); background: rgba(16, 185, 129, 0.05); }
 
-        /* --- Input & Autocomplete --- */
+        /* --- Input --- */
         .input-card {
             background: var(--card); padding: 8px; border-radius: 16px; 
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border);
@@ -108,34 +83,6 @@
         .mic-btn.active { background: #fee2e2; color: #ef4444; border-color: #ef4444; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
 
-        /* Autocomplete CSS */
-        .autocomplete-container {
-            max-height: 120px;
-            overflow-y: auto;
-            background: var(--card);
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            margin-top: -15px; /* Pull it up closer to input */
-            margin-bottom: 20px;
-            display: none;
-            border: 1px solid var(--border);
-        }
-        .suggestion-chip {
-            padding: 10px 15px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            border-bottom: 1px solid var(--border);
-            color: var(--text);
-            font-weight: 500;
-        }
-        .suggestion-chip:hover {
-            background: var(--bg);
-            color: var(--primary);
-        }
-        .suggestion-chip:last-child {
-            border-bottom: none;
-        }
-
         /* --- List --- */
         .cat-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin: 15px 0 5px 5px; font-weight: bold; }
         .item-row {
@@ -148,12 +95,11 @@
         .check-box {
             width: 24px; height: 24px; border: 2px solid var(--text-light); border-radius: 50%;
             display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
-            transition: background 0.2s, border-color 0.2s;
         }
         .item-row.checked .check-box { background: var(--accent); border-color: var(--accent); }
         .item-row.checked .check-box::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
         
-        .details { flex: 1; min-width: 0; cursor: pointer; } 
+        .details { flex: 1; min-width: 0; cursor: pointer; } /* Cursor zeigt an: klickbar für Edit */
         .name { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         /* Controls (Qty & Price) */
@@ -171,7 +117,7 @@
             position: fixed; bottom: 0; left: 0; right: 0; background: var(--card);
             border-top: 1px solid var(--border); padding: 15px 20px 25px 20px;
             display: flex; justify-content: space-between; align-items: center; z-index: 80;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.05); display: none;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05); display: none; /* Standardmäßig aus */
         }
         .total-display { font-size: 1.1rem; font-weight: bold; }
         .total-display span { color: var(--price-color); }
@@ -185,7 +131,7 @@
         }
         .fab-btn { background: none; border: none; font-weight: 600; color: var(--primary); font-size: 0.9rem; cursor: pointer; }
 
-        /* --- Modals (General) --- */
+        /* --- Modal (Edit) --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; display: none; justify-content: center; align-items: center; }
         .modal { background: var(--card); padding: 20px; border-radius: 16px; width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal h3 { margin-top: 0; color: var(--primary); }
@@ -194,12 +140,6 @@
         .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background: var(--bg); color: var(--text); }
         .btn-save { background: var(--primary); color: white; }
-        .btn-danger { background: #ef4444; color: white; }
-
-        /* Quick Add Input in Modal */
-        #quickAddContainer { display: flex; gap: 8px; margin-bottom: 15px; border-top: 1px solid var(--border); padding-top: 15px; }
-        #quickAddContainer input { margin-bottom: 0; flex: 1; }
-        .quick-add-btn { height: 40px; width: 40px; background: var(--accent); color: white; border-radius: 8px; border: none; }
 
         /* --- Toast --- */
         .toast {
@@ -221,28 +161,13 @@
     <div class="drawer" id="drawer">
         <h2>📑 Deine Listen</h2>
         <div class="drawer-list" id="drawerList"></div>
-        
-        <!-- Dark Mode Toggle -->
-        <div class="drawer-item" style="margin-top:20px; border-top: 1px solid var(--border);">
-            <span>🌓 Dark Mode</span>
-            <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)" style="width: auto; margin-bottom: 0; transform: scale(1.2);">
-        </div>
-
         <button class="new-list-btn" onclick="createNewList()">+ Neue Liste</button>
     </div>
 
-    <!-- Edit Item Modal -->
+    <!-- Edit Modal -->
     <div class="modal-overlay" id="editModal">
         <div class="modal">
-            <h3>✏️ Eintrag bearbeiten</h3>
-            
-            <!-- Quick Add Feature -->
-            <div id="quickAddContainer">
-                <input type="text" id="quickAddInput" placeholder="Schnell hinzufügen..." onkeypress="handleQuickAddEnter(event)">
-                <button class="quick-add-btn" onclick="quickAddItem()">+</button>
-            </div>
-            
-            <!-- Edit Form -->
+            <h3>✏️ Bearbeiten</h3>
             <input type="text" id="editName" placeholder="Name">
             <div style="display:flex; gap:10px;">
                 <input type="number" id="editAmount" placeholder="Menge" style="width:30%">
@@ -262,19 +187,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- Delete Confirmation Modal (Ersetzt confirm()) -->
-    <div class="modal-overlay" id="deleteModal">
-        <div class="modal">
-            <h3>Liste löschen</h3>
-            <p>Bist du sicher, dass du die Liste "<span id="deleteListName"></span>" von deinen Geräten entfernen möchtest?</p>
-            <div class="modal-btns">
-                <button class="btn btn-cancel" onclick="closeDeleteModal()">Abbrechen</button>
-                <button class="btn btn-danger" id="confirmDeleteListBtn">Löschen</button>
-            </div>
-        </div>
-    </div>
-
 
     <!-- Header -->
     <div class="header">
@@ -287,14 +199,8 @@
         </div>
         <div id="statusDot" class="status-dot"></div>
     </div>
-    
-    <!-- Progress Bar -->
-    <div class="progress-container" id="progressBarContainer" style="display:none;">
-        <div class="progress-bar" id="progressBar"></div>
-    </div>
 
     <div class="container">
-        <!-- Fehlermeldungen hier -->
         <div id="errorMsg"></div>
 
         <!-- Magic & Favorites -->
@@ -309,13 +215,9 @@
             <button class="action-btn mode-btn" id="modeBtn" onclick="toggleMode()">✨</button>
             <button class="action-btn budget-btn" id="budgetBtn" onclick="toggleBudgetMode()">€</button>
             <button class="action-btn mic-btn" id="micBtn" onclick="toggleDictation()">🎤</button>
-            <!-- oninput für Autovervollständigung hinzugefügt -->
-            <input type="text" id="inputField" placeholder="Was fehlt?" oninput="showSuggestions()" onkeypress="handleEnter(event)">
+            <input type="text" id="inputField" placeholder="Was fehlt?" onkeypress="handleEnter(event)">
             <button class="action-btn" onclick="addItem()">+</button>
         </div>
-        
-        <!-- Autocomplete Suggestions -->
-        <div id="autocompleteContainer" class="autocomplete-container"></div>
 
         <div id="listContainer"></div>
 
@@ -348,21 +250,25 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // setLogLevel importiert für Debugging
-        import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // FIREBASE SETUP
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // CONFIG (Deine bestehende Config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
+            authDomain: "einkaufliste-cd5d3.firebaseapp.com",
+            databaseURL: "https://einkaufliste-cd5d3-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "einkaufliste-cd5d3",
+            storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
+            messagingSenderId: "36721747923",
+            appId: "1:36721747923:web:dbe48ff974c80435eff126",
+            measurementId: "G-37TDK0257N"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
-        // NEU: Debug Logging aktivieren
-        setLogLevel('debug');
 
         // STATE
         let currentListId = "Einkauf";
@@ -374,67 +280,14 @@
         let unsubscribe = null;
         let recognition;
         let editItemId = null;
-        let currentUser = null;
-        let suggestionTimeout;
-
-        let darkModePreference = localStorage.getItem('darkModePreference'); 
+        
         let myLists = JSON.parse(localStorage.getItem('myLists')) || ["Einkauf"];
-        let topItems = JSON.parse(localStorage.getItem('topItems')) || {}; 
+        let topItems = JSON.parse(localStorage.getItem('topItems')) || {}; // Favoriten Speicher
 
-        // --- HAPTIC FEEDBACK ---
-        function hapticFeedback(style) {
-            if (!('vibrate' in navigator) || !navigator.vibrate) return;
-            
-            if (style === 'check') {
-                navigator.vibrate(50); 
-            } else if (style === 'delete') {
-                navigator.vibrate([100, 30, 100]); 
-            }
-        }
-
-        // --- DARK MODE LOGIC ---
-        window.toggleDarkMode = (isDark) => {
-            if (isDark) {
-                document.body.classList.add('dark-mode-override');
-                localStorage.setItem('darkModePreference', 'dark');
-            } else {
-                document.body.classList.remove('dark-mode-override');
-                localStorage.setItem('darkModePreference', 'light');
-            }
-        };
-
-        if (darkModePreference === 'dark') {
-            document.body.classList.add('dark-mode-override');
-        }
-        document.addEventListener('DOMContentLoaded', () => {
-             const toggle = document.getElementById('darkModeToggle');
-             if (toggle) toggle.checked = document.body.classList.contains('dark-mode-override') || darkModePreference === 'dark';
-        });
-
-        // INIT AUTH
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Auth Error (Anmeldefehler):", error);
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Verbindungsproblem: Anmeldefehler. Siehe Konsole für Details.";
-            }
-        };
-
-        initAuth();
-
-        // AUTH LISTENER
+        // INIT
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                currentUser = user;
-                document.getElementById('statusDot').classList.add('online'); // Grüner Punkt
-                console.log("Firestore Status: Angemeldet. User ID:", user.uid);
-                
+                document.getElementById('statusDot').classList.add('online');
                 const urlParams = new URLSearchParams(window.location.search);
                 const sharedList = urlParams.get('list');
                 if (sharedList && !myLists.includes(sharedList)) {
@@ -442,28 +295,20 @@
                     localStorage.setItem('myLists', JSON.stringify(myLists));
                     currentListId = sharedList;
                 }
-                
                 subscribeToList(currentListId);
                 renderDrawer();
                 renderFavorites();
             } else {
-                currentUser = null;
-                document.getElementById('statusDot').classList.remove('online'); // Orange/Gelber Punkt
-                console.error("Firestore Status: Nicht angemeldet.");
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden (Orange Status).";
+                signInAnonymously(auth).catch(e => {
+                    document.getElementById('errorMsg').style.display = 'block';
+                    document.getElementById('errorMsg').innerText = "Verbindungsproblem: " + e.message;
+                });
             }
         });
-
-        // HELPER: Pfad-Generator für diese Umgebung (Public Data)
-        function getListDocRef(listId) {
-            return doc(db, 'artifacts', appId, 'public', 'data', 'shopping_lists', listId);
-        }
 
         // DB SYNC
         function subscribeToList(listId) {
             if(unsubscribe) unsubscribe();
-            if(!currentUser) return; // Wichtig: Nicht abonnieren, wenn nicht angemeldet
             
             currentListId = listId;
             document.getElementById('headerTitle').innerText = listId;
@@ -472,8 +317,7 @@
             window.history.pushState({path:newUrl},'',newUrl);
             renderDrawer();
 
-            const listRef = getListDocRef(listId);
-
+            const listRef = doc(db, "shopping_lists", listId);
             unsubscribe = onSnapshot(listRef, (snap) => {
                 if (snap.exists()) {
                     items = snap.data().items || [];
@@ -483,30 +327,13 @@
                     items = [];
                     renderList();
                 }
-            }, (error) => {
-                console.error("Snapshot Error (Abonnement-Fehler):", error);
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Sync Fehler: Kann Liste nicht abonnieren (Regelfehler?).";
             });
         }
 
         async function saveItems(newItems) {
-            if(!currentUser) {
-                // NEU: Explizite Fehlermeldung, wenn Speichern ohne Login versucht wird
-                console.error("FIREBASE ERROR: Cannot save items. User is not authenticated (currentUser is null).");
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden.";
-                return;
-            }
             try {
-                const listRef = getListDocRef(currentListId);
-                await setDoc(listRef, { items: newItems }, { merge: true });
-                document.getElementById('errorMsg').style.display = 'none';
-            } catch (e) { 
-                console.error("Save Error (Speicherfehler):", e);
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Speicherfehler: Daten konnten nicht in Firestore geschrieben werden (Regelfehler?).";
-            }
+                await setDoc(doc(db, "shopping_lists", currentListId), { items: newItems }, { merge: true });
+            } catch (e) { console.error(e); }
         }
 
         // --- CORE LOGIC ---
@@ -518,6 +345,7 @@
             
             const newItem = smartMode ? parseSmart(text) : { id: Date.now(), name: text, amount: 1, unit: '', category: 'Manuell', price: 0, checked: false };
             
+            // Favoriten lernen
             if(!topItems[newItem.name]) topItems[newItem.name] = 0;
             topItems[newItem.name]++;
             localStorage.setItem('topItems', JSON.stringify(topItems));
@@ -525,25 +353,23 @@
 
             await saveItems([...items, newItem]);
             if(!overrideText) input.value = '';
-            
-            document.getElementById('autocompleteContainer').style.display = 'none';
         };
 
         function parseSmart(text) {
             const categories = {
-                "Obst & Gemüse": ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel", "beere", "knoblauch", "avocado", "paprika", "möhre", "karotte", "ingwer", "zitrone", "limette", "traube", "orange"],
-                "Getränke": ["wasser", "saft", "bier", "cola", "limo", "kaffee", "kasten", "pfand", "flasche", "sixpack", "sprudel", "tee", "energy", "wein", "sekt", "milchshake"],
-                "Kühlregal": ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst", "quark", "mozarella", "frischkäse", "skyr", "pizza", "fertiggericht"],
-                "Vorrat": ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve", "soße", "gewürz", "ketchup", "müsli", "haferflocken", "toast", "nutella", "honig", "schokolade", "chips", "tiefkühl"],
-                "Haushalt": ["papier", "reiniger", "waschmittel", "zahnpasta", "seife", "duschgel", "shampoo", "müllbeutel", "deo", "schwamm", "tabs", "batterie", "folie", "serviette"]
+                "Obst & Gemüse": ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel", "beere", "knoblauch", "avocado"],
+                "Getränke": ["wasser", "saft", "bier", "cola", "limo", "kaffee", "kasten", "pfand", "flasche", "sixpack", "sprudel", "tee", "energy", "wein"],
+                "Kühlregal": ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst", "quark", "mozarella"],
+                "Vorrat": ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve", "soße", "gewürz", "ketchup", "müsli"],
+                "Haushalt": ["papier", "reiniger", "waschmittel", "zahnpasta", "seife", "duschgel", "shampoo", "müllbeutel"]
             };
 
             let clean = text;
-            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg|kasten|flasche|pck|packung)?/i;
+            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg|kasten|flasche)?/i;
             let amount = 1, unit = "";
             const match = clean.match(amountRegex);
             if(match) { 
-                amount = parseFloat(match[1].replace(',','.')); 
+                amount = parseFloat(match[1]); 
                 unit = match[2] || ""; 
                 clean = clean.replace(match[0], "").trim(); 
             }
@@ -557,42 +383,6 @@
             return { id: Date.now() + Math.random(), name: clean.charAt(0).toUpperCase() + clean.slice(1), amount, unit, category, price: 0, checked: false };
         }
 
-        // --- AUTOSUGGEST ---
-        window.showSuggestions = () => {
-            clearTimeout(suggestionTimeout);
-            suggestionTimeout = setTimeout(() => {
-                const input = document.getElementById('inputField');
-                const container = document.getElementById('autocompleteContainer');
-                const query = input.value.trim().toLowerCase();
-
-                if (query.length < 2) {
-                    container.style.display = 'none';
-                    return;
-                }
-
-                const suggestions = Object.entries(topItems)
-                    .filter(([name]) => name.toLowerCase().includes(query))
-                    .sort(([, countA], [, countB]) => countB - countA)
-                    .slice(0, 5); 
-
-                if (suggestions.length === 0) {
-                    container.style.display = 'none';
-                    return;
-                }
-
-                container.innerHTML = suggestions.map(([name]) => 
-                    `<div class="suggestion-chip" onclick="selectSuggestion('${name.replace(/'/g, "\\'")}')">${name}</div>`
-                ).join('');
-                container.style.display = 'block';
-            }, 200);
-        };
-
-        window.selectSuggestion = (name) => {
-            document.getElementById('inputField').value = name;
-            document.getElementById('autocompleteContainer').style.display = 'none';
-            document.getElementById('inputField').focus();
-        };
-
         // --- EDITING ---
         window.openEdit = (id) => {
             const item = items.find(i => i.id === id);
@@ -603,7 +393,6 @@
             document.getElementById('editUnit').value = item.unit || "";
             document.getElementById('editCategory').value = item.category || "Sonstiges";
             document.getElementById('editModal').style.display = 'flex';
-            document.getElementById('quickAddInput').value = ''; 
         };
 
         window.saveEdit = async () => {
@@ -619,26 +408,6 @@
         };
         window.closeEdit = () => { document.getElementById('editModal').style.display = 'none'; editItemId = null; };
 
-        // --- QUICK ADD ---
-        window.quickAddItem = async () => {
-            const input = document.getElementById('quickAddInput');
-            const text = input.value.trim();
-            if(!text) return;
-            
-            const newItem = parseSmart(text);
-            await saveItems([...items, newItem]);
-
-            input.value = '';
-            input.placeholder = "Hinzugefügt!";
-            setTimeout(() => input.placeholder = "Schnell hinzufügen...", 1000);
-        };
-        window.handleQuickAddEnter = (e) => {
-            if(e.key === 'Enter') {
-                e.preventDefault(); 
-                window.quickAddItem(); 
-            }
-        };
-
         // --- BUDGET MODE ---
         window.toggleBudgetMode = () => {
             budgetMode = !budgetMode;
@@ -649,7 +418,7 @@
             if(budgetMode) {
                 btn.classList.add('active');
                 footer.style.display = 'flex';
-                fab.style.display = 'none';
+                fab.style.display = 'none'; // Verstecke normalen Footer
             } else {
                 btn.classList.remove('active');
                 footer.style.display = 'none';
@@ -660,24 +429,18 @@
 
         window.updatePrice = (id, val) => {
             const price = parseFloat(val) || 0;
+            // Wir nutzen setTimeout debounce, um DB Calls zu reduzieren, oder direkt:
             const updated = items.map(i => i.id === id ? { ...i, price: price } : i);
-            saveItems(updated);
+            saveItems(updated); // In Production würde man hier debouncen
         };
 
         // --- STANDARD FUNCTIONS ---
         window.updateQty = async (id, change) => await saveItems(items.map(i => i.id === id ? { ...i, amount: Math.max(1, (i.amount||1) + change) } : i));
-        
-        window.toggleCheck = async (id) => {
-            hapticFeedback('check'); 
-            await saveItems(items.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
-        };
-        
+        window.toggleCheck = async (id) => await saveItems(items.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
         window.deleteItem = async (id) => {
-            hapticFeedback('delete'); 
             const item = items.find(i => i.id === id); lastDeleted = [item];
             await saveItems(items.filter(i => i.id !== id)); showUndo();
         };
-        
         window.clearChecked = async () => {
             const toDel = items.filter(i => i.checked); if(!toDel.length) return;
             lastDeleted = toDel; await saveItems(items.filter(i => !i.checked)); showUndo();
@@ -690,19 +453,13 @@
             clearTimeout(undoTimer); undoTimer = setTimeout(() => t.classList.remove('show'), 4000);
         }
         window.finishShopping = () => {
-            if(!items.some(i => i.checked)) {
-                const t = document.getElementById('undoToast');
-                document.getElementById('toastMsg').innerText = "Nichts erledigt?";
-                t.classList.add('show');
-                setTimeout(() => t.classList.remove('show'), 2000);
-                return;
-            }
+            if(!items.some(i => i.checked)) return alert("Nichts erledigt!");
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.7 } });
             window.clearChecked();
         };
         
         window.addRecipe = async (t) => {
-             const r = { 'breakfast':['Eier','Speck','O-Saft'], 'party':['Cola','Chips','Bier','Eis'], 'cleaning':['Reiniger','Tücher'], 'pasta':['Nudeln', 'Pesto', 'Parmesan'] };
+             const r = { 'breakfast':['Eier','Speck'], 'pasta':['Nudeln','Soße'], 'party':['Cola','Chips'], 'cleaning':['Reiniger','Tücher'] };
              const add = r[t].map(n => parseSmart(n));
              await saveItems([...items, ...add]);
         };
@@ -717,75 +474,32 @@
             inp.placeholder = smartMode ? "Was fehlt?" : "Exakter Text";
             inp.focus();
         };
-        window.handleEnter = (e) => { 
-            if(e.key === 'Enter') {
-                document.getElementById('autocompleteContainer').style.display = 'none';
-                window.addItem(); 
-            }
-        };
-        window.shareList = () => { 
-            navigator.clipboard.writeText(window.location.href); 
-            const t = document.getElementById('undoToast');
-            document.getElementById('toastMsg').innerText = "Link kopiert!";
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2000);
-        };
+        window.handleEnter = (e) => { if(e.key === 'Enter') window.addItem(); };
+        window.shareList = () => { navigator.clipboard.writeText(window.location.href); alert("Link kopiert!"); };
 
         // MULTI LIST
         window.switchList = (id) => { toggleDrawer(); subscribeToList(id); };
         window.createNewList = () => {
-            const n = prompt("Name der neuen Liste:"); 
-            if(n) { 
-                const cleanName = n.trim();
-                if(!cleanName) return;
-                if(!myLists.includes(cleanName)) { 
-                    myLists.push(cleanName); 
-                    localStorage.setItem('myLists', JSON.stringify(myLists)); 
-                }
-                switchList(cleanName);
+            const n = prompt("Name:"); if(n) { 
+                if(!myLists.includes(n)) { myLists.push(n); localStorage.setItem('myLists', JSON.stringify(myLists)); }
+                switchList(n);
             }
         };
-        
-        let listToDeleteName = null;
-        window.openDeleteModal = (e, name) => {
+        window.deleteListRef = (e, name) => {
             e.stopPropagation();
-            listToDeleteName = name;
-            document.getElementById('deleteListName').innerText = name;
-            document.getElementById('deleteModal').style.display = 'flex';
-        };
-
-        window.closeDeleteModal = () => {
-            document.getElementById('deleteModal').style.display = 'none';
-            listToDeleteName = null;
-        };
-
-        document.getElementById('confirmDeleteListBtn').onclick = async () => {
-            if (!listToDeleteName) return;
-            
-            try {
-                // Versuche das Dokument zu löschen
-                await deleteDoc(getListDocRef(listToDeleteName));
-            } catch (error) {
-                console.warn("Could not delete list document in Firestore (Konnte Listendokument nicht löschen):", error);
+            if(confirm(`Liste '${name}' entfernen?`)) {
+                myLists = myLists.filter(l => l !== name);
+                if(!myLists.length) myLists = ["Einkauf"];
+                localStorage.setItem('myLists', JSON.stringify(myLists));
+                if(currentListId === name) switchList(myLists[0]);
+                renderDrawer();
             }
-
-            myLists = myLists.filter(l => l !== listToDeleteName);
-            if(!myLists.length) myLists = ["Einkauf"];
-            localStorage.setItem('myLists', JSON.stringify(myLists));
-            
-            if(currentListId === listToDeleteName) {
-                switchList(myLists[0]);
-            }
-            
-            closeDeleteModal();
-            renderDrawer();
         };
-
         function renderDrawer() {
             document.getElementById('drawerList').innerHTML = myLists.map(name => `
                 <div class="drawer-item ${name === currentListId ? 'active' : ''}" onclick="switchList('${name}')">
                     <span>${name}</span>
-                    ${name !== 'Einkauf' ? `<span onclick="openDeleteModal(event, '${name}')" style="opacity:0.5;font-size:1.2rem;">&times;</span>` : ''}
+                    ${name !== 'Einkauf' ? `<span onclick="deleteListRef(event, '${name}')" style="opacity:0.5;font-size:1.2rem;">&times;</span>` : ''}
                 </div>
             `).join('');
         }
@@ -798,10 +512,7 @@
                 recognition = new SR(); recognition.lang = 'de-DE'; recognition.continuous = false;
                 recognition.onstart = () => document.getElementById('micBtn').classList.add('active');
                 recognition.onend = () => document.getElementById('micBtn').classList.remove('active');
-                recognition.onresult = (e) => {
-                    const text = e.results[0][0].transcript;
-                    document.getElementById('inputField').value = text;
-                };
+                recognition.onresult = (e) => document.getElementById('inputField').value = e.results[0][0].transcript;
             } else { document.getElementById('micBtn').style.display = 'none'; }
         }
         initSpeech();
@@ -814,19 +525,11 @@
             
             const groups = {};
             let sum = 0;
-            let completedCount = 0;
-            let totalCount = items.length;
-
             [...items].sort((a,b) => a.checked - b.checked).forEach(i => {
                 const c = i.category || "Sonstiges"; if(!groups[c]) groups[c]=[]; groups[c].push(i);
-                if(i.checked) completedCount++;
                 if(!i.checked) sum += (i.price || 0);
             });
             document.getElementById('totalSum').innerText = sum.toFixed(2) + " €";
-
-            const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
-            document.getElementById('progressBar').style.width = progress.toFixed(1) + '%';
-            document.getElementById('progressBarContainer').style.display = totalCount > 0 ? 'block' : 'none';
 
             if(items.length === 0) { document.getElementById('emptyState').style.display = 'block'; return; }
             document.getElementById('emptyState').style.display = 'none';
@@ -868,6 +571,7 @@
 
         function renderFavorites() {
             const c = document.getElementById('favContainer');
+            // Basis Chips behalten
             c.innerHTML = `
                 <div class="magic-chip" onclick="addRecipe('party')">🎉 Party</div>
                 <div class="magic-chip" onclick="addRecipe('breakfast')">🥞 Frühstück</div>
@@ -886,4 +590,5 @@
     </script>
 </body>
 </html>
+
 
