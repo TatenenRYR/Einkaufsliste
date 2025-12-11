@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V14 💎</title>
+    <title>SmartEinkauf V15 💎</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -222,7 +222,7 @@
         <h2>📑 Deine Listen</h2>
         <div class="drawer-list" id="drawerList"></div>
         
-        <!-- Dark Mode Toggle (NEU) -->
+        <!-- Dark Mode Toggle -->
         <div class="drawer-item" style="margin-top:20px; border-top: 1px solid var(--border);">
             <span>🌓 Dark Mode</span>
             <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)" style="width: auto; margin-bottom: 0; transform: scale(1.2);">
@@ -288,12 +288,13 @@
         <div id="statusDot" class="status-dot"></div>
     </div>
     
-    <!-- Progress Bar (NEU) -->
+    <!-- Progress Bar -->
     <div class="progress-container" id="progressBarContainer" style="display:none;">
         <div class="progress-bar" id="progressBar"></div>
     </div>
 
     <div class="container">
+        <!-- Fehlermeldungen hier -->
         <div id="errorMsg"></div>
 
         <!-- Magic & Favorites -->
@@ -313,7 +314,7 @@
             <button class="action-btn" onclick="addItem()">+</button>
         </div>
         
-        <!-- Autocomplete Suggestions (NEU) -->
+        <!-- Autocomplete Suggestions -->
         <div id="autocompleteContainer" class="autocomplete-container"></div>
 
         <div id="listContainer"></div>
@@ -349,7 +350,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // setLogLevel importiert für Debugging
+        import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // FIREBASE SETUP
         const firebaseConfig = JSON.parse(__firebase_config);
@@ -358,6 +360,9 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        
+        // NEU: Debug Logging aktivieren
+        setLogLevel('debug');
 
         // STATE
         let currentListId = "Einkauf";
@@ -372,24 +377,22 @@
         let currentUser = null;
         let suggestionTimeout;
 
-        // NEU: Dark Mode State
-        let darkModePreference = localStorage.getItem('darkModePreference'); // 'dark', 'light' oder null
-        
+        let darkModePreference = localStorage.getItem('darkModePreference'); 
         let myLists = JSON.parse(localStorage.getItem('myLists')) || ["Einkauf"];
         let topItems = JSON.parse(localStorage.getItem('topItems')) || {}; 
 
-        // --- HAPTIC FEEDBACK (NEU) ---
+        // --- HAPTIC FEEDBACK ---
         function hapticFeedback(style) {
             if (!('vibrate' in navigator) || !navigator.vibrate) return;
             
             if (style === 'check') {
-                navigator.vibrate(50); // Short tap
+                navigator.vibrate(50); 
             } else if (style === 'delete') {
-                navigator.vibrate([100, 30, 100]); // Double tap for delete
+                navigator.vibrate([100, 30, 100]); 
             }
         }
 
-        // --- DARK MODE LOGIC (NEU) ---
+        // --- DARK MODE LOGIC ---
         window.toggleDarkMode = (isDark) => {
             if (isDark) {
                 document.body.classList.add('dark-mode-override');
@@ -400,13 +403,11 @@
             }
         };
 
-        // Init: Wende gespeicherte Dunkel-Präferenz an
         if (darkModePreference === 'dark') {
             document.body.classList.add('dark-mode-override');
         }
         document.addEventListener('DOMContentLoaded', () => {
              const toggle = document.getElementById('darkModeToggle');
-             // Prüfe, ob die body-Klasse gesetzt ist oder ob die Präferenz "dark" ist
              if (toggle) toggle.checked = document.body.classList.contains('dark-mode-override') || darkModePreference === 'dark';
         });
 
@@ -419,9 +420,9 @@
                     await signInAnonymously(auth);
                 }
             } catch (error) {
-                console.error("Auth Error:", error);
+                console.error("Auth Error (Anmeldefehler):", error);
                 document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Verbindungsproblem: " + error.message;
+                document.getElementById('errorMsg').innerText = "Verbindungsproblem: Anmeldefehler. Siehe Konsole für Details.";
             }
         };
 
@@ -431,7 +432,8 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
-                document.getElementById('statusDot').classList.add('online');
+                document.getElementById('statusDot').classList.add('online'); // Grüner Punkt
+                console.log("Firestore Status: Angemeldet. User ID:", user.uid);
                 
                 const urlParams = new URLSearchParams(window.location.search);
                 const sharedList = urlParams.get('list');
@@ -446,7 +448,10 @@
                 renderFavorites();
             } else {
                 currentUser = null;
-                document.getElementById('statusDot').classList.remove('online');
+                document.getElementById('statusDot').classList.remove('online'); // Orange/Gelber Punkt
+                console.error("Firestore Status: Nicht angemeldet.");
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden (Orange Status).";
             }
         });
 
@@ -458,7 +463,7 @@
         // DB SYNC
         function subscribeToList(listId) {
             if(unsubscribe) unsubscribe();
-            if(!currentUser) return;
+            if(!currentUser) return; // Wichtig: Nicht abonnieren, wenn nicht angemeldet
             
             currentListId = listId;
             document.getElementById('headerTitle').innerText = listId;
@@ -479,18 +484,29 @@
                     renderList();
                 }
             }, (error) => {
-                console.error("Snapshot Error:", error);
+                console.error("Snapshot Error (Abonnement-Fehler):", error);
                 document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Sync Fehler: " + error.message;
+                document.getElementById('errorMsg').innerText = "Sync Fehler: Kann Liste nicht abonnieren (Regelfehler?).";
             });
         }
 
         async function saveItems(newItems) {
-            if(!currentUser) return;
+            if(!currentUser) {
+                // NEU: Explizite Fehlermeldung, wenn Speichern ohne Login versucht wird
+                console.error("FIREBASE ERROR: Cannot save items. User is not authenticated (currentUser is null).");
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden.";
+                return;
+            }
             try {
                 const listRef = getListDocRef(currentListId);
                 await setDoc(listRef, { items: newItems }, { merge: true });
-            } catch (e) { console.error("Save Error:", e); }
+                document.getElementById('errorMsg').style.display = 'none';
+            } catch (e) { 
+                console.error("Save Error (Speicherfehler):", e);
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('errorMsg').innerText = "Speicherfehler: Daten konnten nicht in Firestore geschrieben werden (Regelfehler?).";
+            }
         }
 
         // --- CORE LOGIC ---
@@ -510,7 +526,6 @@
             await saveItems([...items, newItem]);
             if(!overrideText) input.value = '';
             
-            // NEU: Autocomplete Container verstecken
             document.getElementById('autocompleteContainer').style.display = 'none';
         };
 
@@ -542,7 +557,7 @@
             return { id: Date.now() + Math.random(), name: clean.charAt(0).toUpperCase() + clean.slice(1), amount, unit, category, price: 0, checked: false };
         }
 
-        // --- AUTOSUGGEST (NEU) ---
+        // --- AUTOSUGGEST ---
         window.showSuggestions = () => {
             clearTimeout(suggestionTimeout);
             suggestionTimeout = setTimeout(() => {
@@ -558,7 +573,7 @@
                 const suggestions = Object.entries(topItems)
                     .filter(([name]) => name.toLowerCase().includes(query))
                     .sort(([, countA], [, countB]) => countB - countA)
-                    .slice(0, 5); // Max 5 Vorschläge
+                    .slice(0, 5); 
 
                 if (suggestions.length === 0) {
                     container.style.display = 'none';
@@ -566,11 +581,10 @@
                 }
 
                 container.innerHTML = suggestions.map(([name]) => 
-                    // Escapen Sie einfache Anführungszeichen für das JS-Argument
                     `<div class="suggestion-chip" onclick="selectSuggestion('${name.replace(/'/g, "\\'")}')">${name}</div>`
                 ).join('');
                 container.style.display = 'block';
-            }, 200); // Debounce
+            }, 200);
         };
 
         window.selectSuggestion = (name) => {
@@ -654,12 +668,12 @@
         window.updateQty = async (id, change) => await saveItems(items.map(i => i.id === id ? { ...i, amount: Math.max(1, (i.amount||1) + change) } : i));
         
         window.toggleCheck = async (id) => {
-            hapticFeedback('check'); // Haptisches Feedback
+            hapticFeedback('check'); 
             await saveItems(items.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
         };
         
         window.deleteItem = async (id) => {
-            hapticFeedback('delete'); // Haptisches Feedback
+            hapticFeedback('delete'); 
             const item = items.find(i => i.id === id); lastDeleted = [item];
             await saveItems(items.filter(i => i.id !== id)); showUndo();
         };
@@ -749,9 +763,10 @@
             if (!listToDeleteName) return;
             
             try {
+                // Versuche das Dokument zu löschen
                 await deleteDoc(getListDocRef(listToDeleteName));
             } catch (error) {
-                console.warn("Could not delete list document in Firestore:", error);
+                console.warn("Could not delete list document in Firestore (Konnte Listendokument nicht löschen):", error);
             }
 
             myLists = myLists.filter(l => l !== listToDeleteName);
@@ -809,7 +824,6 @@
             });
             document.getElementById('totalSum').innerText = sum.toFixed(2) + " €";
 
-            // NEU: Fortschrittsbalken aktualisieren
             const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
             document.getElementById('progressBar').style.width = progress.toFixed(1) + '%';
             document.getElementById('progressBarContainer').style.display = totalCount > 0 ? 'block' : 'none';
