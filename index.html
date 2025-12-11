@@ -3,134 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#2563eb">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>SmartEinkauf Sync ☁️</title>
-    
-    <!-- Drag & Drop + Konfetti -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <title>SmartEinkauf V8 🎤</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
     <style>
         :root {
-            --primary: #2563eb; --primary-dark: #1e40af; --accent: #10b981;
-            --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --text-light: #64748b;
-            --border: #e2e8f0; --input-bg: #ffffff;
+            --primary: #6366f1; --primary-dark: #4f46e5; --accent: #10b981;
+            --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --text-light: #64748b;
+            --border: #e2e8f0; --danger: #ef4444;
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --primary: #3b82f6; --bg: #0f172a; --card: #1e293b;
-                --text: #f8fafc; --text-light: #94a3b8; --border: #334155; --input-bg: #0f172a;
+                --primary: #818cf8; --bg: #0f172a; --card: #1e293b;
+                --text: #f8fafc; --text-light: #94a3b8; --border: #334155;
             }
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 120px; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 100px; }
 
-        /* UI Styles */
+        /* --- Header --- */
         .header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 15px 20px 25px 20px;
-            border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; position: sticky; top: 0; z-index: 50;
-            display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 20px -5px rgba(0,0,0,0.2);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;
+            padding: 15px 20px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
+            position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 4px 15px -3px rgba(0,0,0,0.2);
         }
-        .list-name { font-size: 1.2rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.2); transition: background 0.3s; }
-        .status-dot.online { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
-        .status-dot.error { background: #ef4444; }
-
-        .container { max-width: 600px; margin: -20px auto 0; padding: 0 15px; position: relative; z-index: 60; }
-        .card { background: var(--card); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-
-        .input-group { display: flex; gap: 8px; }
-        input[type="text"] { flex: 1; padding: 12px; border: 2px solid var(--border); border-radius: 12px; font-size: 16px; outline: none; background: var(--input-bg); color: var(--text); }
-        input:focus { border-color: var(--primary); }
-        .add-btn { background: var(--primary); color: white; border: none; width: 48px; border-radius: 12px; font-size: 1.5rem; cursor: pointer; }
-        .mic-btn { background: var(--border); color: var(--text-light); border: none; width: 44px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
-        .mic-btn.active { background: #ef4444; color: white; }
-
-        ul { list-style: none; padding: 0; margin: 0; }
-        li { background: var(--card); margin-bottom: 8px; border-radius: 12px; padding: 12px; display: flex; align-items: center; border: 1px solid var(--border); transition: 0.2s; }
-        li.checked { opacity: 0.5; background: var(--bg); }
-        li.checked .item-name { text-decoration: line-through; }
+        .header h1 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        .status-dot.online { background: #34d399; box-shadow: 0 0 8px #34d399; }
         
-        .check-circle { width: 22px; height: 22px; border: 2px solid var(--text-light); border-radius: 50%; margin-right: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        li.checked .check-circle { background: var(--accent); border-color: var(--accent); }
-        li.checked .check-circle::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px 15px; }
 
-        .item-content { flex: 1; overflow: hidden; }
-        .item-name { font-weight: 600; font-size: 1rem; }
-        .item-meta { font-size: 0.75rem; color: var(--text-light); display: flex; gap: 5px; align-items: center; margin-top: 2px; }
-        .badge { background: rgba(37, 99, 235, 0.1); color: var(--primary); padding: 1px 5px; border-radius: 4px; }
+        /* --- Input --- */
+        .input-card {
+            background: var(--card); padding: 8px; border-radius: 16px; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border);
+            display: flex; gap: 6px; position: relative; margin-bottom: 20px; align-items: center;
+        }
+        input { flex: 1; border: none; background: transparent; font-size: 16px; color: var(--text); outline: none; padding: 10px 5px; min-width: 0; }
+        
+        /* Input Buttons */
+        .action-btn {
+            background: var(--primary); color: white; border: none; width: 40px; height: 40px; flex-shrink: 0;
+            border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.1s;
+        }
+        .action-btn:active { transform: scale(0.95); }
+        
+        .mode-btn { background: #e0e7ff; color: var(--primary); font-size: 1.1rem; }
+        .mode-btn.simple { background: #f3f4f6; color: var(--text-light); }
+        
+        .mic-btn { background: transparent; color: var(--text-light); border: 1px solid var(--border); }
+        .mic-btn.active { background: #fee2e2; color: #ef4444; border-color: #ef4444; animation: pulse 1.5s infinite; }
 
-        .total-bar { position: fixed; bottom: 80px; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; z-index: 80; }
-        .fab-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; background: var(--card); padding: 10px 25px; border-radius: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); border: 1px solid var(--border); z-index: 90; }
-        .btn-action { background: none; border: none; font-weight: 600; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
 
-        /* Menu Drawer */
-        .drawer { position: fixed; top: 0; left: 0; height: 100%; width: 280px; background: var(--card); z-index: 100; transform: translateX(-100%); transition: transform 0.3s; padding: 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .drawer.open { transform: translateX(0); }
-        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-        .drawer-overlay.open { opacity: 1; pointer-events: auto; }
-        .list-item { padding: 12px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; display: flex; justify-content: space-between; }
-        .list-item.active { background: rgba(37, 99, 235, 0.1); color: var(--primary); font-weight: bold; }
+        /* --- Magic Recipes --- */
+        .magic-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
+        .magic-chip {
+            background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px;
+            font-size: 0.85rem; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        /* --- List --- */
+        .cat-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin: 15px 0 5px 5px; font-weight: bold; }
+        
+        .item-row {
+            background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 10px; border: 1px solid var(--border);
+            transition: all 0.2s; position: relative; overflow: hidden;
+        }
+        .item-row.checked { opacity: 0.6; background: var(--bg); border-color: transparent; }
+        .item-row.checked .name { text-decoration: line-through; }
+        
+        .check-box {
+            width: 24px; height: 24px; border: 2px solid var(--text-light); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+        }
+        .item-row.checked .check-box { background: var(--accent); border-color: var(--accent); }
+        .item-row.checked .check-box::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
+
+        .details { flex: 1; min-width: 0; }
+        .name { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .qty-control { display: flex; align-items: center; gap: 5px; background: var(--bg); padding: 2px; border-radius: 8px; flex-shrink: 0; }
+        .qty-btn { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; cursor: pointer; color: var(--text); }
+        .qty-val { font-size: 0.8rem; font-weight: bold; min-width: 25px; text-align: center; }
+
+        .del-btn { color: var(--text-light); background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; }
+
+        /* --- Toast (Undo) --- */
+        .toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px;
+            display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 100;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+        .undo-btn { background: none; border: none; color: var(--primary); font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* --- Fab --- */
+        .fab-bar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--card); padding: 10px 20px; border-radius: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15); border: 1px solid var(--border); z-index: 90;
+            display: flex; gap: 20px; align-items: center;
+        }
+        .fab-btn { background: none; border: none; font-weight: 600; color: var(--primary); font-size: 0.9rem; cursor: pointer; }
+
+        #errorMsg { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; font-size: 0.9rem; text-align: center; }
     </style>
 </head>
 <body>
 
-    <!-- Drawer -->
-    <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
-    <div class="drawer" id="drawer">
-        <h2>📑 Listen wählen</h2>
-        <div id="drawerList"></div>
-        <button onclick="createNewList()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; margin-top:20px; cursor:pointer;">+ Neue Liste</button>
-        <p style="margin-top:auto; font-size:0.8rem; color:#94a3b8;">Status: <span id="connectionStatus">Verbinde...</span></p>
-    </div>
-
-    <!-- Header -->
     <div class="header">
-        <div onclick="toggleDrawer()">
-            <span style="font-size:0.75rem; opacity:0.8; text-transform:uppercase;">SmartEinkauf Sync</span>
-            <div class="list-name"><span id="headerListName">Einkauf</span> ▼ <div class="status-dot" id="statusDot"></div></div>
-        </div>
-        <button onclick="toggleDrawer()" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer;">☰</button>
+        <h1>🛒 SmartEinkauf <div id="statusDot" class="status-dot"></div></h1>
+        <button onclick="shareList()" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:5px 12px; border-radius:15px; font-size:0.85rem;">🔗 Teilen</button>
     </div>
 
     <div class="container">
-        <!-- Input -->
-        <div class="card">
-            <div class="input-group">
-                <button class="mic-btn" id="micBtn" onclick="toggleDictation()">🎤</button>
-                <input type="text" id="smartInput" placeholder="Z.B. 2 Milch Aldi..." onkeypress="handleEnter(event)">
-                <button class="add-btn" onclick="addItem()">+</button>
-            </div>
-        </div>
-
-        <!-- List -->
-        <ul id="shoppingList"></ul>
         
-        <div id="emptyState" style="text-align: center; padding: 40px; color: var(--text-light); display: none;">
-            <div style="font-size: 3rem; opacity: 0.5;">☁️</div>
-            <p>Liste ist leer.<br>Daten werden live synchronisiert.</p>
+        <div id="errorMsg"></div>
+
+        <!-- Magic Recipes -->
+        <div class="magic-scroll">
+            <div class="magic-chip" onclick="addRecipe('breakfast')">🥞 Frühstück</div>
+            <div class="magic-chip" onclick="addRecipe('pasta')">🍝 Pasta</div>
+            <div class="magic-chip" onclick="addRecipe('party')">🎉 Party</div>
+            <div class="magic-chip" onclick="addRecipe('cleaning')">🧹 Putzen</div>
+        </div>
+
+        <!-- Input -->
+        <div class="input-card">
+            <button class="action-btn mode-btn" id="modeBtn" onclick="toggleMode()">✨</button>
+            <button class="action-btn mic-btn" id="micBtn" onclick="toggleDictation()">🎤</button>
+            <input type="text" id="inputField" placeholder="Was fehlt?" onkeypress="handleEnter(event)">
+            <button class="action-btn" onclick="addItem()">+</button>
+        </div>
+
+        <div id="listContainer"></div>
+
+        <div id="emptyState" style="text-align: center; padding: 50px 20px; color: var(--text-light); display: none;">
+            <div style="font-size: 3rem; margin-bottom: 10px; opacity: 0.3;">🎙️</div>
+            <p>Liste leer.<br>Sprich oder tippe etwas ein.</p>
         </div>
     </div>
 
-    <div class="total-bar">
-        <span>Summe:</span> <span id="totalSum" style="color: var(--primary);">0,00 €</span>
+    <div class="fab-bar">
+        <button class="fab-btn" onclick="clearChecked()">🗑️ Aufräumen</button>
+        <div style="width:1px; height:15px; background:var(--border)"></div>
+        <button class="fab-btn" onclick="finishShopping()">🎉 Fertig</button>
     </div>
 
-    <div class="fab-container">
-        <button class="btn-action" onclick="shareList()">🔗 Einladen</button>
-        <div style="width: 1px; background: var(--border);"></div>
-        <button class="btn-action" onclick="finishShopping()">🎉 Fertig</button>
+    <!-- Undo Toast -->
+    <div id="undoToast" class="toast">
+        <span id="toastMsg">Gelöscht</span>
+        <button class="undo-btn" onclick="performUndo()">Rückgängig</button>
     </div>
 
-    <!-- Firebase SDK (Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, getDoc } 
-        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, arrayUnion, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // DEINE CONFIG
+        // CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
             authDomain: "einkaufliste-cd5d3.firebaseapp.com",
@@ -142,266 +178,265 @@
             measurementId: "G-37TDK0257N"
         };
 
-        // Init Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- Globals accessible from HTML ---
-        window.currentListId = "Einkauf"; 
-        window.items = []; // Local cache for rendering
-        let unsubscribe = null; // Firestore listener
+        // STATE
+        let currentListId = "Einkauf";
+        let items = [];
+        let smartMode = true;
+        let lastDeletedItems = []; // Für Undo
+        let undoTimeout;
+        let recognition; // Speech API
 
-        // --- Auth & Startup ---
+        // AUTH
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                updateStatus(true);
-                // Check URL for shared list
+                document.getElementById('statusDot').classList.add('online');
+                document.getElementById('errorMsg').style.display = 'none';
+                
                 const urlParams = new URLSearchParams(window.location.search);
                 const sharedList = urlParams.get('list');
-                if (sharedList) window.currentListId = sharedList;
+                if (sharedList) currentListId = sharedList;
                 
-                subscribeToList(window.currentListId);
-                renderDrawer();
+                subscribeToList(currentListId);
             } else {
-                signInAnonymously(auth).catch((error) => {
-                    console.error("Auth Error", error);
-                    updateStatus(false);
-                    alert("Fehler: Bitte aktiviere 'Anonymous Auth' in der Firebase Console!");
-                });
+                signInAnonymously(auth).catch(handleError);
             }
         });
 
-        function updateStatus(online) {
-            const dot = document.getElementById('statusDot');
-            const txt = document.getElementById('connectionStatus');
-            if(online) {
-                dot.className = "status-dot online";
-                txt.innerText = "Verbunden ✅";
-                txt.style.color = "green";
-            } else {
-                dot.className = "status-dot error";
-                txt.innerText = "Fehler / Offline ❌";
-                txt.style.color = "red";
-            }
+        function handleError(err) {
+            const el = document.getElementById('errorMsg');
+            el.style.display = 'block';
+            el.innerText = `Verbindungsfehler: ${err.message}`;
+            console.error(err);
         }
 
-        // --- Firestore Logic ---
+        // DB SYNC
         function subscribeToList(listId) {
-            if(unsubscribe) unsubscribe(); // Alten Listener stoppen
-            
-            window.currentListId = listId;
-            document.getElementById('headerListName').innerText = listId;
-            
             const listRef = doc(db, "shopping_lists", listId);
-            
-            unsubscribe = onSnapshot(listRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    window.items = docSnap.data().items || [];
-                    renderList();
-                } else {
-                    // Neue Liste erstellen wenn sie nicht existiert
-                    setDoc(listRef, { items: [], createdAt: new Date() });
-                    window.items = [];
-                    renderList();
-                }
-            }, (error) => {
-                console.error("Datenbank Fehler:", error);
-                if(error.code === 'permission-denied') {
-                    alert("Datenbank Zugriff verweigert! Hast du 'Firestore' im 'Test Mode' erstellt?");
-                }
-            });
-
-            // Update URL ohne Reload
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
             window.history.pushState({path:newUrl},'',newUrl);
+
+            onSnapshot(listRef, (snap) => {
+                if (snap.exists()) {
+                    items = snap.data().items || [];
+                    renderList();
+                } else {
+                    saveItems([]);
+                }
+            }, handleError);
         }
 
-        // --- Actions (Global Window Functions) ---
-        window.createNewList = function() {
-            const name = prompt("Name der neuen Liste (z.B. 'Baumarkt'):");
-            if(name) {
-                subscribeToList(name);
-                toggleDrawer();
-            }
-        };
-
-        window.toggleDrawer = function() {
-            document.getElementById('drawer').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('open');
-            renderDrawer(); // Re-Render Recent Lists logic could go here
-        };
-
-        // Simuliertes Drawer Menü (in echt müsste man eine User-Settings Collection haben für Listen-Übersicht)
-        // Hier Hardcoden wir die "Favoriten" oder merken uns lokal besuchte
-        function renderDrawer() {
-            const history = JSON.parse(localStorage.getItem('my_lists') || '["Einkauf"]');
-            if(!history.includes(window.currentListId)) {
-                history.push(window.currentListId);
-                localStorage.setItem('my_lists', JSON.stringify(history));
-            }
-
-            const el = document.getElementById('drawerList');
-            el.innerHTML = history.map(name => `
-                <div class="list-item ${name === window.currentListId ? 'active' : ''}" onclick="switchList('${name}')">
-                    <span>${name}</span>
-                </div>
-            `).join('');
+        async function saveItems(newItems) {
+            try {
+                await setDoc(doc(db, "shopping_lists", currentListId), { items: newItems }, { merge: true });
+            } catch (e) { handleError(e); }
         }
-        window.switchList = (name) => { subscribeToList(name); toggleDrawer(); };
 
-        window.addItem = async function() {
-            const input = document.getElementById('smartInput');
+        // LOGIC
+        window.addItem = async () => {
+            const input = document.getElementById('inputField');
             const text = input.value.trim();
             if(!text) return;
-
-            const newItem = parseInput(text); // Helper Function call
-            const listRef = doc(db, "shopping_lists", window.currentListId);
-            
-            // Optimistic UI Update (optional, here we wait for sync for simplicity/truth)
-            await updateDoc(listRef, {
-                items: arrayUnion(newItem)
-            });
+            const newItem = smartMode ? parseSmart(text) : createSimpleItem(text);
+            await saveItems([...items, newItem]);
             input.value = '';
         };
 
-        window.toggleCheck = async function(itemId) {
-            const listRef = doc(db, "shopping_lists", window.currentListId);
-            // Firestore Array Update ist tricky für einzelne Felder.
-            // Strategie: Komplettes Array lesen/schreiben ist bei kleinen Listen OK.
-            const updatedItems = window.items.map(i => {
-                if(i.id === itemId) return { ...i, checked: !i.checked };
-                return i;
-            });
-            await updateDoc(listRef, { items: updatedItems });
-        };
-
-        window.deleteItem = async function(itemId) {
-            const listRef = doc(db, "shopping_lists", window.currentListId);
-            const itemToDelete = window.items.find(i => i.id === itemId);
-            await updateDoc(listRef, {
-                items: arrayRemove(itemToDelete) // Achtung: arrayRemove braucht exaktes Objekt. Besser Filter:
-            }).catch(async () => {
-                // Fallback: Manuell filtern
-                const newItems = window.items.filter(i => i.id !== itemId);
-                await updateDoc(listRef, { items: newItems });
-            });
-        };
-
-        window.finishShopping = async function() {
-            const hasChecked = window.items.some(i => i.checked);
-            if(!hasChecked) return alert("Nichts abgehakt!");
-            
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            
-            const listRef = doc(db, "shopping_lists", window.currentListId);
-            const remaining = window.items.filter(i => !i.checked);
-            await updateDoc(listRef, { items: remaining });
-        };
-
-        window.shareList = function() {
-            // Einfach URL teilen
-            const url = window.location.href;
-            navigator.clipboard.writeText(url).then(() => alert("Link kopiert! Schicke ihn an deinen Partner."));
-        };
-
-        // --- Helper: Parsing (gleiche Logik wie vorher) ---
-        const categoryMap = {
-            "obst": "🍎", "kühlung": "🥛", "brot": "🥖", "getränke": "🥤", 
-            "haushalt": "🧻", "vorrat": "🍝", "fleisch": "🥩", "drogerie": "🧴"
-        };
-        const knownStores = ["Aldi", "Lidl", "Rewe", "Edeka", "Netto", "Dm", "Rossmann"];
-
-        function parseInput(text) {
-            let cleanText = text.replace(/\.$/, "");
-            
-            // Preis
-            let price = 0;
-            const priceRegex = /(\d+[.,]\d{1,2})\s*(€|euro)/i;
-            const matchP = cleanText.match(priceRegex);
-            if(matchP) {
-                price = parseFloat(matchP[1].replace(',', '.'));
-                cleanText = cleanText.replace(matchP[0], "").trim();
-            }
-
-            // Menge
-            const amountRegex = /^(\d+[.,]?\d*|ein|eine)\s*(kg|g|l|ml|stk|pkg|beutel|dose|flasche)?/i;
-            let amount = "", unit = "";
-            const matchA = cleanText.match(amountRegex);
-            if (matchA) {
-                amount = matchA[1]; unit = matchA[2] || "";
-                cleanText = cleanText.replace(matchA[0], "").trim();
-            }
-
-            // Store & Kat
-            let store = "Allg."; let icon = "🛒";
-            const words = cleanText.split(" ");
-            const remaining = [];
-            words.forEach(w => {
-                if (knownStores.includes(w.charAt(0).toUpperCase() + w.slice(1))) store = w;
-                else remaining.push(w);
-            });
-            cleanText = remaining.join(" ");
-
-            const searchVal = cleanText.toLowerCase();
-            for (const key in categoryMap) {
-                if (searchVal.includes(key)) icon = categoryMap[key];
-            }
-
-            return {
-                id: Date.now(),
-                name: cleanText.charAt(0).toUpperCase() + cleanText.slice(1),
-                amount, unit, store, icon, price, checked: false
+        window.addRecipe = async (type) => {
+            const recipes = {
+                'breakfast': ['Eier', 'Milch', 'Mehl', 'Bacon'],
+                'pasta': ['Nudeln', 'Tomatensoße', 'Parmesan', 'Basilikum'],
+                'party': ['Chips', 'Cola', 'Bier', 'Pizza'],
+                'cleaning': ['Reiniger', 'Schwämme', 'Müllbeutel']
             };
-        }
+            const newItems = recipes[type].map(name => ({
+                id: Date.now() + Math.random(), name, amount: 1, unit: 'x', category: 'Rezept', checked: false
+            }));
+            await saveItems([...items, ...newItems]);
+            showToast(`Rezept hinzugefügt!`);
+        };
 
-        // --- Rendering ---
-        function renderList() {
-            const el = document.getElementById('shoppingList');
-            el.innerHTML = '';
-            
-            document.getElementById('emptyState').style.display = window.items.length ? 'none' : 'block';
-
-            // Sort: Checked bottom
-            const sorted = [...window.items].sort((a,b) => a.checked - b.checked);
-            let sum = 0;
-
-            sorted.forEach(item => {
-                sum += (item.price || 0);
-                const li = document.createElement('li');
-                li.className = item.checked ? 'checked' : '';
-                li.innerHTML = `
-                    <div class="check-circle" onclick="toggleCheck(${item.id})"></div>
-                    <div class="item-content">
-                        <div class="item-name">${item.name}</div>
-                        <div class="item-meta">
-                            ${item.amount ? `<span><b>${item.amount}</b> ${item.unit}</span>` : ''}
-                            <span class="badge">${item.icon} ${item.store}</span>
-                            ${item.price ? `<span>${item.price.toFixed(2)}€</span>` : ''}
-                        </div>
-                    </div>
-                    <button onclick="deleteItem(${item.id})" style="border:none;background:none;font-size:1.2rem;color:#94a3b8;">&times;</button>
-                `;
-                el.appendChild(li);
+        window.updateQty = async (id, change) => {
+            const updated = items.map(i => {
+                if(i.id === id) {
+                    let amount = parseFloat(i.amount) || 1;
+                    amount += change; if(amount < 1) amount = 1;
+                    return { ...i, amount: amount };
+                } return i;
             });
-            document.getElementById('totalSum').innerText = sum.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+            await saveItems(updated);
+        };
+
+        window.toggleCheck = async (id) => {
+            await saveItems(items.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
+        };
+
+        window.deleteItem = async (id) => {
+            const item = items.find(i => i.id === id);
+            lastDeletedItems = [item];
+            await saveItems(items.filter(i => i.id !== id));
+            showToast(`"${item.name}" gelöscht`, true);
+        };
+
+        window.clearChecked = async () => {
+            const toDelete = items.filter(i => i.checked);
+            if(toDelete.length === 0) return;
+            lastDeletedItems = toDelete;
+            await saveItems(items.filter(i => !i.checked));
+            showToast(`${toDelete.length} gelöscht`, true);
+        };
+
+        window.finishShopping = async () => {
+            if(!items.some(i => i.checked)) return alert("Nichts erledigt!");
+            confetti({ particleCount: 200, spread: 100, origin: { y: 0.7 } });
+            window.clearChecked();
+        };
+
+        // UNDO
+        function showToast(msg, showUndo = false) {
+            const toast = document.getElementById('undoToast');
+            document.getElementById('toastMsg').innerText = msg;
+            document.getElementById('undoToast').querySelector('.undo-btn').style.display = showUndo ? 'block' : 'none';
+            toast.classList.add('show');
+            clearTimeout(undoTimeout);
+            undoTimeout = setTimeout(() => toast.classList.remove('show'), 4000);
         }
 
-        // Input Handler
+        window.performUndo = async () => {
+            if(lastDeletedItems.length > 0) {
+                await saveItems([...items, ...lastDeletedItems]);
+                lastDeletedItems = [];
+                document.getElementById('undoToast').classList.remove('show');
+            }
+        };
+
+        // SPEECH RECOGNITION (Added Back)
+        function initSpeech() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SR();
+                recognition.lang = 'de-DE';
+                recognition.continuous = false;
+                
+                recognition.onstart = () => {
+                    document.getElementById('micBtn').classList.add('active');
+                    document.getElementById('inputField').placeholder = "Ich höre zu...";
+                };
+                recognition.onend = () => {
+                    document.getElementById('micBtn').classList.remove('active');
+                    document.getElementById('inputField').placeholder = "Was fehlt?";
+                };
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('inputField').value = transcript;
+                };
+            } else {
+                document.getElementById('micBtn').style.display = 'none';
+            }
+        }
+        initSpeech(); // Start logic
+
+        window.toggleDictation = () => {
+            if (!recognition) return alert("Mikrofon nicht unterstützt.");
+            if (document.getElementById('micBtn').classList.contains('active')) recognition.stop();
+            else recognition.start();
+        };
+
+        // HELPERS
+        function createSimpleItem(text) { return { id: Date.now(), name: text, amount: 1, unit: '', category: 'Manuell', checked: false }; }
+        
+        function parseSmart(text) {
+            const categories = {
+                "Obst & Gemüse": ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel"],
+                "Kühlregal": ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst"],
+                "Vorrat": ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve"],
+                "Getränke": ["wasser", "saft", "bier", "cola", "limo", "kaffee"],
+                "Haushalt": ["papier", "reiniger", "waschmittel", "zahnpasta"]
+            };
+            let clean = text;
+            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg)?/i;
+            let amount = 1, unit = "";
+            const match = clean.match(amountRegex);
+            if(match) { amount = parseFloat(match[1]); unit = match[2] || ""; clean = clean.replace(match[0], "").trim(); }
+            let category = "Sonstiges";
+            const lower = clean.toLowerCase();
+            for(const [cat, keywords] of Object.entries(categories)) {
+                if(keywords.some(k => lower.includes(k))) { category = cat; break; }
+            }
+            return { id: Date.now(), name: clean.charAt(0).toUpperCase() + clean.slice(1), amount, unit, category, checked: false };
+        }
+
+        window.toggleMode = () => {
+            smartMode = !smartMode;
+            const btn = document.getElementById('modeBtn');
+            const input = document.getElementById('inputField');
+            if(smartMode) {
+                btn.innerText = "✨"; btn.className = "action-btn mode-btn";
+                input.placeholder = "Was fehlt? (Smart)";
+            } else {
+                btn.innerText = "📝"; btn.className = "action-btn mode-btn simple";
+                input.placeholder = "Was fehlt? (Text)";
+            }
+            input.focus();
+        };
+
         window.handleEnter = (e) => { if(e.key === 'Enter') window.addItem(); };
+        window.shareList = () => { navigator.clipboard.writeText(window.location.href); alert("Link kopiert!"); };
 
-        // --- Speech (Legacy JS) ---
-        window.initSpeech = function() {
-             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-             if(!SR) { document.getElementById('micBtn').style.display = 'none'; return; }
-             const rec = new SR(); rec.lang = 'de-DE';
-             rec.onstart = () => document.getElementById('micBtn').classList.add('active');
-             rec.onend = () => document.getElementById('micBtn').classList.remove('active');
-             rec.onresult = (e) => document.getElementById('smartInput').value = e.results[0][0].transcript;
-             window.toggleDictation = () => rec.start();
+        function renderList() {
+            const container = document.getElementById('listContainer');
+            container.innerHTML = '';
+            if(items.length === 0) {
+                document.getElementById('emptyState').style.display = 'block'; return;
+            }
+            document.getElementById('emptyState').style.display = 'none';
+
+            const groups = {};
+            const sorted = [...items].sort((a,b) => a.checked - b.checked);
+            sorted.forEach(item => {
+                const cat = item.category || "Sonstiges";
+                if(!groups[cat]) groups[cat] = [];
+                groups[cat].push(item);
+            });
+
+            const order = ["Obst & Gemüse", "Kühlregal", "Vorrat", "Getränke", "Haushalt", "Rezept", "Manuell", "Sonstiges"];
+            const allKeys = new Set([...order, ...Object.keys(groups)]);
+
+            allKeys.forEach(cat => {
+                if(groups[cat] && groups[cat].length > 0) {
+                    const title = document.createElement('div');
+                    title.className = 'cat-title'; title.innerText = cat;
+                    container.appendChild(title);
+                    groups[cat].forEach(item => {
+                        const row = document.createElement('div');
+                        row.className = `item-row ${item.checked ? 'checked' : ''}`;
+                        const displayUnit = item.unit === 'x' ? '' : item.unit;
+                        
+                        let qtyHtml = '';
+                        if(smartMode || item.amount > 1) {
+                             qtyHtml = `
+                                <div class="qty-control" onclick="event.stopPropagation()">
+                                    <div class="qty-btn" onclick="updateQty(${item.id}, -1)">-</div>
+                                    <div class="qty-val">${item.amount}${displayUnit}</div>
+                                    <div class="qty-btn" onclick="updateQty(${item.id}, 1)">+</div>
+                                </div>`;
+                        }
+                        row.innerHTML = `
+                            <div class="check-box" onclick="toggleCheck(${item.id})"></div>
+                            <div class="details" onclick="toggleCheck(${item.id})">
+                                <div class="name">${item.name}</div>
+                            </div>
+                            ${qtyHtml}
+                            <button class="del-btn" onclick="deleteItem(${item.id})">&times;</button>
+                        `;
+                        container.appendChild(row);
+                    });
+                }
+            });
         }
-        window.initSpeech();
-
     </script>
 </body>
 </html>
