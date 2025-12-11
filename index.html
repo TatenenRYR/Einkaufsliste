@@ -1,1644 +1,408 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Einkaufs-Assistent</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
-  <!-- Firebase-Skripte (müssen weiterhin von extern geladen werden) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  
-  <style>
-    /* ========================================
-      CSS STILE
-    ======================================== */
-    :root {
-      --bg-color: #f0fdf4;
-      --text-color: #1b1b1b;
-      --primary-color: #22c55e;
-      --primary-hover: #16a34a;
-      --card-bg: #ffffff;
-      --border-color: #cce3d3;
-      --shadow-color: rgba(0,0,0,0.05);
-      --input-bg: #ffffff;
-      --disabled-color: #a0a0a0;
-      --erledigt-opacity: 0.6;
-      --header-bg: #dcfce7;
-      --tab-active-border: var(--primary-color);
-      --tab-inactive-color: #4b5563;
-    }
-
-    body.dark-mode {
-      --bg-color: #1f2937;
-      --text-color: #f9fafb;
-      --primary-color: #22c55e;
-      --primary-hover: #16a34a;
-      --card-bg: #374151;
-      --border-color: #4b5563;
-      --shadow-color: rgba(0,0,0,0.2);
-      --input-bg: #4b5563;
-      --disabled-color: #9ca3af;
-      --erledigt-opacity: 0.5;
-      --header-bg: #111827;
-      --tab-active-border: var(--primary-color);
-      --tab-inactive-color: #d1d5db;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>SmartEinkauf Sync ☁️</title>
     
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      padding: 1rem;
-      max-width: 600px;
-      margin: auto;
-      padding-bottom: 6rem; /* Platz für FAB */
-    }
+    <!-- Drag & Drop + Konfetti -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    /* --- Header & Tabs --- */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-      background-color: var(--header-bg);
-      padding: 0.5rem 1rem;
-      border-radius: 12px;
-    }
-    h1 {
-      font-size: 1.5rem;
-      color: var(--primary-color);
-    }
-    #darkModeToggle {
-      background: none;
-      border: none;
-      color: var(--text-color);
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
-    .tabs {
-      display: flex;
-      margin-bottom: 1rem;
-      border-bottom: 2px solid var(--border-color);
-    }
-    .tab-button {
-      flex: 1;
-      padding: 0.8rem;
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--tab-inactive-color);
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    .tab-button.active {
-      color: var(--text-color);
-      border-bottom-color: var(--tab-active-border);
-    }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    <style>
+        :root {
+            --primary: #2563eb; --primary-dark: #1e40af; --accent: #10b981;
+            --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --text-light: #64748b;
+            --border: #e2e8f0; --input-bg: #ffffff;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #3b82f6; --bg: #0f172a; --card: #1e293b;
+                --text: #f8fafc; --text-light: #94a3b8; --border: #334155; --input-bg: #0f172a;
+            }
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 120px; }
 
-    /* --- Bedienelemente (Filter, etc.) --- */
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    .control-item { flex: 1; }
-    
-    input, button, select, textarea {
-      width: 100%;
-      padding: 0.8rem;
-      margin-bottom: 0.8rem;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      font-size: 1rem;
-      background-color: var(--input-bg);
-      color: var(--text-color);
-    }
-    textarea { min-height: 100px; }
+        /* UI Styles */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 15px 20px 25px 20px;
+            border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; position: sticky; top: 0; z-index: 50;
+            display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 20px -5px rgba(0,0,0,0.2);
+        }
+        .list-name { font-size: 1.2rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.2); transition: background 0.3s; }
+        .status-dot.online { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+        .status-dot.error { background: #ef4444; }
 
-    button {
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    button:hover { background-color: var(--primary-hover); }
-    button.secondary {
-      background-color: var(--card-bg);
-      color: var(--text-color);
-      border: 1px solid var(--border-color);
-    }
-    button.secondary:hover { background-color: var(--border-color); }
-    button.danger {
-      background-color: #ef4444;
-      color: white;
-    }
-    button.danger:hover { background-color: #dc2626; }
-    button:disabled {
-      background-color: var(--disabled-color);
-      cursor: not-allowed;
-    }
+        .container { max-width: 600px; margin: -20px auto 0; padding: 0 15px; position: relative; z-index: 60; }
+        .card { background: var(--card); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
 
-    /* --- Produkt Liste --- */
-    ul { list-style-type: none; padding: 0; }
-    li {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem;
-      margin-bottom: 0.5rem;
-      background: var(--card-bg);
-      border-radius: 10px;
-      box-shadow: 0 1px 4px var(--shadow-color);
-      transition: all 0.3s ease;
-    }
-    /* WICHTIG: data-action Attribute werden jetzt für Klicks verwendet */
-    .produkt-info {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      flex: 1;
-      cursor: pointer;
-      overflow: hidden; /* Für Notizen */
-    }
-    .produkt-info i {
-      font-size: 1.5rem;
-      color: var(--primary-color);
-      pointer-events: none; /* Verhindert, dass Icon Klicks "stiehlt" */
-    }
-    .produkt-details {
-      flex: 1;
-      overflow: hidden;
-      pointer-events: none; /* Verhindert, dass Text Klicks "stiehlt" */
-    }
-    .produkt-details strong {
-      display: block;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .kategorie, .notiz, .von-benutzer {
-      display: block;
-      font-size: 0.85rem;
-      color: var(--disabled-color);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .notiz, .von-benutzer { font-style: italic; }
-    
-    .erledigt .produkt-details {
-      text-decoration: line-through;
-      opacity: var(--erledigt-opacity);
-    }
+        .input-group { display: flex; gap: 8px; }
+        input[type="text"] { flex: 1; padding: 12px; border: 2px solid var(--border); border-radius: 12px; font-size: 16px; outline: none; background: var(--input-bg); color: var(--text); }
+        input:focus { border-color: var(--primary); }
+        .add-btn { background: var(--primary); color: white; border: none; width: 48px; border-radius: 12px; font-size: 1.5rem; cursor: pointer; }
+        .mic-btn { background: var(--border); color: var(--text-light); border: none; width: 44px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
+        .mic-btn.active { background: #ef4444; color: white; }
 
-    .aktionen button {
-      margin-left: 0.5rem;
-      padding: 0.5rem;
-      width: 40px;
-      height: 40px;
-      font-size: 1.2rem;
-      border-radius: 50%;
-    }
-    .vorrat-item .aktionen button {
-      background-color: #3b82f6; /* Blau für "zurück zur Liste" */
-    }
+        ul { list-style: none; padding: 0; margin: 0; }
+        li { background: var(--card); margin-bottom: 8px; border-radius: 12px; padding: 12px; display: flex; align-items: center; border: 1px solid var(--border); transition: 0.2s; }
+        li.checked { opacity: 0.5; background: var(--bg); }
+        li.checked .item-name { text-decoration: line-through; }
+        
+        .check-circle { width: 22px; height: 22px; border: 2px solid var(--text-light); border-radius: 50%; margin-right: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        li.checked .check-circle { background: var(--accent); border-color: var(--accent); }
+        li.checked .check-circle::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
 
-    /* --- FAB (Floating Action Button) --- */
-    #fab {
-      position: fixed;
-      bottom: 2rem;
-      right: 2rem;
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      font-size: 2.5rem;
-      line-height: 1;
-      padding: 0;
-      z-index: 999;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-    body.einkaufsmodus #fab { display: none; }
+        .item-content { flex: 1; overflow: hidden; }
+        .item-name { font-weight: 600; font-size: 1rem; }
+        .item-meta { font-size: 0.75rem; color: var(--text-light); display: flex; gap: 5px; align-items: center; margin-top: 2px; }
+        .badge { background: rgba(37, 99, 235, 0.1); color: var(--primary); padding: 1px 5px; border-radius: 4px; }
 
-    /* --- Modals (Pop-ups) --- */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0,0,0,0.5);
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-content {
-      background-color: var(--bg-color);
-      margin: auto;
-      padding: 1.5rem;
-      border: 1px solid var(--border-color);
-      border-radius: 15px;
-      width: 90%;
-      max-width: 500px;
-      position: relative;
-    }
-    .modal-close {
-      position: absolute;
-      top: 0.5rem;
-      right: 1rem;
-      font-size: 2rem;
-      font-weight: bold;
-      color: var(--disabled-color);
-      cursor: pointer;
-    }
-    .modal-content h3 {
-      margin-bottom: 1rem;
-      text-align: center;
-    }
-    .favoriten-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-      gap: 0.5rem;
-    }
-    .favoriten-grid button {
-      padding: 0.5rem;
-      font-size: 0.9rem;
-    }
-    
-    /* Checkbox-Styling */
-    .checkbox-label {
-      display: flex; 
-      align-items: center; 
-      gap: 0.5rem; 
-      margin-bottom: 1rem;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-    .checkbox-label input[type="checkbox"] {
-      width: auto; 
-      margin: 0;
-      height: 1.2em;
-      width: 1.2em;
-    }
+        .total-bar { position: fixed; bottom: 80px; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; z-index: 80; }
+        .fab-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; background: var(--card); padding: 10px 25px; border-radius: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); border: 1px solid var(--border); z-index: 90; }
+        .btn-action { background: none; border: none; font-weight: 600; color: var(--primary); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
 
-
-    /* --- Popups (Undo, etc.) --- */
-    #undoPopup, #loeschPopup, #erledigtPopup {
-      position: fixed;
-      bottom: 1rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffeeba;
-      padding: 1rem;
-      border-radius: 5px;
-      display: none;
-      z-index: 1001;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    }
-    #loeschPopup, #erledigtPopup {
-      bottom: auto;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--card-bg);
-      color: var(--text-color);
-    }
-    #feuerwerk {
-      display: block;
-      margin: auto;
-    }
-  </style>
+        /* Menu Drawer */
+        .drawer { position: fixed; top: 0; left: 0; height: 100%; width: 280px; background: var(--card); z-index: 100; transform: translateX(-100%); transition: transform 0.3s; padding: 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .drawer.open { transform: translateX(0); }
+        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+        .list-item { padding: 12px; border-radius: 8px; margin-bottom: 5px; cursor: pointer; display: flex; justify-content: space-between; }
+        .list-item.active { background: rgba(37, 99, 235, 0.1); color: var(--primary); font-weight: bold; }
+    </style>
 </head>
 <body>
 
-  <!-- 
-    ========================================
-    HTML-STRUKTUR
-    (Stabil, keine 'onclick'-Attribute)
-    ========================================
-  -->
-  <div class="header">
-    <h1>Einkaufs-Assistent</h1>
-    <button id="darkModeToggle"><i class="bi bi-moon-stars-fill"></i></button>
-  </div>
-
-  <nav class="tabs">
-    <button class="tab-button active" data-tab="liste">Einkaufsliste</button>
-    <button class="tab-button" data-tab="vorrat">Vorratskammer</button>
-  </nav>
-
-  <div id="listenContainer" class="tab-content active">
-    <div class="controls">
-      <button id="einkaufsmodusBtn" class="control-item">Einkaufsmodus</button>
+    <!-- Drawer -->
+    <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
+    <div class="drawer" id="drawer">
+        <h2>📑 Listen wählen</h2>
+        <div id="drawerList"></div>
+        <button onclick="createNewList()" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; margin-top:20px; cursor:pointer;">+ Neue Liste</button>
+        <p style="margin-top:auto; font-size:0.8rem; color:#94a3b8;">Status: <span id="connectionStatus">Verbinde...</span></p>
     </div>
-    <div class="controls" id="shopping-controls" style="display: none;">
-      <select id="marktFilter" class="control-item"><option value="">Alle Märkte</option></select>
-      <select id="sortKategorie" class="control-item"><option value="">Sortieren</option></select>
+
+    <!-- Header -->
+    <div class="header">
+        <div onclick="toggleDrawer()">
+            <span style="font-size:0.75rem; opacity:0.8; text-transform:uppercase;">SmartEinkauf Sync</span>
+            <div class="list-name"><span id="headerListName">Einkauf</span> ▼ <div class="status-dot" id="statusDot"></div></div>
+        </div>
+        <button onclick="toggleDrawer()" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer;">☰</button>
     </div>
-    <div class="controls" id="edit-controls">
-      <button id="kiAnalyseBtn" class="control-item"><i class="bi bi-magic"></i> Liste analysieren</button>
-      <button id="aufräumenBtn" class="control-item secondary"><i class="bi bi-check2-circle"></i> Erledigte aufräumen</button>
-      <button id="allesLoeschenBtn" class="control-item danger"><i class="bi bi-trash"></i> Alles löschen</button>
+
+    <div class="container">
+        <!-- Input -->
+        <div class="card">
+            <div class="input-group">
+                <button class="mic-btn" id="micBtn" onclick="toggleDictation()">🎤</button>
+                <input type="text" id="smartInput" placeholder="Z.B. 2 Milch Aldi..." onkeypress="handleEnter(event)">
+                <button class="add-btn" onclick="addItem()">+</button>
+            </div>
+        </div>
+
+        <!-- List -->
+        <ul id="shoppingList"></ul>
+        
+        <div id="emptyState" style="text-align: center; padding: 40px; color: var(--text-light); display: none;">
+            <div style="font-size: 3rem; opacity: 0.5;">☁️</div>
+            <p>Liste ist leer.<br>Daten werden live synchronisiert.</p>
+        </div>
     </div>
-    <ul id="liste"></ul> <!-- Klick-Listener wird hier angehängt -->
-  </div>
 
-  <div id="vorratsContainer" class="tab-content">
-    <div class="controls">
-      <input type="text" id="vorratFilterInput" placeholder="Vorratskammer durchsuchen..." class="control-item" style="flex-basis: 100%;">
-      <button id="vorratKiBtn" class="control-item secondary"><i class="bi bi-lightbulb"></i> Was kochen? (KI)</button>
+    <div class="total-bar">
+        <span>Summe:</span> <span id="totalSum" style="color: var(--primary);">0,00 €</span>
     </div>
-    <ul id="vorratListe"></ul> <!-- Klick-Listener wird hier angehängt -->
-  </div>
 
-  <button id="fab"><i class="bi bi-plus-lg"></i></button>
-
-  <!-- Modals -->
-  <div id="hinzufuegenModal" class="modal">
-    <div class="modal-content">
-      <span class="modal-close">&times;</span>
-      <h3>Neues Produkt</h3>
-      <nav class="tabs">
-        <button class="tab-button active" data-tab="manuell">Manuell</button>
-        <button class="tab-button" data-tab="sprache">Sprache</button>
-        <button class="tab-button" data-tab="rezept">Rezept-KI</button>
-      </nav>
-      <div id="tabManuell" class="tab-content active">
-        <input type="text" id="produktInput" placeholder="Produktname...">
-        <input type="text" id="mengeInput" placeholder="Menge (z.B. 2 Stück)">
-        <input type="text" id="marktInput" placeholder="Markt (optional)">
-        <input type="text" id="notizInput" placeholder="Notiz (optional)">
-        <button id="manuellHinzufuegenBtn">Hinzufügen</button>
-      </div>
-      <div id="tabSprache" class="tab-content">
-        <button id="spracheBtn"><i class="bi bi-mic-fill"></i> Aufnahme starten</button>
-        <p id="spracheStatus" style="text-align: center; margin-top: 1rem;"></p>
-      </div>
-      <div id="tabRezept" class="tab-content">
-        <textarea id="rezeptInput" placeholder="Hier ein Rezept oder eine Zutatenliste einfügen..."></textarea>
-        <button id="rezeptKiBtn"><i class="bi bi-card-checklist"></i> Rezept verarbeiten</button>
-      </div>
-      <hr style="margin: 1.5rem 0;">
-      <h3>Favoriten</h3>
-      <div class="favoriten-grid" id="favoritenGrid"></div>
+    <div class="fab-container">
+        <button class="btn-action" onclick="shareList()">🔗 Einladen</button>
+        <div style="width: 1px; background: var(--border);"></div>
+        <button class="btn-action" onclick="finishShopping()">🎉 Fertig</button>
     </div>
-  </div>
 
-  <div id="checkoffModal" class="modal">
-    <div class="modal-content">
-      <span class="modal-close">&times;</span>
-      <h3>Produkt abhaken</h3>
-      <p>Produkt <strong id="checkoffProduktName"></strong> als erledigt markieren.</p>
-      <label class="checkbox-label">
-        <input type="checkbox" id="inVorratCheckbox">
-        In die Vorratskammer verschieben?
-      </label>
-      <button id="checkoffSpeichernBtn">Speichern</button>
-    </div>
-  </div>
-  
-  <div id="editModal" class="modal">
-    <div class="modal-content">
-      <span class="modal-close">&times;</span>
-      <h3>Produkt bearbeiten</h3>
-      <input type="hidden" id="editIdInput">
-      <input type="text" id="editNameInput" placeholder="Produktname">
-      <input type="text" id="editMengeInput" placeholder="Menge">
-      <input type="text" id="editMarktInput" placeholder="Markt">
-      <input type="text" id="editNotizInput" placeholder="Notiz">
-      <input type="text" id="editKategorieInput" placeholder="Kategorie">
-      <button id="editSpeichernBtn">Änderungen speichern</button>
-    </div>
-  </div>
+    <!-- Firebase SDK (Modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, arrayUnion, arrayRemove, getDoc } 
+        from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  <div id="kiAnalyseModal" class="modal">
-    <div class="modal-content">
-      <span class="modal-close">&times;</span>
-      <h3>KI Analyse</h3>
-      <div id="kiAnalyseErgebnis"></div>
-    </div>
-  </div>
+        // DEINE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
+            authDomain: "einkaufliste-cd5d3.firebaseapp.com",
+            databaseURL: "https://einkaufliste-cd5d3-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "einkaufliste-cd5d3",
+            storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
+            messagingSenderId: "36721747923",
+            appId: "1:36721747923:web:dbe48ff974c80435eff126",
+            measurementId: "G-37TDK0257N"
+        };
 
-  <div id="benutzerModal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <span class="modal-close">&times;</span>
-      <h3>Willkommen!</h3>
-      <p>Wie ist dein Name? Dieser wird angezeigt, wenn du Produkte zu einer geteilten Liste hinzufügst.</p>
-      <input type="text" id="benutzerNameInput" placeholder="Dein Name...">
-      <button id="benutzerSpeichernBtn">Speichern</button>
-    </div>
-  </div>
+        // Init Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-  <!-- Popups -->
-  <div id="undoPopup">
-    <span>Produkt gelöscht.</span>
-    <button id="undoBtn" class="secondary">Rückgängig</button>
-  </div>
-  
-  <div id="loeschPopup">
-    <p id="matheFrage"></p>
-    <input type="number" id="matheAntwort" placeholder="Antwort eingeben">
-    <button id="loeschBestaetigenBtn" class="danger">Bestätigen</button>
-    <button id="loeschAbbrechenBtn" class="secondary">Abbrechen</button>
-  </div>
-  
-  <div id="erledigtPopup">
-    <canvas id="feuerwerk" width="300" height="150"></canvas>
-    <h3>Super, alles erledigt!</h3>
-  </div>
+        // --- Globals accessible from HTML ---
+        window.currentListId = "Einkauf"; 
+        window.items = []; // Local cache for rendering
+        let unsubscribe = null; // Firestore listener
 
-<script>
-    // ######################################################################
-    // ###   INTEGRIERTER CODE: produktVorlagen.js                        ###
-    // ######################################################################
-    const produktVorlagen = [
-      { name: "Milch", kategorie: "Milchprodukte", icon: "bi-box", menge: "1 L", favorit: true },
-      { name: "Eier", kategorie: "Grundnahrungsmittel", icon: "bi-egg-fill", menge: "10 Stück", favorit: true },
-      { name: "Brot", kategorie: "Backwaren", icon: "bi-view-list", menge: "1 Laib", favorit: true },
-      { name: "Butter", kategorie: "Milchprodukte", icon: "bi-droplet-half", menge: "1 Stück", favorit: true },
-      { name: "Käse", kategorie: "Milchprodukte", icon: "bi-grid", menge: "1 Pck.", favorit: true },
-      { name: "Wasser", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Kasten", favorit: true },
-      { name: "Aufbackbrötchen", kategorie: "Backwaren", icon: "bi-view-list", menge: "1 Pck.", favorit: true },
-      { name: "Wurst", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck.", favorit: true },
-      { name: "Kartoffeln", kategorie: "Obst & Gemüse", icon: "bi-node-plus", menge: "1 Netz", favorit: true },
-      { name: "Toilettenpapier", kategorie: "Haushalt", icon: "bi-layers", menge: "1 Pck.", favorit: true },
-      { name: "Äpfel", kategorie: "Obst & Gemüse", icon: "bi-apple", menge: "1 Netz" },
-      { name: "Bananen", kategorie: "Obst & Gemüse", icon: "bi-grip-horizontal", menge: "1 Bund" },
-      { name: "Tomaten", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Rispe" },
-      { name: "Gurke", kategorie: "Obst & Gemüse", icon: "bi-dash-lg", menge: "1 Stück" },
-      { name: "Salat", kategorie: "Obst & Gemüse", icon: "bi-flower1", menge: "1 Kopf" },
-      { name: "Zwiebeln", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Netz" },
-      { name: "Karotten", kategorie: "Obst & Gemüse", icon: "bi-dash-lg", menge: "1 Bund" },
-      { name: "Paprika", kategorie: "Obst & Gemüse", icon: "bi-record-circle", menge: "1 Netz" },
-      { name: "Hackfleisch", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "500 g" },
-      { name: "Hähnchenbrust", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
-      { name: "Salami", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
-      { name: "Schinken", kategorie: "Fleisch & Wurst", icon: "bi-grid-1x2", menge: "1 Pck." },
-      { name: "Joghurt", kategorie: "Milchprodukte", icon: "bi-cup", menge: "4er Pack" },
-      { name: "Sahne", kategorie: "Milchprodukte", icon: "bi-cup-fill", menge: "1 Becher" },
-      { name: "Quark", kategorie: "Milchprodukte", icon: "bi-cup", menge: "1 Becher" },
-      { name: "Frischkäse", kategorie: "Milchprodukte", icon: "bi-box", menge: "1 Pck." },
-      { name: "Nudeln", kategorie: "Grundnahrungsmittel", icon: "bi-stack", menge: "1 Pck." },
-      { name: "Reis", kategorie: "Grundnahrungsmittel", icon: "bi-record-fill", menge: "1 Pck." },
-      { name: "Mehl", kategorie: "Grundnahrungsmittel", icon: "bi-box-seam", menge: "1 kg" },
-      { name: "Zucker", kategorie: "Grundnahrungsmittel", icon: "bi-box-seam", menge: "1 kg" },
-      { name: "Salz", kategorie: "Grundnahrungsmittel", icon: "bi-box-seam", menge: "1 Pck." },
-      { name: "Öl", kategorie: "Grundnahrungsmittel", icon: "bi-droplet", menge: "1 Flasche" },
-      { name: "Tomatensauce", kategorie: "Grundnahrungsmittel", icon: "bi-box", menge: "1 Glas" },
-      { name: "Ketchup", kategorie: "Grundnahrungsmittel", icon: "bi-droplet-fill", menge: "1 Flasche" },
-      { name: "Senf", kategorie: "Grundnahrungsmittel", icon: "bi-droplet-fill", menge: "1 Glas" },
-      { name: "Kaffee", kategorie: "Getränke", icon: "bi-cup-hot-fill", menge: "1 Pfund" },
-      { name: "Tee", kategorie: "Getränke", icon: "bi-cup-hot", menge: "1 Pck." },
-      { name: "Cola", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Flasche" },
-      { name: "Saft", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Flasche" },
-      { name: "Bier", kategorie: "Getränke", icon: "bi-cup-straw", menge: "1 Kasten" },
-      { name: "Küchenrolle", kategorie: "Haushalt", icon: "bi-layers", menge: "1 Pck." },
-      { name: "Waschmittel", kategorie: "Haushalt", icon: "bi-box-seam", menge: "1 Flasche" },
-      { name: "Spülmittel", kategorie: "Haushalt", icon: "bi-droplet", menge: "1 Flasche" },
-      { name: "Müllbeutel", kategorie: "Haushalt", icon: "bi-trash", menge: "1 Rolle" },
-      { name: "Zahnpasta", kategorie: "Hygiene", icon: "bi-activity", menge: "1 Tube" },
-      { name: "Shampoo", kategorie: "Hygiene", icon: "bi-droplet", menge: "1 Flasche" },
-      { name: "Seife", kategorie: "Hygiene", icon: "bi-activity", menge: "1 Stück" },
-    ];
-    // --- ENDE: produktVorlagen.js ---
-
-
-    // ######################################################################
-    // ###   INTEGRIERTER CODE: gemini-api.js                             ###
-    // ######################################################################
-    
-    // API-Key von deiner Eingabe
-    const GEMINI_API_KEY = "AIzaSyAqpZeKexgzO-8uo4rJx8g6NAE4boFBbp8";
-
-    /**
-     * Ruft die Gemini API auf.
-     */
-    async function callGeminiApi(prompt) {
-      
-      if (GEMINI_API_KEY === "DEIN_API_KEY" || !GEMINI_API_KEY || GEMINI_API_KEY === "AIzaSyAqpZeKexgzO-8uo4rJx8g6NAE4boFBbp8" && GEMINI_API_KEY.length < 30) { 
-          console.error("Gemini API Key fehlt oder ist ungültig.");
-          // Wir werfen einen Fehler, den die aufrufende Funktion fangen kann
-          throw new Error("API-Key nicht eingetragen oder ungültig.");
-      }
-      
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
-
-      const requestBody = {
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-          temperature: 0.1, 
-          topK: 1,
-          topP: 1,
-          maxOutputTokens: 2048,
-        }
-      };
-
-      try {
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
+        // --- Auth & Startup ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                updateStatus(true);
+                // Check URL for shared list
+                const urlParams = new URLSearchParams(window.location.search);
+                const sharedList = urlParams.get('list');
+                if (sharedList) window.currentListId = sharedList;
+                
+                subscribeToList(window.currentListId);
+                renderDrawer();
+            } else {
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Auth Error", error);
+                    updateStatus(false);
+                    alert("Fehler: Bitte aktiviere 'Anonymous Auth' in der Firebase Console!");
+                });
+            }
         });
 
-        if (!response.ok) {
-          const errorBody = await response.json();
-          console.error("API-Fehler (Antwort):", errorBody);
-          throw new Error(`API-Fehler: ${response.statusText}`);
+        function updateStatus(online) {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('connectionStatus');
+            if(online) {
+                dot.className = "status-dot online";
+                txt.innerText = "Verbunden ✅";
+                txt.style.color = "green";
+            } else {
+                dot.className = "status-dot error";
+                txt.innerText = "Fehler / Offline ❌";
+                txt.style.color = "red";
+            }
         }
 
-        const data = await response.json();
-        
-        if (data.promptFeedback && data.promptFeedback.blockReason) {
-          console.error("API-Anfrage blockiert:", data.promptFeedback.blockReason);
-          throw new Error(`Anfrage blockiert: ${data.promptFeedback.blockReason}`);
-        }
-
-        if (!data.candidates || !data.candidates[0].content.parts[0].text) {
-            console.error("Unerwartete API-Antwortstruktur:", data);
-            throw new Error("Konnte keine gültige Antwort von der KI extrahieren.");
-        }
-        
-        let textResponse = data.candidates[0].content.parts[0].text;
-        textResponse = textResponse.replace(/^```json\s*/, '').replace(/```$/, '');
-        
-        return textResponse.trim();
-
-      } catch (error) {
-        console.error("Fehler beim Aufrufen der Gemini API:", error);
-        throw error; // Fehler weitergeben
-      }
-    }
-    // --- ENDE: gemini-api.js ---
-
-
-    // ######################################################################
-    // ###   HAUPT-SKRIPT (Rekonstruiert & Stabilisiert)                  ###
-    // ######################################################################
-
-    // Wartet, bis die HTML-Seite vollständig geladen ist.
-    window.addEventListener('DOMContentLoaded', (event) => {
-        
-        // --- App-Zustand (State) ---
-        // Alle "lebenden" Daten der App
-        let produkte = [];
-        let vorrat = [];
-        let zuletztGeloescht = null;
-        let einkaufsmodusAktiv = false;
-        let recognition = null; 
-        let benutzerName = "Gast";
-        let benutzerInitialisiert = false;
-        let db, listenRef;
-        let richtigeAntwort = 0; // Für "Alles löschen"-Sicherheitsabfrage
-        let feuerwerkInterval;
-
-        // --- DOM-Elemente (Cache) ---
-        // Wir speichern alle wichtigen HTML-Elemente einmalig beim Start.
-        const ui = {
-            darkModeToggle: document.getElementById('darkModeToggle'),
-            tabsContainer: document.querySelector('.tabs'),
-            listenContainer: document.getElementById('listenContainer'),
-            vorratsContainer: document.getElementById('vorratsContainer'),
-            einkaufsmodusBtn: document.getElementById('einkaufsmodusBtn'),
-            shoppingControls: document.getElementById('shopping-controls'),
-            editControls: document.getElementById('edit-controls'),
-            marktFilter: document.getElementById('marktFilter'),
-            sortKategorie: document.getElementById('sortKategorie'),
-            kiAnalyseBtn: document.getElementById('kiAnalyseBtn'),
-            aufräumenBtn: document.getElementById('aufräumenBtn'),
-            allesLoeschenBtn: document.getElementById('allesLoeschenBtn'),
-            listeUl: document.getElementById('liste'),
-            vorratFilterInput: document.getElementById('vorratFilterInput'),
-            vorratKiBtn: document.getElementById('vorratKiBtn'),
-            vorratListeUl: document.getElementById('vorratListe'),
-            fab: document.getElementById('fab'),
+        // --- Firestore Logic ---
+        function subscribeToList(listId) {
+            if(unsubscribe) unsubscribe(); // Alten Listener stoppen
             
-            // Modals
-            hinzufuegenModal: document.getElementById('hinzufuegenModal'),
-            checkoffModal: document.getElementById('checkoffModal'),
-            editModal: document.getElementById('editModal'),
-            kiAnalyseModal: document.getElementById('kiAnalyseModal'),
-            benutzerModal: document.getElementById('benutzerModal'),
+            window.currentListId = listId;
+            document.getElementById('headerListName').innerText = listId;
             
-            // Hinzufügen-Modal
-            hinzufuegenTabs: document.getElementById('hinzufuegenModal').querySelector('.tabs'),
-            manuellHinzufuegenBtn: document.getElementById('manuellHinzufuegenBtn'),
-            spracheBtn: document.getElementById('spracheBtn'),
-            spracheStatus: document.getElementById('spracheStatus'),
-            rezeptKiBtn: document.getElementById('rezeptKiBtn'),
-            favoritenGrid: document.getElementById('favoritenGrid'),
+            const listRef = doc(db, "shopping_lists", listId);
             
-            // Bearbeiten-Modal
-            editSpeichernBtn: document.getElementById('editSpeichernBtn'),
-            
-            // Checkoff-Modal
-            checkoffSpeichernBtn: document.getElementById('checkoffSpeichernBtn'),
-            
-            // Benutzer-Modal
-            benutzerSpeichernBtn: document.getElementById('benutzerSpeichernBtn'),
-
-            // Popups
-            undoPopup: document.getElementById('undoPopup'),
-            undoBtn: document.getElementById('undoBtn'),
-            loeschPopup: document.getElementById('loeschPopup'),
-            loeschBestaetigenBtn: document.getElementById('loeschBestaetigenBtn'),
-            loeschAbbrechenBtn: document.getElementById('loeschAbbrechenBtn'),
-            erledigtPopup: document.getElementById('erledigtPopup'),
-            feuerwerkCanvas: document.getElementById('feuerwerk'),
-            
-            // Globale Modal-Schließ-Buttons
-            modalCloseBtns: document.querySelectorAll('.modal-close')
-        };
-        
-        // --- 1. App-Initialisierung (Startpunkt) ---
-        
-        function mainApp() {
-            // Firebase-Konfiguration von deiner Eingabe
-            const firebaseConfig = {
-              apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
-              authDomain: "einkaufliste-cd5d3.firebaseapp.com",
-              // databaseURL ist für Realtime Database, wir nutzen Firestore
-              projectId: "einkaufliste-cd5d3",
-              storageBucket: "einkaufliste-cd5d3.firebasestorage.app", // Korrigierter Storage Bucket
-              messagingSenderId: "36721747923",
-              appId: "1:36721747923:web:dbe48ff974c80435eff126",
-              measurementId: "G-37TDK0257N"
-            };
-
-            try {
-                // Prüfen ob Firebase schon initialisiert ist
-                if (!firebase.apps.length) {
-                    firebase.initializeApp(firebaseConfig);
+            unsubscribe = onSnapshot(listRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    window.items = docSnap.data().items || [];
+                    renderList();
+                } else {
+                    // Neue Liste erstellen wenn sie nicht existiert
+                    setDoc(listRef, { items: [], createdAt: new Date() });
+                    window.items = [];
+                    renderList();
                 }
-                db = firebase.firestore();
-            } catch (e) {
-                console.error("Firebase Initialisierung fehlgeschlagen:", e);
-                alert("Fehler: Firebase konnte nicht gestartet werden. Sind die Firebase-Skripte blockiert?");
-                return;
-            }
-
-            const params = new URLSearchParams(window.location.search);
-            const LISTEN_ID = params.get("list") || "standardliste";
-            listenRef = db.collection("einkaufslisten").doc(LISTEN_ID);
-
-            // --- Datenbank-Listener (Die "Single Source of Truth") ---
-            // Diese Funktion wird bei JEDER Änderung in der Datenbank aufgerufen
-            // und ist die EINZIGE, die 'renderListe' und 'renderVorratskammer' aufruft.
-            listenRef.onSnapshot(doc => {
-              if (doc.exists) {
-                const data = doc.data();
-                produkte = data.produkte || [];
-                vorrat = data.vorrat || [];
-                
-                initialisiereBenutzer(); // Prüft, ob wir den Benutzer nach dem Namen fragen müssen
-                
-                aktualisiereDropdowns(); // Füllt die Filter-Dropdowns
-                renderListe(); // Zeichnet die Einkaufsliste neu
-                renderVorratskammer(); // Zeichnet die Vorratskammer neu
-              } else {
-                // Wenn die Listen-ID neu ist, wird hier ein leeres Dokument erstellt
-                console.log("Neues Dokument wird erstellt.");
-                initialisiereBenutzer();
-                speichereAlles(); 
-              }
-            }, err => {
-                // Fehlerbehandlung, falls Firebase blockiert ist
-                console.error("Firebase Snapshot-Fehler:", err);
-                alert("Fehler: Konnte nicht mit der Datenbank verbinden. Prüfe die Firebase-Regeln oder die Internetverbindung.");
+            }, (error) => {
+                console.error("Datenbank Fehler:", error);
+                if(error.code === 'permission-denied') {
+                    alert("Datenbank Zugriff verweigert! Hast du 'Firestore' im 'Test Mode' erstellt?");
+                }
             });
 
-            // Dark Mode beim Start prüfen
-            if (localStorage.getItem('darkMode') === 'enabled') {
-                toggleDarkMode();
+            // Update URL ohne Reload
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
+            window.history.pushState({path:newUrl},'',newUrl);
+        }
+
+        // --- Actions (Global Window Functions) ---
+        window.createNewList = function() {
+            const name = prompt("Name der neuen Liste (z.B. 'Baumarkt'):");
+            if(name) {
+                subscribeToList(name);
+                toggleDrawer();
             }
-            
-            // Alle statischen Event-Listener (Knopfdrücke etc.) binden
-            bindEventListeners();
-            
-        } // --- Ende von mainApp() ---
+        };
 
+        window.toggleDrawer = function() {
+            document.getElementById('drawer').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('open');
+            renderDrawer(); // Re-Render Recent Lists logic could go here
+        };
 
-        // --- 2. Event-Listener (Die Steuerzentrale) ---
-        
-        /**
-         * Weist allen statischen HTML-Elementen ihre Klick-Funktionen zu.
-         */
-        function bindEventListeners() {
-            // Header
-            ui.darkModeToggle.addEventListener('click', toggleDarkMode);
-            
-            // Tabs (Hauptnavigation & Hinzufügen-Modal)
-            ui.tabsContainer.addEventListener('click', handleTabClick);
-            ui.hinzufuegenTabs.addEventListener('click', handleTabClick);
-            
-            // Haupt-Kontroll-Buttons
-            ui.einkaufsmodusBtn.addEventListener('click', toggleEinkaufsmodus);
-            ui.kiAnalyseBtn.addEventListener('click', starteKiAnalyse);
-            ui.aufräumenBtn.addEventListener('click', raeumeErledigteAuf);
-            ui.allesLoeschenBtn.addEventListener('click', zeigeLoeschAbfrage); // Button für "Alles löschen"
-            ui.vorratKiBtn.addEventListener('click', starteVorratAnalyse);
-            ui.fab.addEventListener('click', oeffneHinzufuegenModal);
-
-            // Filter (reagieren auf 'change' oder 'keyup')
-            ui.marktFilter.addEventListener('change', renderListe);
-            ui.sortKategorie.addEventListener('change', renderListe);
-            ui.vorratFilterInput.addEventListener('keyup', renderVorratskammer);
-
-            // WICHTIG: Event Delegation für dynamische Listen
-            // Diese "hören" auf Klicks innerhalb der gesamten Liste (<ul>)
-            ui.listeUl.addEventListener('click', handleListenKlick);
-            ui.vorratListeUl.addEventListener('click', handleVorratsKlick);
-
-            // Modal-Buttons
-            ui.manuellHinzufuegenBtn.addEventListener('click', manuellHinzufuegen);
-            ui.spracheBtn.addEventListener('click', starteSpracheingabe);
-            ui.rezeptKiBtn.addEventListener('click', starteRezeptAnalyse);
-            ui.checkoffSpeichernBtn.addEventListener('click', speichereCheckoff);
-            ui.editSpeichernBtn.addEventListener('click', speichereEdit);
-            ui.benutzerSpeichernBtn.addEventListener('click', speichereBenutzer);
-
-            // Popup-Buttons
-            ui.undoBtn.addEventListener('click', undoLoeschen);
-            ui.loeschBestaetigenBtn.addEventListener('click', pruefeAntwort);
-            ui.loeschAbbrechenBtn.addEventListener('click', abbrechenLoeschen);
-
-            // Alle Schließen-Buttons (Modals)
-            ui.modalCloseBtns.forEach(btn => btn.addEventListener('click', schliesseAlleModals));
-        }
-
-        // --- 3. Event-Handler (Was passiert bei Klicks) ---
-
-        /**
-         * Fängt alle Klicks innerhalb der Haupt-Einkaufsliste ab.
-         * Findet heraus, welches Produkt (data-id) und welche Aktion (data-action) geklickt wurde.
-         * Dies behebt den "Buttons gehen nicht"-Fehler.
-         */
-        function handleListenKlick(event) {
-            const li = event.target.closest('li[data-id]'); // Das LI-Element mit der ID finden
-            if (!li) return; // Klick ins Leere
-            
-            const id = parseInt(li.dataset.id);
-            const actionTarget = event.target.closest('[data-action]'); // Das Element mit der Aktion (kann li selbst sein)
-            if (!actionTarget) return;
-
-            const action = actionTarget.dataset.action;
-            
-            // Führt die entsprechende Aktion aus
-            if (action === 'toggle') {
-                toggleErledigt(id);
-            } else if (action === 'edit') {
-                oeffneEditModal(id);
-            } else if (action === 'delete') {
-                loescheProdukt(id);
+        // Simuliertes Drawer Menü (in echt müsste man eine User-Settings Collection haben für Listen-Übersicht)
+        // Hier Hardcoden wir die "Favoriten" oder merken uns lokal besuchte
+        function renderDrawer() {
+            const history = JSON.parse(localStorage.getItem('my_lists') || '["Einkauf"]');
+            if(!history.includes(window.currentListId)) {
+                history.push(window.currentListId);
+                localStorage.setItem('my_lists', JSON.stringify(history));
             }
-        }
-        
-        /**
-         * Fängt alle Klicks innerhalb der Vorratskammer-Liste ab.
-         */
-        function handleVorratsKlick(event) {
-            const li = event.target.closest('li[data-id]');
-            if (!li) return;
-            
-            const id = parseInt(li.dataset.id);
-            verschiebeInListe(id); // Jedes Klicken hier bedeutet "verschieben"
-        }
 
-        /**
-         * Fängt Klicks auf Tab-Reiter ab (sowohl Haupt-Tabs als auch Modal-Tabs).
-         * Dies behebt den "leere Liste nach Tab-Wechsel"-Fehler.
-         */
-        function handleTabClick(event) {
-            const target = event.target.closest('.tab-button');
-            if (!target || target.classList.contains('active')) return;
-            
-            const tabName = target.dataset.tab;
-            
-            // Findet den Container (entweder Haupt-Tabs oder Modal-Tabs)
-            const tabContainer = target.closest('.tabs');
-            const contentContainer = tabContainer.nextElementSibling.parentElement; 
-            
-            // Alle Tabs im selben Container deaktivieren
-            tabContainer.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
-            contentContainer.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            // Ziel-Tab aktivieren
-            target.classList.add('active');
-            
-            // Logik für Haupt-Tabs (Einkaufsliste/Vorrat)
-            if (tabName === 'liste') {
-                ui.listenContainer.classList.add('active');
-                ui.fab.style.display = einkaufsmodusAktiv ? 'none' : 'block';
-            } else if (tabName === 'vorrat') {
-                ui.vorratsContainer.classList.add('active');
-                ui.fab.style.display = 'none';
-            }
-            // Logik für Hinzufügen-Modal-Tabs
-            else if (tabName === 'manuell') {
-                document.getElementById('tabManuell').classList.add('active');
-            } else if (tabName === 'sprache') {
-                document.getElementById('tabSprache').classList.add('active');
-            } else if (tabName === 'rezept') {
-                document.getElementById('tabRezept').classList.add('active');
-            }
-        }
-
-
-        // --- 4. Kern-Funktionen (Daten & UI-Logik) ---
-
-        /**
-         * Speichert den aktuellen Zustand von 'produkte' und 'vorrat' in Firebase.
-         */
-        function speichereAlles() {
-          if (!listenRef) {
-              console.warn("Speichern fehlgeschlagen: listenRef ist noch nicht bereit.");
-              return; 
-          }
-          const zuSpeicherndeProdukte = produkte.map(p => ({
-            id: p.id, name: p.name, menge: p.menge, markt: p.markt,
-            notiz: p.notiz, kategorie: p.kategorie, icon: p.icon,
-            erledigt: p.erledigt, hinzugefuegtVon: p.hinzugefuegtVon || "Gast"
-          }));
-          listenRef.set({ 
-            produkte: zuSpeicherndeProdukte, 
-            vorrat: vorrat
-          }).catch(err => console.error("Fehler beim Speichern: ", err));
-        }
-
-        /**
-         * Öffnet das "Produkt hinzufügen"-Modal.
-         */
-        function oeffneHinzufuegenModal() {
-          ui.hinzufuegenModal.style.display = 'flex';
-          ladeFavoriten();
-        }
-        
-        /**
-         * Schließt ALLE offenen Modals.
-         */
-        function schliesseAlleModals() {
-          document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-          if (recognition) {
-            recognition.stop();
-            recognition = null;
-          }
-        }
-
-        /**
-         * Schaltet den Dark Mode um und speichert die Wahl.
-         */
-        function toggleDarkMode() {
-          document.body.classList.toggle('dark-mode');
-          const icon = ui.darkModeToggle.querySelector('i');
-          if (document.body.classList.contains('dark-mode')) {
-            icon.classList.remove('bi-moon-stars-fill');
-            icon.classList.add('bi-sun-fill');
-            localStorage.setItem('darkMode', 'enabled');
-          } else {
-            icon.classList.remove('bi-sun-fill');
-            icon.classList.add('bi-moon-stars-fill');
-            localStorage.setItem('darkMode', 'disabled');
-          }
-        }
-        
-        /**
-         * Schaltet den Einkaufsmodus um (blendet UI-Elemente ein/aus).
-         */
-        function toggleEinkaufsmodus() {
-          einkaufsmodusAktiv = !einkaufsmodusAktiv;
-          document.body.classList.toggle("einkaufsmodus", einkaufsmodusAktiv);
-          
-          ui.einkaufsmodusBtn.classList.toggle("active", einkaufsmodusAktiv);
-          ui.einkaufsmodusBtn.innerHTML = einkaufsmodusAktiv ? "Bearbeiten-Modus" : "Einkaufsmodus";
-          
-          ui.editControls.style.display = einkaufsmodusAktiv ? "none" : "flex";
-          ui.shoppingControls.style.display = einkaufsmodusAktiv ? "flex" : "none";
-          ui.fab.style.display = einkaufsmodusAktiv ? "none" : "block";
-          
-          renderListe(); // Modus-Wechsel erfordert Neurenderung
-        }
-
-        /**
-         * Prüft, ob ein Benutzername lokal gespeichert ist, sonst wird das Modal gezeigt.
-         */
-        function initialisiereBenutzer() {
-          if (benutzerInitialisiert) return;
-          
-          const lokalerName = localStorage.getItem('benutzerName');
-          if (lokalerName) {
-            benutzerName = lokalerName;
-          } else {
-            setTimeout(() => {
-                if (ui.benutzerModal) ui.benutzerModal.style.display = 'flex';
-            }, 500);
-          }
-          benutzerInitialisiert = true;
-        }
-
-        /**
-         * Speichert den eingegebenen Benutzernamen lokal.
-         */
-        function speichereBenutzer() {
-          const nameInput = document.getElementById('benutzerNameInput').value.trim();
-          if (nameInput) {
-            benutzerName = nameInput;
-            localStorage.setItem('benutzerName', benutzerName);
-            schliesseAlleModals();
-          } else {
-            alert("Bitte gib einen Namen ein.");
-          }
-        }
-
-        /**
-         * Zeichnet die Haupt-Einkaufsliste basierend auf Filtern und Modus.
-         */
-        function renderListe() {
-          const ul = ui.listeUl;
-          if (!ul) return; 
-          ul.innerHTML = '';
-          
-          const kat = ui.sortKategorie.value;
-          const markt = ui.marktFilter.value;
-
-          let gefiltert = [...produkte];
-          
-          if (einkaufsmodusAktiv) {
-            gefiltert = gefiltert.filter(p => !p.erledigt);
-            if (markt) gefiltert = gefiltert.filter(p => p.markt === markt);
-          } else {
-            gefiltert.sort((a, b) => a.erledigt - b.erledigt);
-          }
-
-          if (kat) {
-            gefiltert = gefiltert.filter(p => p.kategorie === kat);
-          }
-          
-          if (gefiltert.length === 0 && einkaufsmodusAktiv && produkte.length > 0 && produkte.some(p=> p.erledigt)) {
-            zeigeErledigtPopup();
-          }
-
-          // Erstellt die HTML-Elemente für jedes Produkt
-          gefiltert.forEach(p => {
-            const li = document.createElement("li");
-            li.dataset.id = p.id; // WICHTIG: ID am LI speichern
-            li.className = p.erledigt ? 'erledigt' : '';
-            
-            // data-action Attribute steuern die Klick-Handler
-            li.innerHTML = `
-              <span class="produkt-info" data-action="toggle">
-                <i class="bi ${p.icon || 'bi-bag'}"></i>
-                <div class="produkt-details">
-                  <strong>${p.name}</strong>
-                  <span class="kategorie">${p.menge} ${p.markt ? '• ' + p.markt : ''} ${p.kategorie ? '• ' + p.kategorie : ''}</span>
-                  ${p.notiz ? `<span class="notiz">${p.notiz}</span>` : ''}
-                  ${p.hinzugefuegtVon && p.hinzugefuegtVon !== "Gast" ? `<span class="von-benutzer"><i>Von: ${p.hinzugefuegtVon}</i></span>` : ''}
+            const el = document.getElementById('drawerList');
+            el.innerHTML = history.map(name => `
+                <div class="list-item ${name === window.currentListId ? 'active' : ''}" onclick="switchList('${name}')">
+                    <span>${name}</span>
                 </div>
-              </span>
-              <span class="aktionen">
-                ${!einkaufsmodusAktiv ? `
-                  <button class="secondary" data-action="edit"><i class="bi bi-pencil"></i></button>
-                  <button class="danger" data-action="delete"><i class="bi bi-trash"></i></button>
-                ` : ''}
-              </span>`;
-            ul.appendChild(li);
-          });
+            `).join('');
         }
-        
-        /**
-         * Zeichnet die Vorratskammer-Liste basierend auf dem Suchfilter.
-         */
-        function renderVorratskammer() {
-          const ul = ui.vorratListeUl;
-          if (!ul) return; 
-          const filter = ui.vorratFilterInput.value.toLowerCase();
-          ul.innerHTML = '';
-          
-          vorrat
-            .filter(p => p.name.toLowerCase().includes(filter))
-            .sort((a,b) => a.name.localeCompare(b.name))
-            .forEach(p => {
-              const li = document.createElement("li");
-              li.dataset.id = p.id; // WICHTIG: ID am LI speichern
-              li.className = 'vorrat-item';
-              li.dataset.action = "move"; // Klick auf das ganze LI ist "move"
-              
-              li.innerHTML = `
-                <span class="produkt-info" data-action="move">
-                  <i class="bi ${p.icon || 'bi-box-seam'}"></i>
-                  <div class="produkt-details">
-                    <strong>${p.name}</strong>
-                    <span class="kategorie">${p.menge || ''}</span>
-                  </div>
-                </span>
-                <span class="aktionen">
-                  <button data-action="move"><i class="bi bi-arrow-up-left-circle"></i></button>
-                </span>`;
-              ul.appendChild(li);
+        window.switchList = (name) => { subscribeToList(name); toggleDrawer(); };
+
+        window.addItem = async function() {
+            const input = document.getElementById('smartInput');
+            const text = input.value.trim();
+            if(!text) return;
+
+            const newItem = parseInput(text); // Helper Function call
+            const listRef = doc(db, "shopping_lists", window.currentListId);
+            
+            // Optimistic UI Update (optional, here we wait for sync for simplicity/truth)
+            await updateDoc(listRef, {
+                items: arrayUnion(newItem)
             });
-        }
+            input.value = '';
+        };
 
-        /**
-         * Füllt die Dropdown-Filter (Kategorie, Markt) basierend auf den aktuellen Produkten.
-         */
-        function aktualisiereDropdowns() {
-          const katSet = new Set(produkte.map(p => p.kategorie).filter(k => k));
-          const marktSet = new Set(produkte.map(p => p.markt).filter(m => m));
-          
-          if (ui.sortKategorie) {
-              const alterWert = ui.sortKategorie.value;
-              ui.sortKategorie.innerHTML = '<option value="">Nach Kategorie sortieren</option>';
-              Array.from(katSet).sort().forEach(k => {
-                ui.sortKategorie.innerHTML += `<option value="${k}">${k}</option>`;
-              });
-              ui.sortKategorie.value = alterWert; // Auswahl beibehalten
-          }
-          
-          if (ui.marktFilter) {
-              const alterWert = ui.marktFilter.value;
-              ui.marktFilter.innerHTML = '<option value="">Alle Märkte filtern</option>';
-              Array.from(marktSet).sort().forEach(m => {
-                ui.marktFilter.innerHTML += `<option value="${m}">${m}</option>`;
-              });
-              ui.marktFilter.value = alterWert; // Auswahl beibehalten
-          }
-        }
+        window.toggleCheck = async function(itemId) {
+            const listRef = doc(db, "shopping_lists", window.currentListId);
+            // Firestore Array Update ist tricky für einzelne Felder.
+            // Strategie: Komplettes Array lesen/schreiben ist bei kleinen Listen OK.
+            const updatedItems = window.items.map(i => {
+                if(i.id === itemId) return { ...i, checked: !i.checked };
+                return i;
+            });
+            await updateDoc(listRef, { items: updatedItems });
+        };
 
-        /**
-         * Wrapper für den manuellen Hinzufügen-Button. Prüft Eingabe und schließt Modal.
-         */
-        function manuellHinzufuegen() {
-            const name = document.getElementById('produktInput').value.trim();
-            if (!name) {
-                alert("Bitte gib einen Produktnamen ein.");
-                return; 
-            }
-            hinzufuegen(); // Ruft Kern-Hinzufügen-Funktion auf
-            schliesseAlleModals();
-        }
-        
-        /**
-         * Kernfunktion zum Hinzufügen von Produkten. Wird von manuell, KI, Sprache etc. genutzt.
-         * Kombiniert Mengen, wenn Produkt schon existiert.
-         */
-        function hinzufuegen(produktObj = null) {
-          let name, menge, markt, notiz, kategorie, icon;
+        window.deleteItem = async function(itemId) {
+            const listRef = doc(db, "shopping_lists", window.currentListId);
+            const itemToDelete = window.items.find(i => i.id === itemId);
+            await updateDoc(listRef, {
+                items: arrayRemove(itemToDelete) // Achtung: arrayRemove braucht exaktes Objekt. Besser Filter:
+            }).catch(async () => {
+                // Fallback: Manuell filtern
+                const newItems = window.items.filter(i => i.id !== itemId);
+                await updateDoc(listRef, { items: newItems });
+            });
+        };
 
-          if (produktObj) { // Hinzufügen per KI, Favorit oder Sprache
-            name = produktObj.name.trim();
-            menge = produktObj.menge || "1 Stück";
-            markt = produktObj.markt || "";
-            notiz = produktObj.notiz || "";
-          } else { // Hinzufügen per manuellem Formular
-            name = document.getElementById('produktInput').value.trim();
-            menge = document.getElementById('mengeInput').value.trim() || "1 Stück";
-            markt = document.getElementById('marktInput').value.trim();
-            notiz = document.getElementById('notizInput').value.trim();
-          }
+        window.finishShopping = async function() {
+            const hasChecked = window.items.some(i => i.checked);
+            if(!hasChecked) return alert("Nichts abgehakt!");
+            
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            
+            const listRef = doc(db, "shopping_lists", window.currentListId);
+            const remaining = window.items.filter(i => !i.checked);
+            await updateDoc(listRef, { items: remaining });
+        };
 
-          if (!name) return; // Sollte nicht passieren, aber sicher ist sicher
+        window.shareList = function() {
+            // Einfach URL teilen
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => alert("Link kopiert! Schicke ihn an deinen Partner."));
+        };
 
-          // Mengen-Logik
-          const mengenMatch = menge.match(/^(\d+[\.,]?\d*)\s*(.*)/);
-          let zahl = 1;
-          let einheit = menge;
-          if (mengenMatch) {
-            zahl = parseFloat(mengenMatch[1].replace(',', '.'));
-            einheit = mengenMatch[2].trim() || "Stück";
-          }
+        // --- Helper: Parsing (gleiche Logik wie vorher) ---
+        const categoryMap = {
+            "obst": "🍎", "kühlung": "🥛", "brot": "🥖", "getränke": "🥤", 
+            "haushalt": "🧻", "vorrat": "🍝", "fleisch": "🥩", "drogerie": "🧴"
+        };
+        const knownStores = ["Aldi", "Lidl", "Rewe", "Edeka", "Netto", "Dm", "Rossmann"];
 
-          const bestehend = produkte.find(p => 
-            !p.erledigt &&
-            p.name.toLowerCase() === name.toLowerCase() &&
-            p.markt === markt &&
-            p.menge.toLowerCase().endsWith(einheit.toLowerCase())
-          );
-
-          if (bestehend) { // Produkt existiert -> Menge erhöhen
-            const bestMatch = bestehend.menge.match(/^(\d+[\.,]?\d*)\s*(.*)/);
-            let bestZahl = parseFloat(bestMatch[1].replace(',', '.'));
-            bestehend.menge = `${bestZahl + zahl} ${einheit}`;
-            if (notiz) bestehend.notiz = (bestehend.notiz ? bestehend.notiz + "; " : "") + notiz;
-            bestehend.hinzugefuegtVon = benutzerName; 
-          } else { // Produkt ist neu -> Hinzufügen
-            const vorlage = findeProduktVorlage(name);
-            if (vorlage && !produktObj) { // Manuell -> Vorlage nutzen
-              kategorie = vorlage.kategorie;
-              icon = vorlage.icon;
-              menge = menge === "1 Stück" ? (vorlage.menge || menge) : menge; 
-            } else if (produktObj && produktObj.kategorie) { // KI/Favorit -> Daten übernehmen
-              kategorie = produktObj.kategorie;
-              icon = produktObj.icon || 'bi-bag';
-            } else { // Unbekannt
-              kategorie = "Sonstiges";
-              icon = "bi-bag";
+        function parseInput(text) {
+            let cleanText = text.replace(/\.$/, "");
+            
+            // Preis
+            let price = 0;
+            const priceRegex = /(\d+[.,]\d{1,2})\s*(€|euro)/i;
+            const matchP = cleanText.match(priceRegex);
+            if(matchP) {
+                price = parseFloat(matchP[1].replace(',', '.'));
+                cleanText = cleanText.replace(matchP[0], "").trim();
             }
 
-            const id = Date.now();
-            produkte.push({ id, name, menge, markt, notiz, kategorie, icon, erledigt: false, hinzugefuegtVon: benutzerName });
-          }
-          
-          speichereAlles(); // Speichern. 'onSnapshot' kümmert sich ums Neuzeichnen.
-          
-          if (!produktObj) { // Formularfelder leeren
-            document.getElementById('produktInput').value = '';
-            document.getElementById('mengeInput').value = '';
-            document.getElementById('marktInput').value = '';
-            document.getElementById('notizInput').value = '';
-          }
-        }
+            // Menge
+            const amountRegex = /^(\d+[.,]?\d*|ein|eine)\s*(kg|g|l|ml|stk|pkg|beutel|dose|flasche)?/i;
+            let amount = "", unit = "";
+            const matchA = cleanText.match(amountRegex);
+            if (matchA) {
+                amount = matchA[1]; unit = matchA[2] || "";
+                cleanText = cleanText.replace(matchA[0], "").trim();
+            }
 
-        /**
-         * Sucht eine passende Vorlage aus der 'produktVorlagen'-Liste.
-         */
-        function findeProduktVorlage(eingabe) {
-          if (typeof produktVorlagen === 'undefined') {
-              console.warn("produktVorlagen-Array ist nicht definiert.");
-              return null;
-          }
-          const n = eingabe.toLowerCase();
-          return produktVorlagen.find(p => p.name.toLowerCase() === n);
-        }
-        
-        /**
-         * Füllt das Favoriten-Grid im Hinzufügen-Modal.
-         */
-        function ladeFavoriten() {
-          const grid = ui.favoritenGrid;
-          if (!grid) return;
-          grid.innerHTML = '';
-          if (typeof produktVorlagen === 'undefined') {
-              console.warn("produktVorlagen-Array ist nicht definiert.");
-              grid.innerHTML = "<p>Favoriten-Definitionen fehlen.</p>";
-              return;
-          }
-          
-          produktVorlagen.filter(p => p.favorit).forEach(p => {
-            const btn = document.createElement('button');
-            btn.className = 'secondary';
-            btn.innerHTML = `<i class="bi ${p.icon || 'bi-bag'}"></i> ${p.name}`;
-            btn.onclick = () => { // onclick ist hier OK, da es dynamisch erzeugt wird
-              hinzufuegen({
-                name: p.name,
-                menge: p.menge,
-                kategorie: p.kategorie,
-                icon: p.icon
-              });
-              // schließt das Modal nicht, für schnelles Hinzufügen
+            // Store & Kat
+            let store = "Allg."; let icon = "🛒";
+            const words = cleanText.split(" ");
+            const remaining = [];
+            words.forEach(w => {
+                if (knownStores.includes(w.charAt(0).toUpperCase() + w.slice(1))) store = w;
+                else remaining.push(w);
+            });
+            cleanText = remaining.join(" ");
+
+            const searchVal = cleanText.toLowerCase();
+            for (const key in categoryMap) {
+                if (searchVal.includes(key)) icon = categoryMap[key];
+            }
+
+            return {
+                id: Date.now(),
+                name: cleanText.charAt(0).toUpperCase() + cleanText.slice(1),
+                amount, unit, store, icon, price, checked: false
             };
-            grid.appendChild(btn);
-          });
         }
 
-        /**
-         * Schaltet den "erledigt"-Status eines Produkts um.
-         */
-        function toggleErledigt(id) {
-          const p = produkte.find(p => p.id === id);
-          if (!p) return;
-
-          if (!p.erledigt && einkaufsmodusAktiv) {
-            oeffneCheckoffModal(p); // Im Einkaufsmodus: Erst Modal zeigen
-          } else {
-            p.erledigt = !p.erledigt; // Im Bearbeiten-Modus: Direkt umschalten
-            speichereAlles();
-          }
-        }
-
-        /**
-         * Löscht ein Produkt (mit Undo-Möglichkeit).
-         */
-        function loescheProdukt(id) {
-          zuletztGeloescht = produkte.find(p => p.id === id);
-          produkte = produkte.filter(p => p.id !== id);
-          speichereAlles();
-          zeigeUndo();
-        }
-        
-        /**
-         * Entfernt alle als "erledigt" markierten Produkte.
-         */
-        function raeumeErledigteAuf() {
-          const erledigte = produkte.filter(p => p.erledigt);
-          if (erledigte.length === 0) {
-            alert("Es gibt keine erledigten Produkte zum Aufräumen.");
-            return;
-          }
-          if (confirm(`Möchtest du ${erledigte.length} erledigte Produkte entfernen?`)) {
-            produkte = produkte.filter(p => !p.erledigt);
-            speichereAlles();
-          }
-        }
-
-        /**
-         * Öffnet das "Produkt bearbeiten"-Modal mit den Daten des Produkts.
-         */
-        function oeffneEditModal(id) {
-          const p = produkte.find(p => p.id === id);
-          if (!p) return;
-          document.getElementById('editIdInput').value = p.id;
-          document.getElementById('editNameInput').value = p.name;
-          document.getElementById('editMengeInput').value = p.menge;
-          document.getElementById('editMarktInput').value = p.markt || '';
-          document.getElementById('editNotizInput').value = p.notiz || '';
-          document.getElementById('editKategorieInput').value = p.kategorie || '';
-          ui.editModal.style.display = 'flex';
-        }
-
-        /**
-         * Speichert die Änderungen aus dem "Bearbeiten"-Modal.
-         */
-        function speichereEdit() {
-          const id = parseInt(document.getElementById('editIdInput').value);
-          const p = produkte.find(p => p.id === id);
-
-          if (!p) {
-            schliesseAlleModals();
-            return;
-          }
-          
-          p.name = document.getElementById('editNameInput').value;
-          p.menge = document.getElementById('editMengeInput').value;
-          p.markt = document.getElementById('editMarktInput').value;
-          p.notiz = document.getElementById('editNotizInput').value;
-          p.kategorie = document.getElementById('editKategorieInput').value;
-          
-          const vorlage = findeProduktVorlage(p.name);
-          p.icon = vorlage ? vorlage.icon : 'bi-bag';
-          
-          speichereAlles();
-          schliesseAlleModals(); 
-        }
-        
-        /**
-         * Verschiebt ein Produkt von der Vorratskammer zurück zur Einkaufsliste.
-         */
-        function verschiebeInListe(vorratId) {
-          const p = vorrat.find(p => p.id === vorratId);
-          if (!p) return;
-          
-          hinzufuegen({
-            name: p.name,
-            menge: p.menge,
-            kategorie: p.kategorie,
-            icon: p.icon
-          });
-          
-          vorrat = vorrat.filter(v => v.id !== vorratId);
-          speichereAlles();
-        }
-
-        /**
-         * Öffnet das "Abhaken"-Modal (fragt nach "In Vorrat verschieben?").
-         */
-        function oeffneCheckoffModal(produkt) {
-          document.getElementById('checkoffProduktName').textContent = produkt.name;
-          document.getElementById('inVorratCheckbox').checked = false;
-          ui.checkoffModal.style.display = 'flex';
-          
-          // ID für den Speicher-Button zwischenspeichern
-          ui.checkoffSpeichernBtn.dataset.id = produkt.id; 
-        }
-
-        /**
-         * Speichert das Ergebnis des "Abhaken"-Modals.
-         */
-        function speichereCheckoff() {
-          // ID aus dem data-Attribut des Buttons holen
-          const id = parseInt(ui.checkoffSpeichernBtn.dataset.id);
-          const p = produkte.find(p => p.id === id);
-
-          if (!p) {
-            schliesseAlleModals();
-            return;
-          }
-          
-          const inVorrat = document.getElementById('inVorratCheckbox').checked;
-          
-          p.erledigt = true;
-          
-          if (inVorrat) {
-            const vorratExistiert = vorrat.find(v => v.name.toLowerCase() === p.name.toLowerCase());
-            if (!vorratExistiert) {
-              vorrat.push({
-                id: p.id, name: p.name, menge: p.menge,
-                kategorie: p.kategorie, icon: p.icon
-              });
-            }
-          }
-          
-          speichereAlles();
-          schliesseAlleModals(); 
-        }
-        
-        // --- 5. KI-Funktionen ---
-
-        /**
-         * Ruft Gemini API auf, um die aktuelle Liste zu analysieren ("Was fehlt?").
-         */
-        async function starteKiAnalyse() {
-          const unerledigteProdukte = produkte
-            .filter(p => !p.erledigt)
-            .map(p => `${p.name} (${p.menge})`);
+        // --- Rendering ---
+        function renderList() {
+            const el = document.getElementById('shoppingList');
+            el.innerHTML = '';
             
-          if (unerledigteProdukte.length < 2) {
-            alert("Füge mindestens 2 Produkte hinzu, damit die KI die Liste analysieren kann.");
-            return;
-          }
+            document.getElementById('emptyState').style.display = window.items.length ? 'none' : 'block';
 
-          const modalInhalt = document.getElementById('kiAnalyseErgebnis');
-          modalInhalt.innerHTML = "<p>Analysiere Liste... <i class='bi bi-robot'></i></p>";
-          ui.kiAnalyseModal.style.display = 'flex';
-          
-          const prompt = `
-            Hier ist eine Einkaufsliste: ${unerledigteProdukte.join(', ')}.
-            Analysiere diese Liste. Was fehlt wahrscheinlich? 
-            Beispiel: Wenn "Nudeln, Hackfleisch" da sind, fehlt "Tomatensauce".
-            Gib mir 3-5 Vorschläge für Produkte, die logisch dazu passen.
-            Antworte NUR mit einer JSON-Liste von Objekten im Format:
-            [{"name": "Produkt A"}, {"name": "Produkt B"}]
-            Kein Text davor oder danach.
-          `;
-          
-          try {
-            const kiAntwort = await callGeminiApi(prompt); // Ruft die integrierte Funktion auf
-            const vorschlaege = JSON.parse(kiAntwort);
-            
-            modalInhalt.innerHTML = "<h4>Vorschläge (Was fehlt?):</h4>";
-            if (vorschlaege.length === 0) {
-              modalInhalt.innerHTML += "<p>Sieht vollständig aus!</p>";
-            }
-            
-            // Erstellt die klickbaren Vorschlags-Buttons
-            vorschlaege.forEach(v => {
-              const btn = document.createElement('button');
-              btn.className = 'secondary';
-              btn.style.marginBottom = '0.5rem';
-              btn.innerHTML = `<i class="bi bi-plus-lg"></i> ${v.name}`;
-              btn.onclick = () => {
-                  hinzufuegen({name: v.name});
-                  btn.disabled = true;
-                  btn.textContent = 'Hinzugefügt';
-              };
-              modalInhalt.appendChild(btn);
+            // Sort: Checked bottom
+            const sorted = [...window.items].sort((a,b) => a.checked - b.checked);
+            let sum = 0;
+
+            sorted.forEach(item => {
+                sum += (item.price || 0);
+                const li = document.createElement('li');
+                li.className = item.checked ? 'checked' : '';
+                li.innerHTML = `
+                    <div class="check-circle" onclick="toggleCheck(${item.id})"></div>
+                    <div class="item-content">
+                        <div class="item-name">${item.name}</div>
+                        <div class="item-meta">
+                            ${item.amount ? `<span><b>${item.amount}</b> ${item.unit}</span>` : ''}
+                            <span class="badge">${item.icon} ${item.store}</span>
+                            ${item.price ? `<span>${item.price.toFixed(2)}€</span>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="deleteItem(${item.id})" style="border:none;background:none;font-size:1.2rem;color:#94a3b8;">&times;</button>
+                `;
+                el.appendChild(li);
             });
-          } catch (err) {
-            console.error("KI-Analyse-Fehler: ", err);
-            // Zeigt dem Benutzer die Fehlermeldung (z.B. "API-Key nicht eingetragen")
-            modalInhalt.innerHTML = `<p>Fehler bei der KI-Analyse: ${err.message}</p>`;
-          }
-        }
-        
-        /**
-         * Ruft Gemini API auf, um die Vorratskammer zu analysieren ("Was kochen?").
-         */
-        async function starteVorratAnalyse() {
-          if (vorrat.length < 2) {
-            alert("Füge mindestens 2 Produkte in deine Vorratskammer ein, damit die KI ein Rezept vorschlagen kann.");
-            return;
-          }
-
-          const vorratListe = vorrat.map(p => p.name).join(', ');
-
-          const modalInhalt = document.getElementById('kiAnalyseErgebnis');
-          modalInhalt.innerHTML = "<p>Suche Rezept basierend auf Vorrat... <i class='bi bi-robot'></i></p>";
-          ui.kiAnalyseModal.style.display = 'flex';
-          
-          const prompt = `
-            Hier ist mein aktueller Vorrat: ${vorratListe}.
-            Schlage mir ein einfaches Rezept (1-2 Portionen) vor, das viele dieser Zutaten nutzt.
-            Liste 1-3 wichtige Zutaten auf, die mir WAHRSCHEINLICH FEHLEN, um das Rezept zu kochen.
-            Ignoriere Standardzutaten wie Salz, Pfeffer, Öl.
-            Antworte NUR mit einer JSON-Antwort im Format:
-            {"rezeptName": "Name des Rezepts", "fehlendeZutaten": [{"name": "Fehlende Zutat A", "menge": "z.B. 100g"}, {"name": "Fehlende Zutat B", "menge": "z.B. 1 Stk"}]}
-          `;
-          
-          try {
-            const kiAntwort = await callGeminiApi(prompt);
-            const vorschlag = JSON.parse(kiAntwort);
-            
-            modalInhalt.innerHTML = `<h4>Rezeptvorschlag:</h4><p><strong>${vorschlag.rezeptName}</strong></p><hr><p>Fehlende Zutaten (zur Liste hinzufügen):</p>`;
-            
-            if (vorschlag.fehlendeZutaten.length === 0) {
-              modalInhalt.innerHTML += "<p>Du scheinst alles zu haben!</p>";
-            }
-            
-            vorschlag.fehlendeZutaten.forEach(z => {
-              const btn = document.createElement('button');
-              btn.className = 'secondary';
-              btn.style.marginBottom = '0.5rem';
-              btn.innerHTML = `<i class="bi bi-plus-lg"></i> ${z.name} (${z.menge})`;
-              btn.onclick = () => {
-                  hinzufuegen({name: z.name, menge: z.menge});
-                  btn.disabled = true;
-                  btn.textContent = 'Hinzugefügt';
-              };
-              modalInhalt.appendChild(btn);
-            });
-          } catch (err) {
-            console.error("KI-Vorratsanalyse-Fehler: ", err);
-            modalInhalt.innerHTML = `<p>Fehler bei der Rezept-Analyse: ${err.message}</p>`;
-          }
-        }
-        
-        /**
-         * Ruft Gemini API auf, um einen Rezept-Text zu parsen.
-         */
-        async function starteRezeptAnalyse() {
-          const rezeptText = document.getElementById('rezeptInput').value;
-          if (!rezeptText) {
-            alert("Bitte füge ein Rezept ein.");
-            return;
-          }
-          
-          const btn = ui.rezeptKiBtn;
-          btn.disabled = true;
-          btn.innerHTML = "<i class='bi bi-hourglass-split'></i> Verarbeite...";
-          
-          const prompt = `
-            Extrahiere die Zutaten aus diesem Text. 
-            Ignoriere Standardzutaten (Salz, Pfeffer, Öl, Wasser).
-            Erstelle eine JSON-Liste von Objekten. Nutze 'produktVorlagen.js', um die korrekte Kategorie und Icon zu finden.
-            Das Format muss sein:
-            [
-              {"name": "Tomaten", "menge": "500 g", "kategorie": "Gemüse", "icon": "bi-egg"},
-              {"name": "Hackfleisch", "menge": "1 Pfund", "kategorie": "Fleisch", "icon": "bi-list-ul"}
-            ]
-            Text: "${rezeptText}"
-          `;
-          
-          try {
-            const kiAntwort = await callGeminiApi(prompt);
-            const zutaten = JSON.parse(kiAntwort);
-            
-            zutaten.forEach(z => {
-              hinzufuegen(z);
-            });
-            
-            schliesseAlleModals();
-            alert(`${zutaten.length} Zutaten wurden zur Liste hinzugefügt.`);
-          } catch (err) {
-            console.error("Rezept-KI-Fehler: ", err);
-            alert(`Fehler bei der Rezept-Analyse. (Fehler: ${err.message})`);
-          } finally {
-            btn.disabled = false;
-            btn.innerHTML = "<i class='bi bi-card-checklist'></i> Rezept verarbeiten";
-          }
+            document.getElementById('totalSum').innerText = sum.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
         }
 
-        /**
-         * Startet die Browser-Spracherkennung.
-         */
-        function starteSpracheingabe() {
-          if (!('webkitSpeechRecognition' in window)) {
-            alert("Spracherkennung wird von diesem Browser nicht unterstützt.");
-            return;
-          }
-          
-          if (recognition) { // Falls sie schon läuft, stoppen
-            recognition.stop();
-            return;
-          }
-          
-          recognition = new webkitSpeechRecognition();
-          recognition.lang = 'de-DE';
-          recognition.interimResults = false;
-          recognition.maxAlternatives = 1;
-          
-          const status = ui.spracheStatus;
-          const btn = ui.spracheBtn;
-          
-          recognition.onstart = () => {
-            status.textContent = "Höre zu...";
-            btn.disabled = true;
-            btn.innerHTML = "<i class='bi bi-mic-fill'></i> Aufnahme stoppen";
-          };
-          
-          recognition.onresult = (event) => {
-            const text = event.results[0][0].transcript;
-            status.textContent = `Erkannt: "${text}"`;
-            hinzufuegen({ name: text });
-          };
-          
-          recognition.onerror = (event) => {
-            status.textContent = "Fehler bei der Erkennung. Nochmal versuchen.";
-            console.error("Spracherkennungsfehler: ", event.error);
-          };
-          
-          recognition.onend = () => {
-            status.textContent = "";
-            btn.disabled = false;
-            btn.innerHTML = "<i class='bi bi-mic-fill'></i> Aufnahme starten";
-            recognition = null;
-          };
-          
-          recognition.start();
-        }
-        
-        // --- 6. Hilfsfunktionen (Popups, etc.) ---
-        
-        function zeigeUndo() {
-          ui.undoPopup.style.display = "block";
-          setTimeout(() => { ui.undoPopup.style.display = "none"; }, 5000);
-        }
+        // Input Handler
+        window.handleEnter = (e) => { if(e.key === 'Enter') window.addItem(); };
 
-        function undoLoeschen() {
-          if (zuletztGeloescht) {
-            produkte.push(zuletztGeloescht);
-            speichereAlles(); 
-            zuletztGeloescht = null;
-            ui.undoPopup.style.display = "none";
-          }
+        // --- Speech (Legacy JS) ---
+        window.initSpeech = function() {
+             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+             if(!SR) { document.getElementById('micBtn').style.display = 'none'; return; }
+             const rec = new SR(); rec.lang = 'de-DE';
+             rec.onstart = () => document.getElementById('micBtn').classList.add('active');
+             rec.onend = () => document.getElementById('micBtn').classList.remove('active');
+             rec.onresult = (e) => document.getElementById('smartInput').value = e.results[0][0].transcript;
+             window.toggleDictation = () => rec.start();
         }
+        window.initSpeech();
 
-        function zeigeLoeschAbfrage() {
-          const a = Math.floor(Math.random() * 10 + 1);
-          const b = Math.floor(Math.random() * 10 + 1);
-          richtigeAntwort = a + b;
-          document.getElementById("matheFrage").textContent = `Sicher? Was ist ${a} + ${b}?`;
-          document.getElementById("matheAntwort").value = "";
-          ui.loeschPopup.style.display = "block";
-        }
-
-        function pruefeAntwort() {
-          const eingabe = parseInt(document.getElementById("matheAntwort").value);
-          if (eingabe === richtigeAntwort) {
-            produkte = [];
-            vorrat = [];
-            speichereAlles();
-            ui.loeschPopup.style.display = "none";
-          } else {
-            alert("Falsche Antwort.");
-          }
-        }
-
-        function abbrechenLoeschen() {
-          ui.loeschPopup.style.display = "none";
-        }
-        
-        function zeigeErledigtPopup() {
-          const popup = ui.erledigtPopup;
-          if (!popup) return;
-          popup.style.display = "block";
-          starteFeuerwerk();
-
-          setTimeout(() => {
-            popup.style.display = "none";
-            stopFeuerwerk();
-          }, 5000);
-        }
-
-        function starteFeuerwerk() {
-          const canvas = ui.feuerwerkCanvas;
-          if (!canvas) return;
-          const ctx = canvas.getContext("2d");
-          feuerwerkInterval = setInterval(() => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < 30; i++) {
-              const x = Math.random() * canvas.width;
-              const y = Math.random() * canvas.height;
-              const r = Math.random() * 3 + 2;
-              ctx.beginPath();
-              ctx.arc(x, y, r, 0, Math.PI * 2);
-              ctx.fillStyle = `hsl(${Math.random() * 360}, 100%, 60%)`;
-              ctx.fill();
-            }
-          }, 100);
-        }
-        function stopFeuerwerk() {
-          clearInterval(feuerwerkInterval);
-        }
-
-        // --- 7. App-Start ---
-        // Ruft die mainApp() Funktion auf, um alles zu starten.
-        mainApp();
-        
-    }); // Ende von DOMContentLoaded
-    
-</script>
+    </script>
 </body>
 </html>
-
 
