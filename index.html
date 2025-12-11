@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V8 🎤</title>
+    <title>SmartEinkauf V9 📑</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
-            --primary: #6366f1; --primary-dark: #4f46e5; --accent: #10b981;
-            --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --text-light: #64748b;
-            --border: #e2e8f0; --danger: #ef4444;
+            --primary: #4f46e5; --primary-dark: #4338ca; --accent: #10b981;
+            --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --text-light: #64748b;
+            --border: #e2e8f0;
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --primary: #818cf8; --bg: #0f172a; --card: #1e293b;
+                --primary: #6366f1; --bg: #0f172a; --card: #1e293b;
                 --text: #f8fafc; --text-light: #94a3b8; --border: #334155;
             }
         }
@@ -27,10 +27,29 @@
             position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 4px 15px -3px rgba(0,0,0,0.2);
         }
-        .header h1 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        .header-content { display: flex; align-items: center; gap: 15px; }
+        .menu-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
+        .header h1 { margin: 0; font-size: 1.1rem; display: flex; flex-direction: column; line-height: 1.2; }
+        .list-title { font-size: 1.3rem; font-weight: bold; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; box-shadow: 0 0 5px rgba(0,0,0,0.5); margin-left: 8px; display: inline-block;}
         .status-dot.online { background: #34d399; box-shadow: 0 0 8px #34d399; }
         
+        /* --- Drawer (Menu) --- */
+        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: 0.3s; }
+        .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+        .drawer { 
+            position: fixed; top: 0; left: 0; height: 100%; width: 80%; max-width: 300px; 
+            background: var(--card); z-index: 100; transform: translateX(-100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 20px; display: flex; flex-direction: column; box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+        }
+        .drawer.open { transform: translateX(0); }
+        .drawer h2 { margin-top: 0; color: var(--primary); font-size: 1.5rem; }
+        .drawer-list { flex: 1; overflow-y: auto; margin: 20px 0; }
+        .drawer-item { padding: 15px; border-radius: 12px; margin-bottom: 8px; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .drawer-item.active { background: #e0e7ff; color: var(--primary); }
+        .drawer-item:hover:not(.active) { background: var(--bg); }
+        .new-list-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; }
+
         .container { max-width: 600px; margin: 0 auto; padding: 20px 15px; }
 
         /* --- Input --- */
@@ -40,21 +59,15 @@
             display: flex; gap: 6px; position: relative; margin-bottom: 20px; align-items: center;
         }
         input { flex: 1; border: none; background: transparent; font-size: 16px; color: var(--text); outline: none; padding: 10px 5px; min-width: 0; }
-        
-        /* Input Buttons */
         .action-btn {
             background: var(--primary); color: white; border: none; width: 40px; height: 40px; flex-shrink: 0;
             border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
             transition: transform 0.1s;
         }
-        .action-btn:active { transform: scale(0.95); }
-        
         .mode-btn { background: #e0e7ff; color: var(--primary); font-size: 1.1rem; }
         .mode-btn.simple { background: #f3f4f6; color: var(--text-light); }
-        
         .mic-btn { background: transparent; color: var(--text-light); border: 1px solid var(--border); }
         .mic-btn.active { background: #fee2e2; color: #ef4444; border-color: #ef4444; animation: pulse 1.5s infinite; }
-
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
 
         /* --- Magic Recipes --- */
@@ -62,12 +75,10 @@
         .magic-chip {
             background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px;
             font-size: 0.85rem; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
 
         /* --- List --- */
         .cat-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin: 15px 0 5px 5px; font-weight: bold; }
-        
         .item-row {
             background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px;
             display: flex; align-items: center; gap: 10px; border: 1px solid var(--border);
@@ -75,24 +86,20 @@
         }
         .item-row.checked { opacity: 0.6; background: var(--bg); border-color: transparent; }
         .item-row.checked .name { text-decoration: line-through; }
-        
         .check-box {
             width: 24px; height: 24px; border: 2px solid var(--text-light); border-radius: 50%;
             display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
         }
         .item-row.checked .check-box { background: var(--accent); border-color: var(--accent); }
         .item-row.checked .check-box::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
-
         .details { flex: 1; min-width: 0; }
         .name { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
         .qty-control { display: flex; align-items: center; gap: 5px; background: var(--bg); padding: 2px; border-radius: 8px; flex-shrink: 0; }
         .qty-btn { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; cursor: pointer; color: var(--text); }
         .qty-val { font-size: 0.8rem; font-weight: bold; min-width: 25px; text-align: center; }
-
         .del-btn { color: var(--text-light); background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; }
 
-        /* --- Toast (Undo) --- */
+        /* --- Toast & Fab --- */
         .toast {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
             background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px;
@@ -101,8 +108,6 @@
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
         .undo-btn { background: none; border: none; color: var(--primary); font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        /* --- Fab --- */
         .fab-bar {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             background: var(--card); padding: 10px 20px; border-radius: 30px;
@@ -110,22 +115,37 @@
             display: flex; gap: 20px; align-items: center;
         }
         .fab-btn { background: none; border: none; font-weight: 600; color: var(--primary); font-size: 0.9rem; cursor: pointer; }
-
+        
         #errorMsg { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; font-size: 0.9rem; text-align: center; }
     </style>
 </head>
 <body>
 
+    <!-- Drawer Menu -->
+    <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
+    <div class="drawer" id="drawer">
+        <h2>📑 Deine Listen</h2>
+        <div class="drawer-list" id="drawerList">
+            <!-- Listen werden hier generiert -->
+        </div>
+        <button class="new-list-btn" onclick="createNewList()">+ Neue Liste</button>
+    </div>
+
+    <!-- Header -->
     <div class="header">
-        <h1>🛒 SmartEinkauf <div id="statusDot" class="status-dot"></div></h1>
-        <button onclick="shareList()" style="background:rgba(255,255,255,0.2); border:none; color:white; padding:5px 12px; border-radius:15px; font-size:0.85rem;">🔗 Teilen</button>
+        <div class="header-content">
+            <button class="menu-btn" onclick="toggleDrawer()">☰</button>
+            <h1>
+                <span style="font-size:0.8rem; opacity:0.8; font-weight:normal;">SmartEinkauf</span>
+                <span class="list-title" id="headerTitle">Einkauf</span>
+            </h1>
+        </div>
+        <div id="statusDot" class="status-dot"></div>
     </div>
 
     <div class="container">
-        
         <div id="errorMsg"></div>
 
-        <!-- Magic Recipes -->
         <div class="magic-scroll">
             <div class="magic-chip" onclick="addRecipe('breakfast')">🥞 Frühstück</div>
             <div class="magic-chip" onclick="addRecipe('pasta')">🍝 Pasta</div>
@@ -133,7 +153,6 @@
             <div class="magic-chip" onclick="addRecipe('cleaning')">🧹 Putzen</div>
         </div>
 
-        <!-- Input -->
         <div class="input-card">
             <button class="action-btn mode-btn" id="modeBtn" onclick="toggleMode()">✨</button>
             <button class="action-btn mic-btn" id="micBtn" onclick="toggleDictation()">🎤</button>
@@ -144,18 +163,17 @@
         <div id="listContainer"></div>
 
         <div id="emptyState" style="text-align: center; padding: 50px 20px; color: var(--text-light); display: none;">
-            <div style="font-size: 3rem; margin-bottom: 10px; opacity: 0.3;">🎙️</div>
-            <p>Liste leer.<br>Sprich oder tippe etwas ein.</p>
+            <div style="font-size: 3rem; margin-bottom: 10px; opacity: 0.3;">🛒</div>
+            <p>Liste ist leer.<br>Füge etwas hinzu.</p>
         </div>
     </div>
 
     <div class="fab-bar">
-        <button class="fab-btn" onclick="clearChecked()">🗑️ Aufräumen</button>
+        <button class="fab-btn" onclick="shareList()">🔗 Teilen</button>
         <div style="width:1px; height:15px; background:var(--border)"></div>
         <button class="fab-btn" onclick="finishShopping()">🎉 Fertig</button>
     </div>
 
-    <!-- Undo Toast -->
     <div id="undoToast" class="toast">
         <span id="toastMsg">Gelöscht</span>
         <button class="undo-btn" onclick="performUndo()">Rückgängig</button>
@@ -164,7 +182,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, arrayUnion, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // CONFIG
         const firebaseConfig = {
@@ -186,253 +204,244 @@
         let currentListId = "Einkauf";
         let items = [];
         let smartMode = true;
-        let lastDeletedItems = []; // Für Undo
-        let undoTimeout;
-        let recognition; // Speech API
+        let lastDeleted = [];
+        let undoTimer;
+        let unsubscribe = null;
+        let recognition;
+        
+        // Multi-List History (Local)
+        let myLists = JSON.parse(localStorage.getItem('myLists')) || ["Einkauf"];
 
-        // AUTH
+        // INIT
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('statusDot').classList.add('online');
-                document.getElementById('errorMsg').style.display = 'none';
-                
                 const urlParams = new URLSearchParams(window.location.search);
                 const sharedList = urlParams.get('list');
-                if (sharedList) currentListId = sharedList;
-                
+                if (sharedList && !myLists.includes(sharedList)) {
+                    myLists.push(sharedList);
+                    localStorage.setItem('myLists', JSON.stringify(myLists));
+                    currentListId = sharedList;
+                }
                 subscribeToList(currentListId);
+                renderDrawer();
             } else {
-                signInAnonymously(auth).catch(handleError);
+                signInAnonymously(auth).catch(e => {
+                    document.getElementById('errorMsg').style.display = 'block';
+                    document.getElementById('errorMsg').innerText = "Verbindungsproblem: " + e.message;
+                });
             }
         });
 
-        function handleError(err) {
-            const el = document.getElementById('errorMsg');
-            el.style.display = 'block';
-            el.innerText = `Verbindungsfehler: ${err.message}`;
-            console.error(err);
-        }
-
-        // DB SYNC
+        // DB & MULTI-LIST LOGIC
         function subscribeToList(listId) {
-            const listRef = doc(db, "shopping_lists", listId);
+            if(unsubscribe) unsubscribe(); // Alten Listener stoppen
+            
+            currentListId = listId;
+            document.getElementById('headerTitle').innerText = listId;
+            
+            // URL Update
             const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
             window.history.pushState({path:newUrl},'',newUrl);
+            
+            // Highlight Menu
+            renderDrawer();
 
-            onSnapshot(listRef, (snap) => {
+            const listRef = doc(db, "shopping_lists", listId);
+            unsubscribe = onSnapshot(listRef, (snap) => {
                 if (snap.exists()) {
                     items = snap.data().items || [];
                     renderList();
                 } else {
-                    saveItems([]);
+                    saveItems([]); // Init new list
+                    items = [];
+                    renderList();
                 }
-            }, handleError);
+            });
         }
 
         async function saveItems(newItems) {
             try {
                 await setDoc(doc(db, "shopping_lists", currentListId), { items: newItems }, { merge: true });
-            } catch (e) { handleError(e); }
+            } catch (e) { console.error(e); }
         }
 
-        // LOGIC
-        window.addItem = async () => {
-            const input = document.getElementById('inputField');
-            const text = input.value.trim();
-            if(!text) return;
-            const newItem = smartMode ? parseSmart(text) : createSimpleItem(text);
-            await saveItems([...items, newItem]);
-            input.value = '';
+        window.switchList = (id) => {
+            toggleDrawer();
+            subscribeToList(id);
         };
 
-        window.addRecipe = async (type) => {
-            const recipes = {
-                'breakfast': ['Eier', 'Milch', 'Mehl', 'Bacon'],
-                'pasta': ['Nudeln', 'Tomatensoße', 'Parmesan', 'Basilikum'],
-                'party': ['Chips', 'Cola', 'Bier', 'Pizza'],
-                'cleaning': ['Reiniger', 'Schwämme', 'Müllbeutel']
-            };
-            const newItems = recipes[type].map(name => ({
-                id: Date.now() + Math.random(), name, amount: 1, unit: 'x', category: 'Rezept', checked: false
-            }));
-            await saveItems([...items, ...newItems]);
-            showToast(`Rezept hinzugefügt!`);
-        };
-
-        window.updateQty = async (id, change) => {
-            const updated = items.map(i => {
-                if(i.id === id) {
-                    let amount = parseFloat(i.amount) || 1;
-                    amount += change; if(amount < 1) amount = 1;
-                    return { ...i, amount: amount };
-                } return i;
-            });
-            await saveItems(updated);
-        };
-
-        window.toggleCheck = async (id) => {
-            await saveItems(items.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
-        };
-
-        window.deleteItem = async (id) => {
-            const item = items.find(i => i.id === id);
-            lastDeletedItems = [item];
-            await saveItems(items.filter(i => i.id !== id));
-            showToast(`"${item.name}" gelöscht`, true);
-        };
-
-        window.clearChecked = async () => {
-            const toDelete = items.filter(i => i.checked);
-            if(toDelete.length === 0) return;
-            lastDeletedItems = toDelete;
-            await saveItems(items.filter(i => !i.checked));
-            showToast(`${toDelete.length} gelöscht`, true);
-        };
-
-        window.finishShopping = async () => {
-            if(!items.some(i => i.checked)) return alert("Nichts erledigt!");
-            confetti({ particleCount: 200, spread: 100, origin: { y: 0.7 } });
-            window.clearChecked();
-        };
-
-        // UNDO
-        function showToast(msg, showUndo = false) {
-            const toast = document.getElementById('undoToast');
-            document.getElementById('toastMsg').innerText = msg;
-            document.getElementById('undoToast').querySelector('.undo-btn').style.display = showUndo ? 'block' : 'none';
-            toast.classList.add('show');
-            clearTimeout(undoTimeout);
-            undoTimeout = setTimeout(() => toast.classList.remove('show'), 4000);
-        }
-
-        window.performUndo = async () => {
-            if(lastDeletedItems.length > 0) {
-                await saveItems([...items, ...lastDeletedItems]);
-                lastDeletedItems = [];
-                document.getElementById('undoToast').classList.remove('show');
+        window.createNewList = () => {
+            const name = prompt("Name der neuen Liste (z.B. 'Baumarkt'):");
+            if (name) {
+                if(!myLists.includes(name)) {
+                    myLists.push(name);
+                    localStorage.setItem('myLists', JSON.stringify(myLists));
+                }
+                switchList(name);
             }
         };
 
-        // SPEECH RECOGNITION (Added Back)
-        function initSpeech() {
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SR();
-                recognition.lang = 'de-DE';
-                recognition.continuous = false;
-                
-                recognition.onstart = () => {
-                    document.getElementById('micBtn').classList.add('active');
-                    document.getElementById('inputField').placeholder = "Ich höre zu...";
-                };
-                recognition.onend = () => {
-                    document.getElementById('micBtn').classList.remove('active');
-                    document.getElementById('inputField').placeholder = "Was fehlt?";
-                };
-                recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    document.getElementById('inputField').value = transcript;
-                };
-            } else {
-                document.getElementById('micBtn').style.display = 'none';
+        window.deleteListRef = (e, name) => {
+            e.stopPropagation();
+            if(confirm(`Liste '${name}' aus deinem Menü entfernen? (Daten bleiben erhalten)`)) {
+                myLists = myLists.filter(l => l !== name);
+                if(myLists.length === 0) myLists = ["Einkauf"];
+                localStorage.setItem('myLists', JSON.stringify(myLists));
+                if(currentListId === name) switchList(myLists[0]);
+                renderDrawer();
             }
-        }
-        initSpeech(); // Start logic
-
-        window.toggleDictation = () => {
-            if (!recognition) return alert("Mikrofon nicht unterstützt.");
-            if (document.getElementById('micBtn').classList.contains('active')) recognition.stop();
-            else recognition.start();
         };
 
-        // HELPERS
-        function createSimpleItem(text) { return { id: Date.now(), name: text, amount: 1, unit: '', category: 'Manuell', checked: false }; }
-        
+        function renderDrawer() {
+            const el = document.getElementById('drawerList');
+            el.innerHTML = myLists.map(name => `
+                <div class="drawer-item ${name === currentListId ? 'active' : ''}" onclick="switchList('${name}')">
+                    <span>${name}</span>
+                    ${name !== 'Einkauf' ? `<span onclick="deleteListRef(event, '${name}')" style="opacity:0.5;font-size:1.2rem;">&times;</span>` : ''}
+                </div>
+            `).join('');
+        }
+
+        window.toggleDrawer = () => {
+            document.getElementById('drawer').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('open');
+        };
+
+        // PARSER & LOGIC
         function parseSmart(text) {
+            // Verbesserte Kategorien (Kasten Cola Fix)
             const categories = {
-                "Obst & Gemüse": ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel"],
-                "Kühlregal": ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst"],
-                "Vorrat": ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve"],
-                "Getränke": ["wasser", "saft", "bier", "cola", "limo", "kaffee"],
-                "Haushalt": ["papier", "reiniger", "waschmittel", "zahnpasta"]
+                "Obst & Gemüse": ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel", "beere", "knoblauch"],
+                "Getränke": ["wasser", "saft", "bier", "cola", "limo", "kaffee", "kasten", "pfand", "flasche", "sixpack", "sprudel", "tee", "energy"],
+                "Kühlregal": ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst", "quark", "mozarella"],
+                "Vorrat": ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve", "soße", "gewürz", "ketchup"],
+                "Haushalt": ["papier", "reiniger", "waschmittel", "zahnpasta", "seife", "duschgel", "shampoo", "müllbeutel"]
             };
+
             let clean = text;
-            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg)?/i;
+            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg|kasten|flasche)?/i;
             let amount = 1, unit = "";
             const match = clean.match(amountRegex);
-            if(match) { amount = parseFloat(match[1]); unit = match[2] || ""; clean = clean.replace(match[0], "").trim(); }
+            if(match) { 
+                amount = parseFloat(match[1]); 
+                unit = match[2] || ""; 
+                clean = clean.replace(match[0], "").trim(); 
+            }
+            
+            // Einheit "Kasten" auch als Getränk-Trigger nutzen
+            if(unit.toLowerCase() === 'kasten') clean += " Getränk";
+
             let category = "Sonstiges";
             const lower = clean.toLowerCase();
             for(const [cat, keywords] of Object.entries(categories)) {
                 if(keywords.some(k => lower.includes(k))) { category = cat; break; }
             }
+
             return { id: Date.now(), name: clean.charAt(0).toUpperCase() + clean.slice(1), amount, unit, category, checked: false };
         }
 
+        window.addItem = async () => {
+            const input = document.getElementById('inputField');
+            const text = input.value.trim();
+            if(!text) return;
+            const newItem = smartMode ? parseSmart(text) : { id: Date.now(), name: text, amount: 1, unit: '', category: 'Manuell', checked: false };
+            await saveItems([...items, newItem]);
+            input.value = '';
+        };
+
+        // ... Standard Funktionen (Delete, Check, Qty) ...
+        window.updateQty = async (id, change) => {
+            await saveItems(items.map(i => i.id === id ? { ...i, amount: Math.max(1, (i.amount||1) + change) } : i));
+        };
+        window.toggleCheck = async (id) => await saveItems(items.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
+        window.deleteItem = async (id) => {
+            const item = items.find(i => i.id === id); lastDeleted = [item];
+            await saveItems(items.filter(i => i.id !== id)); showUndo();
+        };
+        window.clearChecked = async () => {
+            const toDel = items.filter(i => i.checked); if(!toDel.length) return;
+            lastDeleted = toDel; await saveItems(items.filter(i => !i.checked)); showUndo();
+        };
+        window.performUndo = async () => {
+            if(lastDeleted.length) { await saveItems([...items, ...lastDeleted]); lastDeleted=[]; document.getElementById('undoToast').classList.remove('show'); }
+        };
+        function showUndo() {
+            const t = document.getElementById('undoToast'); t.classList.add('show');
+            clearTimeout(undoTimer); undoTimer = setTimeout(() => t.classList.remove('show'), 4000);
+        }
+        window.finishShopping = () => {
+            if(!items.some(i => i.checked)) return alert("Nichts erledigt!");
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.7 } });
+            window.clearChecked();
+        };
+        
+        // RECIPES
+        window.addRecipe = async (t) => {
+             const r = { 'breakfast':['Eier','Speck'], 'pasta':['Nudeln','Soße'], 'party':['Cola','Chips'], 'cleaning':['Reiniger','Tücher'] };
+             const add = r[t].map(n => parseSmart(n));
+             await saveItems([...items, ...add]);
+        };
+
+        // INPUT HELPERS
         window.toggleMode = () => {
             smartMode = !smartMode;
             const btn = document.getElementById('modeBtn');
-            const input = document.getElementById('inputField');
-            if(smartMode) {
-                btn.innerText = "✨"; btn.className = "action-btn mode-btn";
-                input.placeholder = "Was fehlt? (Smart)";
-            } else {
-                btn.innerText = "📝"; btn.className = "action-btn mode-btn simple";
-                input.placeholder = "Was fehlt? (Text)";
-            }
-            input.focus();
+            const inp = document.getElementById('inputField');
+            btn.innerText = smartMode ? "✨" : "📝";
+            btn.className = smartMode ? "action-btn mode-btn" : "action-btn mode-btn simple";
+            inp.placeholder = smartMode ? "Was fehlt?" : "Exakter Text";
+            inp.focus();
         };
-
         window.handleEnter = (e) => { if(e.key === 'Enter') window.addItem(); };
         window.shareList = () => { navigator.clipboard.writeText(window.location.href); alert("Link kopiert!"); };
 
+        // SPEECH
+        function initSpeech() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SR(); recognition.lang = 'de-DE'; recognition.continuous = false;
+                recognition.onstart = () => document.getElementById('micBtn').classList.add('active');
+                recognition.onend = () => document.getElementById('micBtn').classList.remove('active');
+                recognition.onresult = (e) => document.getElementById('inputField').value = e.results[0][0].transcript;
+            } else { document.getElementById('micBtn').style.display = 'none'; }
+        }
+        initSpeech();
+        window.toggleDictation = () => { if(recognition) recognition.start(); };
+
+        // RENDER
         function renderList() {
             const container = document.getElementById('listContainer');
             container.innerHTML = '';
-            if(items.length === 0) {
-                document.getElementById('emptyState').style.display = 'block'; return;
-            }
+            if(items.length === 0) { document.getElementById('emptyState').style.display = 'block'; return; }
             document.getElementById('emptyState').style.display = 'none';
 
             const groups = {};
-            const sorted = [...items].sort((a,b) => a.checked - b.checked);
-            sorted.forEach(item => {
-                const cat = item.category || "Sonstiges";
-                if(!groups[cat]) groups[cat] = [];
-                groups[cat].push(item);
+            [...items].sort((a,b) => a.checked - b.checked).forEach(i => {
+                const c = i.category || "Sonstiges"; if(!groups[c]) groups[c]=[]; groups[c].push(i);
             });
 
-            const order = ["Obst & Gemüse", "Kühlregal", "Vorrat", "Getränke", "Haushalt", "Rezept", "Manuell", "Sonstiges"];
-            const allKeys = new Set([...order, ...Object.keys(groups)]);
-
-            allKeys.forEach(cat => {
-                if(groups[cat] && groups[cat].length > 0) {
-                    const title = document.createElement('div');
-                    title.className = 'cat-title'; title.innerText = cat;
-                    container.appendChild(title);
+            const order = ["Obst & Gemüse", "Kühlregal", "Vorrat", "Getränke", "Haushalt", "Manuell", "Sonstiges"];
+            [...order, ...Object.keys(groups)].filter((v,i,a)=>a.indexOf(v)===i).forEach(cat => {
+                if(groups[cat] && groups[cat].length) {
+                    container.innerHTML += `<div class="cat-title">${cat}</div>`;
                     groups[cat].forEach(item => {
-                        const row = document.createElement('div');
-                        row.className = `item-row ${item.checked ? 'checked' : ''}`;
-                        const displayUnit = item.unit === 'x' ? '' : item.unit;
+                        const qty = (smartMode || item.amount>1) ? `
+                            <div class="qty-control" onclick="event.stopPropagation()">
+                                <div class="qty-btn" onclick="updateQty(${item.id}, -1)">-</div>
+                                <div class="qty-val">${item.amount}${item.unit}</div>
+                                <div class="qty-btn" onclick="updateQty(${item.id}, 1)">+</div>
+                            </div>` : '';
                         
-                        let qtyHtml = '';
-                        if(smartMode || item.amount > 1) {
-                             qtyHtml = `
-                                <div class="qty-control" onclick="event.stopPropagation()">
-                                    <div class="qty-btn" onclick="updateQty(${item.id}, -1)">-</div>
-                                    <div class="qty-val">${item.amount}${displayUnit}</div>
-                                    <div class="qty-btn" onclick="updateQty(${item.id}, 1)">+</div>
-                                </div>`;
-                        }
-                        row.innerHTML = `
+                        const el = document.createElement('div');
+                        el.className = `item-row ${item.checked ? 'checked' : ''}`;
+                        el.innerHTML = `
                             <div class="check-box" onclick="toggleCheck(${item.id})"></div>
-                            <div class="details" onclick="toggleCheck(${item.id})">
-                                <div class="name">${item.name}</div>
-                            </div>
-                            ${qtyHtml}
+                            <div class="details" onclick="toggleCheck(${item.id})"><div class="name">${item.name}</div></div>
+                            ${qty}
                             <button class="del-btn" onclick="deleteItem(${item.id})">&times;</button>
                         `;
-                        container.appendChild(row);
+                        container.appendChild(el);
                     });
                 }
             });
