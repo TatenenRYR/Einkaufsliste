@@ -3,29 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V10 💎</title>
+    <title>SmartEinkauf V17 💎</title>
+    <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
+        /* --- Root Variables (Light Mode Default) --- */
         :root {
             --primary: #4f46e5; --primary-dark: #4338ca; --accent: #10b981;
             --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --text-light: #64748b;
             --border: #e2e8f0; --price-color: #059669;
+            --filter-bg: #e0e7ff;
         }
+        /* --- Dark Mode (System Preference) --- */
         @media (prefers-color-scheme: dark) {
             :root {
                 --primary: #6366f1; --bg: #0f172a; --card: #1e293b;
                 --text: #f8fafc; --text-light: #94a3b8; --border: #334155; --price-color: #34d399;
+                --filter-bg: #334155;
             }
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        /* --- Dark Mode (Manual Override) --- */
+        body.dark-mode-override {
+            --primary: #6366f1; --bg: #0f172a; --card: #1e293b;
+            --text: #f8fafc; --text-light: #94a3b8; --border: #334155; --price-color: #34d399;
+            --filter-bg: #334155;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 140px; }
 
-        /* --- Header --- */
+        /* --- Header & Progress --- */
         .header {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white;
             padding: 15px 20px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
             position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 4px 15px -3px rgba(0,0,0,0.2);
+        }
+        /* Progress Bar Styles */
+        .progress-container {
+            height: 4px;
+            width: 100%;
+            background: rgba(0,0,0,0.1); 
+            position: sticky;
+            top: 60px; 
+            z-index: 40;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            transition: width 0.3s ease-out;
+            border-radius: 0 4px 4px 0;
         }
         .header-content { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
@@ -34,6 +62,38 @@
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; box-shadow: 0 0 5px rgba(0,0,0,0.5); margin-left: 8px; display: inline-block;}
         .status-dot.online { background: #34d399; box-shadow: 0 0 8px #34d399; }
         
+        /* --- Filter/Sort Bar (NEU) --- */
+        .control-bar {
+            position: sticky;
+            top: 64px; /* Unter Progress Bar */
+            z-index: 30;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--filter-bg);
+            padding: 8px 15px;
+            border-bottom: 1px solid var(--border);
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .control-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            padding: 5px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .control-btn.active {
+            background: rgba(79, 70, 229, 0.1); /* light blue for active */
+        }
+        .control-btn:hover {
+            background: rgba(79, 70, 229, 0.05);
+        }
+
+
         /* --- Drawer (Menu) --- */
         .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: 0.3s; }
         .drawer-overlay.open { opacity: 1; pointer-events: auto; }
@@ -51,6 +111,8 @@
         .new-list-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; }
 
         .container { max-width: 600px; margin: 0 auto; padding: 20px 15px; }
+        .container:first-child { padding-top: 5px; }
+
 
         /* --- Favorites & Magic Scroll --- */
         .magic-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
@@ -62,7 +124,7 @@
         .magic-chip:active { background: var(--primary); color: white; border-color: var(--primary); }
         .magic-chip.fav { border-color: var(--accent); color: var(--accent); background: rgba(16, 185, 129, 0.05); }
 
-        /* --- Input --- */
+        /* --- Input & Autocomplete --- */
         .input-card {
             background: var(--card); padding: 8px; border-radius: 16px; 
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border);
@@ -83,23 +145,81 @@
         .mic-btn.active { background: #fee2e2; color: #ef4444; border-color: #ef4444; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
 
-        /* --- List --- */
-        .cat-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); margin: 15px 0 5px 5px; font-weight: bold; }
+        /* Autocomplete CSS */
+        .autocomplete-container {
+            max-height: 120px;
+            overflow-y: auto;
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-top: -15px; 
+            margin-bottom: 20px;
+            display: none;
+            border: 1px solid var(--border);
+        }
+        .suggestion-chip {
+            padding: 10px 15px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            font-weight: 500;
+        }
+        .suggestion-chip:hover {
+            background: var(--bg);
+            color: var(--primary);
+        }
+        .suggestion-chip:last-child {
+            border-bottom: none;
+        }
+
+        /* --- List & Reordering --- */
+        /* Category Title Style (Jetzt klickbar für Collapse) */
+        .cat-title-wrapper { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 15px 5px 5px 5px;
+            cursor: pointer;
+            font-size: 0.75rem; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            color: var(--text-light); 
+            font-weight: bold; 
+        }
+
+        .cat-title-icon {
+            font-size: 1.2rem;
+            line-height: 1;
+            margin-right: 5px;
+            transition: transform 0.2s;
+        }
+        .cat-title-wrapper.collapsed .cat-title-icon {
+            transform: rotate(-90deg);
+        }
+
         .item-row {
             background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px;
             display: flex; align-items: center; gap: 10px; border: 1px solid var(--border);
             transition: all 0.2s; position: relative; overflow: hidden;
+            /* Drag and Drop Styles */
+            cursor: grab;
         }
+        .item-row.dragging { opacity: 0.5; border: 2px dashed var(--primary); }
+        .item-row.drag-over-top { border-top: 2px solid var(--primary); }
+        .item-row.drag-over-bottom { border-bottom: 2px solid var(--primary); }
+
         .item-row.checked { opacity: 0.6; background: var(--bg); border-color: transparent; }
         .item-row.checked .name { text-decoration: line-through; }
         .check-box {
             width: 24px; height: 24px; border: 2px solid var(--text-light); border-radius: 50%;
             display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+            transition: background 0.2s, border-color 0.2s;
         }
         .item-row.checked .check-box { background: var(--accent); border-color: var(--accent); }
         .item-row.checked .check-box::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
         
-        .details { flex: 1; min-width: 0; cursor: pointer; } /* Cursor zeigt an: klickbar für Edit */
+        .details { flex: 1; min-width: 0; cursor: pointer; display: flex; align-items: center; gap: 5px; } 
         .name { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         /* Controls (Qty & Price) */
@@ -117,7 +237,7 @@
             position: fixed; bottom: 0; left: 0; right: 0; background: var(--card);
             border-top: 1px solid var(--border); padding: 15px 20px 25px 20px;
             display: flex; justify-content: space-between; align-items: center; z-index: 80;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.05); display: none; /* Standardmäßig aus */
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05); display: none;
         }
         .total-display { font-size: 1.1rem; font-weight: bold; }
         .total-display span { color: var(--price-color); }
@@ -131,7 +251,7 @@
         }
         .fab-btn { background: none; border: none; font-weight: 600; color: var(--primary); font-size: 0.9rem; cursor: pointer; }
 
-        /* --- Modal (Edit) --- */
+        /* --- Modals (General) --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; display: none; justify-content: center; align-items: center; }
         .modal { background: var(--card); padding: 20px; border-radius: 16px; width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal h3 { margin-top: 0; color: var(--primary); }
@@ -140,6 +260,12 @@
         .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background: var(--bg); color: var(--text); }
         .btn-save { background: var(--primary); color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+
+        /* Quick Add Input in Modal */
+        #quickAddContainer { display: flex; gap: 8px; margin-bottom: 15px; border-top: 1px solid var(--border); padding-top: 15px; }
+        #quickAddContainer input { margin-bottom: 0; flex: 1; }
+        .quick-add-btn { height: 40px; width: 40px; background: var(--accent); color: white; border-radius: 8px; border: none; }
 
         /* --- Toast --- */
         .toast {
@@ -161,13 +287,28 @@
     <div class="drawer" id="drawer">
         <h2>📑 Deine Listen</h2>
         <div class="drawer-list" id="drawerList"></div>
+        
+        <!-- Dark Mode Toggle -->
+        <div class="drawer-item" style="margin-top:20px; border-top: 1px solid var(--border);">
+            <span>🌓 Dark Mode</span>
+            <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)" style="width: auto; margin-bottom: 0; transform: scale(1.2);">
+        </div>
+
         <button class="new-list-btn" onclick="createNewList()">+ Neue Liste</button>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- Edit Item Modal -->
     <div class="modal-overlay" id="editModal">
         <div class="modal">
-            <h3>✏️ Bearbeiten</h3>
+            <h3>✏️ Eintrag bearbeiten</h3>
+            
+            <!-- Quick Add Feature -->
+            <div id="quickAddContainer">
+                <input type="text" id="quickAddInput" placeholder="Schnell hinzufügen..." onkeypress="handleQuickAddEnter(event)">
+                <button class="quick-add-btn" onclick="quickAddItem()">+</button>
+            </div>
+            
+            <!-- Edit Form -->
             <input type="text" id="editName" placeholder="Name">
             <div style="display:flex; gap:10px;">
                 <input type="number" id="editAmount" placeholder="Menge" style="width:30%">
@@ -187,6 +328,19 @@
             </div>
         </div>
     </div>
+    
+    <!-- Delete Confirmation Modal (Ersetzt confirm()) -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h3>Liste löschen</h3>
+            <p>Bist du sicher, dass du die Liste "<span id="deleteListName"></span>" von deinen Geräten entfernen möchtest?</p>
+            <div class="modal-btns">
+                <button class="btn btn-cancel" onclick="closeDeleteModal()">Abbrechen</button>
+                <button class="btn btn-danger" id="confirmDeleteListBtn">Löschen</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Header -->
     <div class="header">
@@ -199,8 +353,27 @@
         </div>
         <div id="statusDot" class="status-dot"></div>
     </div>
+    
+    <!-- Progress Bar -->
+    <div class="progress-container" id="progressBarContainer" style="display:none;">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    
+    <!-- Filter/Sort Bar (NEU) -->
+    <div class="control-bar">
+        <div>
+            Sortierung: 
+            <button class="control-btn" id="sortAdded" onclick="toggleSort('added')">Hinzugefügt</button>
+            <button class="control-btn active" id="sortCategory" onclick="toggleSort('category')">Kategorie</button>
+        </div>
+        <div>
+            Filter: 
+            <button class="control-btn" id="filterUnchecked" onclick="toggleFilter('unchecked')">Unerledigt</button>
+        </div>
+    </div>
 
     <div class="container">
+        <!-- Fehlermeldungen hier -->
         <div id="errorMsg"></div>
 
         <!-- Magic & Favorites -->
@@ -215,9 +388,13 @@
             <button class="action-btn mode-btn" id="modeBtn" onclick="toggleMode()">✨</button>
             <button class="action-btn budget-btn" id="budgetBtn" onclick="toggleBudgetMode()">€</button>
             <button class="action-btn mic-btn" id="micBtn" onclick="toggleDictation()">🎤</button>
-            <input type="text" id="inputField" placeholder="Was fehlt?" onkeypress="handleEnter(event)">
+            <!-- oninput für Autovervollständigung hinzugefügt -->
+            <input type="text" id="inputField" placeholder="Was fehlt?" oninput="showSuggestions()" onkeypress="handleEnter(event)">
             <button class="action-btn" onclick="addItem()">+</button>
         </div>
+        
+        <!-- Autocomplete Suggestions -->
+        <div id="autocompleteContainer" class="autocomplete-container"></div>
 
         <div id="listContainer"></div>
 
@@ -250,25 +427,20 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CONFIG (Deine bestehende Config)
-        const firebaseConfig = {
-            apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
-            authDomain: "einkaufliste-cd5d3.firebaseapp.com",
-            databaseURL: "https://einkaufliste-cd5d3-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "einkaufliste-cd5d3",
-            storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
-            messagingSenderId: "36721747923",
-            appId: "1:36721747923:web:dbe48ff974c80435eff126",
-            measurementId: "G-37TDK0257N"
-        };
+        // FIREBASE SETUP
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        
+        // Debug Logging aktivieren
+        setLogLevel('debug');
 
         // STATE
         let currentListId = "Einkauf";
@@ -280,14 +452,73 @@
         let unsubscribe = null;
         let recognition;
         let editItemId = null;
+        let currentUser = null;
+        let suggestionTimeout;
         
-        let myLists = JSON.parse(localStorage.getItem('myLists')) || ["Einkauf"];
-        let topItems = JSON.parse(localStorage.getItem('topItems')) || {}; // Favoriten Speicher
+        // DRAG AND DROP STATE
+        let draggedId = null; 
 
-        // INIT
+        // FILTER/SORT STATE (NEU)
+        let sortMode = 'category'; // 'category' oder 'added'
+        let filterMode = 'all';    // 'all' oder 'unchecked'
+
+        let darkModePreference = localStorage.getItem('darkModePreference'); 
+        let myLists = JSON.parse(localStorage.getItem('myLists')) || ["Einkauf"];
+        let topItems = JSON.parse(localStorage.getItem('topItems')) || {}; 
+        let collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories')) || {};
+
+        // --- HAPTIC FEEDBACK ---
+        function hapticFeedback(style) {
+            if (!('vibrate' in navigator) || !navigator.vibrate) return;
+            if (style === 'check') {
+                navigator.vibrate(50); 
+            } else if (style === 'delete') {
+                navigator.vibrate([100, 30, 100]); 
+            }
+        }
+
+        // --- DARK MODE LOGIC ---
+        window.toggleDarkMode = (isDark) => {
+            if (isDark) {
+                document.body.classList.add('dark-mode-override');
+                localStorage.setItem('darkModePreference', 'dark');
+            } else {
+                document.body.classList.remove('dark-mode-override');
+                localStorage.setItem('darkModePreference', 'light');
+            }
+        };
+
+        if (darkModePreference === 'dark') {
+            document.body.classList.add('dark-mode-override');
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+             const toggle = document.getElementById('darkModeToggle');
+             if (toggle) toggle.checked = document.body.classList.contains('dark-mode-override') || darkModePreference === 'dark';
+        });
+
+        // INIT AUTH
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth Error (Anmeldefehler):", error);
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('errorMsg').innerText = "Verbindungsproblem: Anmeldefehler. Siehe Konsole für Details.";
+            }
+        };
+
+        initAuth();
+
+        // AUTH LISTENER
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                document.getElementById('statusDot').classList.add('online');
+                currentUser = user;
+                document.getElementById('statusDot').classList.add('online'); 
+                
                 const urlParams = new URLSearchParams(window.location.search);
                 const sharedList = urlParams.get('list');
                 if (sharedList && !myLists.includes(sharedList)) {
@@ -295,20 +526,27 @@
                     localStorage.setItem('myLists', JSON.stringify(myLists));
                     currentListId = sharedList;
                 }
+                
                 subscribeToList(currentListId);
                 renderDrawer();
                 renderFavorites();
             } else {
-                signInAnonymously(auth).catch(e => {
-                    document.getElementById('errorMsg').style.display = 'block';
-                    document.getElementById('errorMsg').innerText = "Verbindungsproblem: " + e.message;
-                });
+                currentUser = null;
+                document.getElementById('statusDot').classList.remove('online'); 
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden (Orange Status).";
             }
         });
+
+        // HELPER: Pfad-Generator für diese Umgebung (Public Data)
+        function getListDocRef(listId) {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'shopping_lists', listId);
+        }
 
         // DB SYNC
         function subscribeToList(listId) {
             if(unsubscribe) unsubscribe();
+            if(!currentUser) return; 
             
             currentListId = listId;
             document.getElementById('headerTitle').innerText = listId;
@@ -317,9 +555,11 @@
             window.history.pushState({path:newUrl},'',newUrl);
             renderDrawer();
 
-            const listRef = doc(db, "shopping_lists", listId);
+            const listRef = getListDocRef(listId);
+
             unsubscribe = onSnapshot(listRef, (snap) => {
                 if (snap.exists()) {
+                    // Wichtig: Daten kommen aus der DB und überschreiben die aktuelle Reihenfolge
                     items = snap.data().items || [];
                     renderList();
                 } else {
@@ -327,13 +567,29 @@
                     items = [];
                     renderList();
                 }
+            }, (error) => {
+                console.error("Snapshot Error (Abonnement-Fehler):", error);
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('errorMsg').innerText = "Sync Fehler: Kann Liste nicht abonnieren (Regelfehler?).";
             });
         }
 
         async function saveItems(newItems) {
+            if(!currentUser) {
+                console.error("FIREBASE ERROR: Cannot save items. User is not authenticated (currentUser is null).");
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden.";
+                return;
+            }
             try {
-                await setDoc(doc(db, "shopping_lists", currentListId), { items: newItems }, { merge: true });
-            } catch (e) { console.error(e); }
+                const listRef = getListDocRef(currentListId);
+                await setDoc(listRef, { items: newItems }, { merge: true });
+                document.getElementById('errorMsg').style.display = 'none';
+            } catch (e) { 
+                console.error("Save Error (Speicherfehler):", e);
+                document.getElementById('errorMsg').style.display = 'block';
+                document.getElementById('errorMsg').innerText = "Speicherfehler: Daten konnten nicht in Firestore geschrieben werden (Regelfehler?).";
+            }
         }
 
         // --- CORE LOGIC ---
@@ -343,9 +599,10 @@
             const text = overrideText || input.value.trim();
             if(!text) return;
             
-            const newItem = smartMode ? parseSmart(text) : { id: Date.now(), name: text, amount: 1, unit: '', category: 'Manuell', price: 0, checked: false };
-            
-            // Favoriten lernen
+            // NEU: Hinzugefügt-Zeitstempel speichern
+            const newItem = smartMode ? parseSmart(text) : { id: Date.now(), name: text, amount: 1, unit: '', category: 'Manuell', price: 0, checked: false, added: Date.now() };
+            if (!newItem.added) newItem.added = Date.now();
+
             if(!topItems[newItem.name]) topItems[newItem.name] = 0;
             topItems[newItem.name]++;
             localStorage.setItem('topItems', JSON.stringify(topItems));
@@ -353,23 +610,25 @@
 
             await saveItems([...items, newItem]);
             if(!overrideText) input.value = '';
+            
+            document.getElementById('autocompleteContainer').style.display = 'none';
         };
 
         function parseSmart(text) {
             const categories = {
-                "Obst & Gemüse": ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel", "beere", "knoblauch", "avocado"],
-                "Getränke": ["wasser", "saft", "bier", "cola", "limo", "kaffee", "kasten", "pfand", "flasche", "sixpack", "sprudel", "tee", "energy", "wein"],
-                "Kühlregal": ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst", "quark", "mozarella"],
-                "Vorrat": ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve", "soße", "gewürz", "ketchup", "müsli"],
-                "Haushalt": ["papier", "reiniger", "waschmittel", "zahnpasta", "seife", "duschgel", "shampoo", "müllbeutel"]
+                "Obst & Gemüse": ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel", "beere", "knoblauch", "avocado", "paprika", "möhre", "karotte", "ingwer", "zitrone", "limette", "traube", "orange"],
+                "Getränke": ["wasser", "saft", "bier", "cola", "limo", "kaffee", "kasten", "pfand", "flasche", "sixpack", "sprudel", "tee", "energy", "wein", "sekt", "milchshake"],
+                "Kühlregal": ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst", "quark", "mozarella", "frischkäse", "skyr", "pizza", "fertiggericht"],
+                "Vorrat": ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve", "soße", "gewürz", "ketchup", "müsli", "haferflocken", "toast", "nutella", "honig", "schokolade", "chips", "tiefkühl"],
+                "Haushalt": ["papier", "reiniger", "waschmittel", "zahnpasta", "seife", "duschgel", "shampoo", "müllbeutel", "deo", "schwamm", "tabs", "batterie", "folie", "serviette"]
             };
 
             let clean = text;
-            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg|kasten|flasche)?/i;
+            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg|kasten|flasche|pck|packung)?/i;
             let amount = 1, unit = "";
             const match = clean.match(amountRegex);
             if(match) { 
-                amount = parseFloat(match[1]); 
+                amount = parseFloat(match[1].replace(',','.')); 
                 unit = match[2] || ""; 
                 clean = clean.replace(match[0], "").trim(); 
             }
@@ -380,8 +639,142 @@
             for(const [cat, keywords] of Object.entries(categories)) {
                 if(keywords.some(k => lower.includes(k))) { category = cat; break; }
             }
-            return { id: Date.now() + Math.random(), name: clean.charAt(0).toUpperCase() + clean.slice(1), amount, unit, category, price: 0, checked: false };
+            return { id: Date.now() + Math.random(), name: clean.charAt(0).toUpperCase() + clean.slice(1), amount, unit, category, price: 0, checked: false, added: Date.now() };
         }
+
+        // --- AUTOSUGGEST ---
+        window.showSuggestions = () => {
+            clearTimeout(suggestionTimeout);
+            suggestionTimeout = setTimeout(() => {
+                const input = document.getElementById('inputField');
+                const container = document.getElementById('autocompleteContainer');
+                const query = input.value.trim().toLowerCase();
+
+                if (query.length < 2) {
+                    container.style.display = 'none';
+                    return;
+                }
+
+                const suggestions = Object.entries(topItems)
+                    .filter(([name]) => name.toLowerCase().includes(query))
+                    .sort(([, countA], [, countB]) => countB - countA)
+                    .slice(0, 5); 
+
+                if (suggestions.length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+
+                container.innerHTML = suggestions.map(([name]) => 
+                    `<div class="suggestion-chip" onclick="selectSuggestion('${name.replace(/'/g, "\\'")}')">${name}</div>`
+                ).join('');
+                container.style.display = 'block';
+            }, 200);
+        };
+
+        window.selectSuggestion = (name) => {
+            document.getElementById('inputField').value = name;
+            document.getElementById('autocompleteContainer').style.display = 'none';
+            document.getElementById('inputField').focus();
+        };
+
+        // --- FILTER / SORT LOGIC (NEU) ---
+        window.toggleSort = (mode) => {
+            sortMode = mode;
+            document.getElementById('sortCategory').classList.remove('active');
+            document.getElementById('sortAdded').classList.remove('active');
+            document.getElementById(`sort${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add('active');
+            renderList();
+        };
+
+        window.toggleFilter = (mode) => {
+            if (mode === 'unchecked' && filterMode === 'unchecked') {
+                filterMode = 'all';
+                document.getElementById('filterUnchecked').classList.remove('active');
+            } else {
+                filterMode = 'unchecked';
+                document.getElementById('filterUnchecked').classList.add('active');
+            }
+            renderList();
+        };
+
+        // --- DRAG AND DROP LOGIC ---
+        window.handleDragStart = (e, id) => {
+            draggedId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.classList.add('dragging');
+        };
+
+        window.handleDragOver = (e, targetId) => {
+            e.preventDefault();
+            const targetEl = document.getElementById(`item-${targetId}`);
+            if (!targetEl || draggedId == targetId) return;
+
+            document.querySelectorAll('.item-row').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+
+            const rect = targetEl.getBoundingClientRect();
+            const midpoint = rect.y + rect.height / 2;
+
+            if (e.clientY < midpoint) {
+                targetEl.classList.add('drag-over-top');
+            } else {
+                targetEl.classList.add('drag-over-bottom');
+            }
+        };
+
+        window.handleDragLeave = (e, id) => {
+            e.target.classList.remove('drag-over-top', 'drag-over-bottom');
+        };
+
+        window.handleDrop = (e, targetId) => {
+            e.preventDefault();
+            
+            // Clean up drag visual cues
+            window.handleDragEnd(e);
+
+            if (!draggedId || draggedId == targetId) return;
+
+            // Finde das Item, das verschoben wird, und das Ziel-Item
+            const itemToMove = items.find(i => i.id == draggedId);
+            if (!itemToMove) return;
+
+            const targetEl = document.getElementById(`item-${targetId}`);
+            const rect = targetEl.getBoundingClientRect();
+            const midpoint = rect.y + rect.height / 2;
+            const insertAfter = e.clientY > midpoint;
+
+            // Erstelle eine neue Liste und berechne den neuen Index
+            const newItems = items.filter(i => i.id != draggedId);
+            let targetIndex = newItems.findIndex(i => i.id == targetId);
+
+            if (insertAfter) {
+                targetIndex += 1;
+            }
+            
+            newItems.splice(targetIndex, 0, itemToMove);
+            
+            // Speichern der neu sortierten Liste
+            saveItems(newItems);
+        };
+        
+        window.handleDragEnd = (e) => {
+            draggedId = null;
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.item-row').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+        };
+        // --- END DRAG AND DROP LOGIC ---
+
+
+        // --- CATEGORY COLLAPSE LOGIC ---
+        window.toggleCategoryCollapse = (categoryName) => {
+            collapsedCategories[categoryName] = !collapsedCategories[categoryName];
+            localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+            renderList();
+        };
 
         // --- EDITING ---
         window.openEdit = (id) => {
@@ -393,6 +786,7 @@
             document.getElementById('editUnit').value = item.unit || "";
             document.getElementById('editCategory').value = item.category || "Sonstiges";
             document.getElementById('editModal').style.display = 'flex';
+            document.getElementById('quickAddInput').value = ''; 
         };
 
         window.saveEdit = async () => {
@@ -408,6 +802,26 @@
         };
         window.closeEdit = () => { document.getElementById('editModal').style.display = 'none'; editItemId = null; };
 
+        // --- QUICK ADD ---
+        window.quickAddItem = async () => {
+            const input = document.getElementById('quickAddInput');
+            const text = input.value.trim();
+            if(!text) return;
+            
+            const newItem = parseSmart(text);
+            await saveItems([...items, newItem]);
+
+            input.value = '';
+            input.placeholder = "Hinzugefügt!";
+            setTimeout(() => input.placeholder = "Schnell hinzufügen...", 1000);
+        };
+        window.handleQuickAddEnter = (e) => {
+            if(e.key === 'Enter') {
+                e.preventDefault(); 
+                window.quickAddItem(); 
+            }
+        };
+
         // --- BUDGET MODE ---
         window.toggleBudgetMode = () => {
             budgetMode = !budgetMode;
@@ -418,7 +832,7 @@
             if(budgetMode) {
                 btn.classList.add('active');
                 footer.style.display = 'flex';
-                fab.style.display = 'none'; // Verstecke normalen Footer
+                fab.style.display = 'none';
             } else {
                 btn.classList.remove('active');
                 footer.style.display = 'none';
@@ -429,18 +843,24 @@
 
         window.updatePrice = (id, val) => {
             const price = parseFloat(val) || 0;
-            // Wir nutzen setTimeout debounce, um DB Calls zu reduzieren, oder direkt:
             const updated = items.map(i => i.id === id ? { ...i, price: price } : i);
-            saveItems(updated); // In Production würde man hier debouncen
+            saveItems(updated);
         };
 
         // --- STANDARD FUNCTIONS ---
         window.updateQty = async (id, change) => await saveItems(items.map(i => i.id === id ? { ...i, amount: Math.max(1, (i.amount||1) + change) } : i));
-        window.toggleCheck = async (id) => await saveItems(items.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
+        
+        window.toggleCheck = async (id) => {
+            hapticFeedback('check'); 
+            await saveItems(items.map(i => i.id === id ? { ...i, checked: !i.checked } : i));
+        };
+        
         window.deleteItem = async (id) => {
+            hapticFeedback('delete'); 
             const item = items.find(i => i.id === id); lastDeleted = [item];
             await saveItems(items.filter(i => i.id !== id)); showUndo();
         };
+        
         window.clearChecked = async () => {
             const toDel = items.filter(i => i.checked); if(!toDel.length) return;
             lastDeleted = toDel; await saveItems(items.filter(i => !i.checked)); showUndo();
@@ -453,13 +873,19 @@
             clearTimeout(undoTimer); undoTimer = setTimeout(() => t.classList.remove('show'), 4000);
         }
         window.finishShopping = () => {
-            if(!items.some(i => i.checked)) return alert("Nichts erledigt!");
+            if(!items.some(i => i.checked)) {
+                const t = document.getElementById('undoToast');
+                document.getElementById('toastMsg').innerText = "Nichts erledigt?";
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 2000);
+                return;
+            }
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.7 } });
             window.clearChecked();
         };
         
         window.addRecipe = async (t) => {
-             const r = { 'breakfast':['Eier','Speck'], 'pasta':['Nudeln','Soße'], 'party':['Cola','Chips'], 'cleaning':['Reiniger','Tücher'] };
+             const r = { 'breakfast':['Eier','Speck','O-Saft'], 'party':['Cola','Chips','Bier','Eis'], 'cleaning':['Reiniger','Tücher'], 'pasta':['Nudeln', 'Pesto', 'Parmesan'] };
              const add = r[t].map(n => parseSmart(n));
              await saveItems([...items, ...add]);
         };
@@ -474,32 +900,74 @@
             inp.placeholder = smartMode ? "Was fehlt?" : "Exakter Text";
             inp.focus();
         };
-        window.handleEnter = (e) => { if(e.key === 'Enter') window.addItem(); };
-        window.shareList = () => { navigator.clipboard.writeText(window.location.href); alert("Link kopiert!"); };
+        window.handleEnter = (e) => { 
+            if(e.key === 'Enter') {
+                document.getElementById('autocompleteContainer').style.display = 'none';
+                window.addItem(); 
+            }
+        };
+        window.shareList = () => { 
+            navigator.clipboard.writeText(window.location.href); 
+            const t = document.getElementById('undoToast');
+            document.getElementById('toastMsg').innerText = "Link kopiert!";
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
+        };
 
         // MULTI LIST
         window.switchList = (id) => { toggleDrawer(); subscribeToList(id); };
         window.createNewList = () => {
-            const n = prompt("Name:"); if(n) { 
-                if(!myLists.includes(n)) { myLists.push(n); localStorage.setItem('myLists', JSON.stringify(myLists)); }
-                switchList(n);
+            const n = prompt("Name der neuen Liste:"); 
+            if(n) { 
+                const cleanName = n.trim();
+                if(!cleanName) return;
+                if(!myLists.includes(cleanName)) { 
+                    myLists.push(cleanName); 
+                    localStorage.setItem('myLists', JSON.stringify(myLists)); 
+                }
+                switchList(cleanName);
             }
         };
-        window.deleteListRef = (e, name) => {
+        
+        let listToDeleteName = null;
+        window.openDeleteModal = (e, name) => {
             e.stopPropagation();
-            if(confirm(`Liste '${name}' entfernen?`)) {
-                myLists = myLists.filter(l => l !== name);
-                if(!myLists.length) myLists = ["Einkauf"];
-                localStorage.setItem('myLists', JSON.stringify(myLists));
-                if(currentListId === name) switchList(myLists[0]);
-                renderDrawer();
-            }
+            listToDeleteName = name;
+            document.getElementById('deleteListName').innerText = name;
+            document.getElementById('deleteModal').style.display = 'flex';
         };
+
+        window.closeDeleteModal = () => {
+            document.getElementById('deleteModal').style.display = 'none';
+            listToDeleteName = null;
+        };
+
+        document.getElementById('confirmDeleteListBtn').onclick = async () => {
+            if (!listToDeleteName) return;
+            
+            try {
+                await deleteDoc(getListDocRef(listToDeleteName));
+            } catch (error) {
+                console.warn("Could not delete list document in Firestore (Konnte Listendokument nicht löschen):", error);
+            }
+
+            myLists = myLists.filter(l => l !== listToDeleteName);
+            if(!myLists.length) myLists = ["Einkauf"];
+            localStorage.setItem('myLists', JSON.stringify(myLists));
+            
+            if(currentListId === listToDeleteName) {
+                switchList(myLists[0]);
+            }
+            
+            closeDeleteModal();
+            renderDrawer();
+        };
+
         function renderDrawer() {
             document.getElementById('drawerList').innerHTML = myLists.map(name => `
                 <div class="drawer-item ${name === currentListId ? 'active' : ''}" onclick="switchList('${name}')">
                     <span>${name}</span>
-                    ${name !== 'Einkauf' ? `<span onclick="deleteListRef(event, '${name}')" style="opacity:0.5;font-size:1.2rem;">&times;</span>` : ''}
+                    ${name !== 'Einkauf' ? `<span onclick="openDeleteModal(event, '${name}')" style="opacity:0.5;font-size:1.2rem;">&times;</span>` : ''}
                 </div>
             `).join('');
         }
@@ -512,7 +980,10 @@
                 recognition = new SR(); recognition.lang = 'de-DE'; recognition.continuous = false;
                 recognition.onstart = () => document.getElementById('micBtn').classList.add('active');
                 recognition.onend = () => document.getElementById('micBtn').classList.remove('active');
-                recognition.onresult = (e) => document.getElementById('inputField').value = e.results[0][0].transcript;
+                recognition.onresult = (e) => {
+                    const text = e.results[0][0].transcript;
+                    document.getElementById('inputField').value = text;
+                };
             } else { document.getElementById('micBtn').style.display = 'none'; }
         }
         initSpeech();
@@ -523,55 +994,141 @@
             const container = document.getElementById('listContainer');
             container.innerHTML = '';
             
+            // 1. Filtern und Sortieren der Gesamtdaten
+            let displayItems = [...items];
+            
+            if (filterMode === 'unchecked') {
+                displayItems = displayItems.filter(i => !i.checked);
+            }
+
+            // Die Sortierung nach Kategorie findet später statt, aber wir sortieren die gesamte Liste
+            // nach 'checked' (unerledigte zuerst) ODER nach 'added' (neueste zuerst), falls so gewünscht.
+            if (sortMode === 'added') {
+                // Bei Sortierung nach "Hinzugefügt" (Added) wird nach Hinzugefügt-Zeit sortiert
+                displayItems.sort((a, b) => b.added - a.added);
+            } else {
+                 // Standardmäßig (Kategorie) werden erledigte Items ans Ende geschoben
+                 displayItems.sort((a,b) => a.checked - b.checked);
+            }
+
+
+            // 2. Gruppieren nach Kategorie
             const groups = {};
             let sum = 0;
-            [...items].sort((a,b) => a.checked - b.checked).forEach(i => {
-                const c = i.category || "Sonstiges"; if(!groups[c]) groups[c]=[]; groups[c].push(i);
+            let completedCount = 0;
+            let totalCount = items.length; // Gesamtanzahl bleibt für den Fortschritt
+
+            // Berechnung der Summe und des Fortschritts basierend auf der UNGEFILTERTEN Liste
+            items.forEach(i => {
+                if(i.checked) completedCount++;
                 if(!i.checked) sum += (i.price || 0);
             });
             document.getElementById('totalSum').innerText = sum.toFixed(2) + " €";
+            
+            // Gruppierung basiert auf den anzuzeigenden Elementen (displayItems)
+            displayItems.forEach(i => {
+                const c = i.category || "Sonstiges"; 
+                if(!groups[c]) groups[c]=[]; 
+                groups[c].push(i);
+            });
+
+
+            // 3. Fortschrittsbalken aktualisieren
+            const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+            document.getElementById('progressBar').style.width = progress.toFixed(1) + '%';
+            document.getElementById('progressBarContainer').style.display = totalCount > 0 ? 'block' : 'none';
 
             if(items.length === 0) { document.getElementById('emptyState').style.display = 'block'; return; }
             document.getElementById('emptyState').style.display = 'none';
 
-            const order = ["Obst & Gemüse", "Kühlregal", "Vorrat", "Getränke", "Haushalt", "Manuell", "Sonstiges"];
-            [...order, ...Object.keys(groups)].filter((v,i,a)=>a.indexOf(v)===i).forEach(cat => {
-                if(groups[cat] && groups[cat].length) {
-                    container.innerHTML += `<div class="cat-title">${cat}</div>`;
-                    groups[cat].forEach(item => {
-                        let rightSide = '';
-                        if(budgetMode) {
-                            rightSide = `<input type="number" class="price-input" placeholder="€" value="${item.price||''}" onchange="updatePrice(${item.id}, this.value)" onclick="event.stopPropagation()">`;
-                        } else {
-                            if(smartMode || item.amount > 1) {
-                                rightSide = `
-                                <div class="qty-control" onclick="event.stopPropagation()">
-                                    <div class="qty-btn" onclick="updateQty(${item.id}, -1)">-</div>
-                                    <div class="qty-val">${item.amount}${item.unit}</div>
-                                    <div class="qty-btn" onclick="updateQty(${item.id}, 1)">+</div>
-                                </div>`;
-                            }
-                        }
 
-                        const el = document.createElement('div');
-                        el.className = `item-row ${item.checked ? 'checked' : ''}`;
-                        el.innerHTML = `
-                            <div class="check-box" onclick="toggleCheck(${item.id})"></div>
-                            <div class="details" onclick="openEdit(${item.id})"><div class="name">${item.name}</div></div>
-                            <div class="right-controls">
-                                ${rightSide}
-                                <button class="del-btn" onclick="deleteItem(${item.id})">&times;</button>
+            // 4. Render-Reihenfolge der Kategorien definieren
+            const order = ["Obst & Gemüse", "Kühlregal", "Vorrat", "Getränke", "Haushalt", "Manuell", "Sonstiges"];
+            
+            let categoriesToRender = sortMode === 'category' 
+                ? [...order, ...Object.keys(groups)].filter((v,i,a)=>a.indexOf(v)===i) // Nach fester Reihenfolge + neue Kategorien
+                : ['Alle Artikel']; // Eine einzige Kategorie für "Nach Hinzugefügt" Sortierung
+
+            // Wenn nach Hinzugefügt sortiert wird, gibt es nur eine Gruppe mit allen Items
+            if (sortMode === 'added') {
+                groups['Alle Artikel'] = displayItems;
+            }
+
+            categoriesToRender.forEach(cat => {
+                const itemsInCat = groups[cat];
+                if(itemsInCat && itemsInCat.length) {
+                    const isCollapsed = collapsedCategories[cat];
+                    
+                    // Nur Category Sorting hat Titel und Collapse
+                    if (sortMode === 'category') {
+                         const titleWrapper = document.createElement('div');
+                         titleWrapper.className = `cat-title-wrapper ${isCollapsed ? 'collapsed' : ''}`;
+                         titleWrapper.setAttribute('onclick', `toggleCategoryCollapse('${cat.replace(/'/g, "\\'")}')`);
+                         titleWrapper.innerHTML = `
+                            <div>
+                                <span class="cat-title-icon">▼</span>
+                                <span>${cat}</span>
                             </div>
-                        `;
-                        container.appendChild(el);
-                    });
+                            <small style="opacity: 0.8;">(${itemsInCat.length})</small>
+                         `;
+                         container.appendChild(titleWrapper);
+                    }
+
+
+                    if (!isCollapsed || sortMode === 'added') { // Zeige immer alle, wenn nach Datum sortiert
+                        // Bei Kategorie-Sortierung itemsInCat bereits nach checked sortiert,
+                        // bei Added-Sortierung ist itemsInCat bereits nach added sortiert.
+
+                        itemsInCat.forEach(item => {
+                            let rightSide = '';
+                            if(budgetMode) {
+                                rightSide = `<input type="number" class="price-input" placeholder="€" value="${item.price||''}" onchange="updatePrice(${item.id}, this.value)" onclick="event.stopPropagation()">`;
+                            } else {
+                                if(smartMode || item.amount > 1) {
+                                    rightSide = `
+                                    <div class="qty-control" onclick="event.stopPropagation()">
+                                        <div class="qty-btn" onclick="updateQty(${item.id}, -1)">-</div>
+                                        <div class="qty-val">${item.amount}${item.unit}</div>
+                                        <div class="qty-btn" onclick="updateQty(${item.id}, 1)">+</div>
+                                    </div>`;
+                                }
+                            }
+                            
+                            // Kühl-Symbol (NEU)
+                            const isChilled = item.category === 'Kühlregal' ? '<span style="color:#63b3ed; margin-right: 5px;">❄️</span>' : '';
+
+                            const el = document.createElement('div');
+                            el.className = `item-row ${item.checked ? 'checked' : ''}`;
+                            el.id = `item-${item.id}`; 
+                            el.draggable = true; 
+                            
+                            el.setAttribute('ondragstart', `handleDragStart(event, ${item.id})`);
+                            el.setAttribute('ondragover', `handleDragOver(event, ${item.id})`);
+                            el.setAttribute('ondragleave', `handleDragLeave(event, ${item.id})`);
+                            el.setAttribute('ondrop', `handleDrop(event, ${item.id})`);
+                            el.setAttribute('ondragend', `handleDragEnd(event)`);
+
+
+                            el.innerHTML = `
+                                <div class="check-box" onclick="toggleCheck(${item.id})"></div>
+                                <div class="details" onclick="openEdit(${item.id})">
+                                    ${isChilled}
+                                    <div class="name">${item.name}</div>
+                                </div>
+                                <div class="right-controls">
+                                    ${rightSide}
+                                    <button class="del-btn" onclick="deleteItem(${item.id})">&times;</button>
+                                </div>
+                            `;
+                            container.appendChild(el);
+                        });
+                    }
                 }
             });
         }
 
         function renderFavorites() {
             const c = document.getElementById('favContainer');
-            // Basis Chips behalten
             c.innerHTML = `
                 <div class="magic-chip" onclick="addRecipe('party')">🎉 Party</div>
                 <div class="magic-chip" onclick="addRecipe('breakfast')">🥞 Frühstück</div>
@@ -590,5 +1147,4 @@
     </script>
 </body>
 </html>
-
 
