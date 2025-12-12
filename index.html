@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V17 💎</title>
+    <title>SmartEinkauf V19 💎</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -13,8 +13,10 @@
             --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --text-light: #64748b;
             --border: #e2e8f0; --price-color: #059669;
             --filter-bg: #e0e7ff;
+            --debug-bg: #1e293b;
+            --debug-text: #f8fafc;
         }
-        /* --- Dark Mode (System Preference) --- */
+        /* --- Dark Mode (System Preference/Manual Override) --- */
         @media (prefers-color-scheme: dark) {
             :root {
                 --primary: #6366f1; --bg: #0f172a; --card: #1e293b;
@@ -22,7 +24,6 @@
                 --filter-bg: #334155;
             }
         }
-        /* --- Dark Mode (Manual Override) --- */
         body.dark-mode-override {
             --primary: #6366f1; --bg: #0f172a; --card: #1e293b;
             --text: #f8fafc; --text-light: #94a3b8; --border: #334155; --price-color: #34d399;
@@ -39,21 +40,11 @@
             position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 4px 15px -3px rgba(0,0,0,0.2);
         }
-        /* Progress Bar Styles */
         .progress-container {
-            height: 4px;
-            width: 100%;
-            background: rgba(0,0,0,0.1); 
-            position: sticky;
-            top: 60px; 
-            z-index: 40;
+            height: 4px; width: 100%; background: rgba(0,0,0,0.1); position: sticky; top: 60px; z-index: 40;
         }
         .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: var(--accent);
-            transition: width 0.3s ease-out;
-            border-radius: 0 4px 4px 0;
+            height: 100%; width: 0%; background: var(--accent); transition: width 0.3s ease-out; border-radius: 0 4px 4px 0;
         }
         .header-content { display: flex; align-items: center; gap: 15px; }
         .menu-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 40px; height: 40px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
@@ -62,46 +53,20 @@
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; box-shadow: 0 0 5px rgba(0,0,0,0.5); margin-left: 8px; display: inline-block;}
         .status-dot.online { background: #34d399; box-shadow: 0 0 8px #34d399; }
         
-        /* --- Filter/Sort Bar (NEU) --- */
+        /* --- Filter/Sort Bar --- */
         .control-bar {
-            position: sticky;
-            top: 64px; /* Unter Progress Bar */
-            z-index: 30;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--filter-bg);
-            padding: 8px 15px;
-            border-bottom: 1px solid var(--border);
-            color: var(--primary);
-            font-size: 0.85rem;
-            font-weight: 600;
+            position: sticky; top: 64px; z-index: 30; display: flex; justify-content: space-between;
+            align-items: center; background: var(--filter-bg); padding: 8px 15px;
+            border-bottom: 1px solid var(--border); color: var(--primary); font-size: 0.85rem; font-weight: 600;
         }
-        .control-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            padding: 5px 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.1s;
-        }
-        .control-btn.active {
-            background: rgba(79, 70, 229, 0.1); /* light blue for active */
-        }
-        .control-btn:hover {
-            background: rgba(79, 70, 229, 0.05);
-        }
+        .control-btn { background: none; border: none; color: var(--primary); padding: 5px 10px; border-radius: 8px; cursor: pointer; transition: background 0.1s; }
+        .control-btn.active { background: rgba(79, 70, 229, 0.1); }
+        .control-btn:hover { background: rgba(79, 70, 229, 0.05); }
 
-
-        /* --- Drawer (Menu) --- */
+        /* --- Drawers, Modals, Lists, etc. (Styles unverändert beibehalten) --- */
         .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: 0.3s; }
         .drawer-overlay.open { opacity: 1; pointer-events: auto; }
-        .drawer { 
-            position: fixed; top: 0; left: 0; height: 100%; width: 80%; max-width: 300px; 
-            background: var(--card); z-index: 100; transform: translateX(-100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 20px; display: flex; flex-direction: column; box-shadow: 5px 0 15px rgba(0,0,0,0.1);
-        }
+        .drawer { position: fixed; top: 0; left: 0; height: 100%; width: 80%; max-width: 300px; background: var(--card); z-index: 100; transform: translateX(-100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px; display: flex; flex-direction: column; box-shadow: 5px 0 15px rgba(0,0,0,0.1); }
         .drawer.open { transform: translateX(0); }
         .drawer h2 { margin-top: 0; color: var(--primary); font-size: 1.5rem; }
         .drawer-list { flex: 1; overflow-y: auto; margin: 20px 0; }
@@ -109,149 +74,49 @@
         .drawer-item.active { background: #e0e7ff; color: var(--primary); }
         .drawer-item:hover:not(.active) { background: var(--bg); }
         .new-list-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; }
-
         .container { max-width: 600px; margin: 0 auto; padding: 20px 15px; }
-        .container:first-child { padding-top: 5px; }
-
-
-        /* --- Favorites & Magic Scroll --- */
         .magic-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
-        .magic-chip {
-            background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px;
-            font-size: 0.85rem; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;
-            color: var(--text-light); transition: 0.2s;
-        }
+        .magic-chip { background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px; color: var(--text-light); transition: 0.2s; }
         .magic-chip:active { background: var(--primary); color: white; border-color: var(--primary); }
         .magic-chip.fav { border-color: var(--accent); color: var(--accent); background: rgba(16, 185, 129, 0.05); }
-
-        /* --- Input & Autocomplete --- */
-        .input-card {
-            background: var(--card); padding: 8px; border-radius: 16px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border);
-            display: flex; gap: 6px; position: relative; margin-bottom: 20px; align-items: center;
-        }
+        .input-card { background: var(--card); padding: 8px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); display: flex; gap: 6px; position: relative; margin-bottom: 20px; align-items: center; }
         input { flex: 1; border: none; background: transparent; font-size: 16px; color: var(--text); outline: none; padding: 10px 5px; min-width: 0; }
-        .action-btn {
-            background: var(--primary); color: white; border: none; width: 40px; height: 40px; flex-shrink: 0;
-            border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: transform 0.1s;
-        }
+        .action-btn { background: var(--primary); color: white; border: none; width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
         .mode-btn { background: #e0e7ff; color: var(--primary); font-size: 1.1rem; }
         .mode-btn.simple { background: #f3f4f6; color: var(--text-light); }
         .budget-btn { background: #ecfdf5; color: var(--accent); font-weight: bold; font-size: 1rem; }
         .budget-btn.active { background: var(--accent); color: white; }
-        
         .mic-btn { background: transparent; color: var(--text-light); border: 1px solid var(--border); }
         .mic-btn.active { background: #fee2e2; color: #ef4444; border-color: #ef4444; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
-
-        /* Autocomplete CSS */
-        .autocomplete-container {
-            max-height: 120px;
-            overflow-y: auto;
-            background: var(--card);
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            margin-top: -15px; 
-            margin-bottom: 20px;
-            display: none;
-            border: 1px solid var(--border);
-        }
-        .suggestion-chip {
-            padding: 10px 15px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            border-bottom: 1px solid var(--border);
-            color: var(--text);
-            font-weight: 500;
-        }
-        .suggestion-chip:hover {
-            background: var(--bg);
-            color: var(--primary);
-        }
-        .suggestion-chip:last-child {
-            border-bottom: none;
-        }
-
-        /* --- List & Reordering --- */
-        /* Category Title Style (Jetzt klickbar für Collapse) */
-        .cat-title-wrapper { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            padding: 15px 5px 5px 5px;
-            cursor: pointer;
-            font-size: 0.75rem; 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-            color: var(--text-light); 
-            font-weight: bold; 
-        }
-
-        .cat-title-icon {
-            font-size: 1.2rem;
-            line-height: 1;
-            margin-right: 5px;
-            transition: transform 0.2s;
-        }
-        .cat-title-wrapper.collapsed .cat-title-icon {
-            transform: rotate(-90deg);
-        }
-
-        .item-row {
-            background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px;
-            display: flex; align-items: center; gap: 10px; border: 1px solid var(--border);
-            transition: all 0.2s; position: relative; overflow: hidden;
-            /* Drag and Drop Styles */
-            cursor: grab;
-        }
+        .autocomplete-container { max-height: 120px; overflow-y: auto; background: var(--card); border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-top: -15px; margin-bottom: 20px; display: none; border: 1px solid var(--border); }
+        .suggestion-chip { padding: 10px 15px; font-size: 0.95rem; cursor: pointer; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 500; }
+        .suggestion-chip:hover { background: var(--bg); color: var(--primary); }
+        .suggestion-chip:last-child { border-bottom: none; }
+        .cat-title-wrapper { display: flex; align-items: center; justify-content: space-between; padding: 15px 5px 5px 5px; cursor: pointer; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-light); font-weight: bold; }
+        .cat-title-icon { font-size: 1.2rem; line-height: 1; margin-right: 5px; transition: transform 0.2s; }
+        .cat-title-wrapper.collapsed .cat-title-icon { transform: rotate(-90deg); }
+        .item-row { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); transition: all 0.2s; position: relative; overflow: hidden; cursor: grab; }
         .item-row.dragging { opacity: 0.5; border: 2px dashed var(--primary); }
         .item-row.drag-over-top { border-top: 2px solid var(--primary); }
         .item-row.drag-over-bottom { border-bottom: 2px solid var(--primary); }
-
         .item-row.checked { opacity: 0.6; background: var(--bg); border-color: transparent; }
         .item-row.checked .name { text-decoration: line-through; }
-        .check-box {
-            width: 24px; height: 24px; border: 2px solid var(--text-light); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
-            transition: background 0.2s, border-color 0.2s;
-        }
+        .check-box { width: 24px; height: 24px; border: 2px solid var(--text-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background 0.2s, border-color 0.2s; }
         .item-row.checked .check-box { background: var(--accent); border-color: var(--accent); }
         .item-row.checked .check-box::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
-        
         .details { flex: 1; min-width: 0; cursor: pointer; display: flex; align-items: center; gap: 5px; } 
         .name { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        /* Controls (Qty & Price) */
         .right-controls { display: flex; align-items: center; gap: 8px; }
         .qty-control { display: flex; align-items: center; gap: 5px; background: var(--bg); padding: 2px; border-radius: 8px; flex-shrink: 0; }
         .qty-btn { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; cursor: pointer; color: var(--text); }
         .qty-val { font-size: 0.8rem; font-weight: bold; min-width: 20px; text-align: center; }
-        
         .price-input { width: 55px; padding: 4px; border: 1px solid var(--accent); border-radius: 6px; font-size: 0.9rem; text-align: right; background: var(--bg); color: var(--text); }
-        
         .del-btn { color: var(--text-light); background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; }
-
-        /* --- Footer (Total) --- */
-        .footer-bar {
-            position: fixed; bottom: 0; left: 0; right: 0; background: var(--card);
-            border-top: 1px solid var(--border); padding: 15px 20px 25px 20px;
-            display: flex; justify-content: space-between; align-items: center; z-index: 80;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.05); display: none;
-        }
+        .footer-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 15px 20px 25px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 80; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); display: none; }
         .total-display { font-size: 1.1rem; font-weight: bold; }
         .total-display span { color: var(--price-color); }
-
-        /* --- Fab --- */
-        .fab-bar {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--card); padding: 10px 20px; border-radius: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15); border: 1px solid var(--border); z-index: 90;
-            display: flex; gap: 20px; align-items: center;
-        }
+        .fab-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--card); padding: 10px 20px; border-radius: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); border: 1px solid var(--border); z-index: 90; display: flex; gap: 20px; align-items: center; }
         .fab-btn { background: none; border: none; font-weight: 600; color: var(--primary); font-size: 0.9rem; cursor: pointer; }
-
-        /* --- Modals (General) --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; display: none; justify-content: center; align-items: center; }
         .modal { background: var(--card); padding: 20px; border-radius: 16px; width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal h3 { margin-top: 0; color: var(--primary); }
@@ -261,26 +126,93 @@
         .btn-cancel { background: var(--bg); color: var(--text); }
         .btn-save { background: var(--primary); color: white; }
         .btn-danger { background: #ef4444; color: white; }
-
-        /* Quick Add Input in Modal */
         #quickAddContainer { display: flex; gap: 8px; margin-bottom: 15px; border-top: 1px solid var(--border); padding-top: 15px; }
         #quickAddContainer input { margin-bottom: 0; flex: 1; }
         .quick-add-btn { height: 40px; width: 40px; background: var(--accent); color: white; border-radius: 8px; border: none; }
-
-        /* --- Toast --- */
-        .toast {
-            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px);
-            background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px;
-            display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 100;
-        }
+        .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 100; }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
         .undo-btn { background: none; border: none; color: var(--primary); font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; }
-
         #errorMsg { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; font-size: 0.9rem; text-align: center; }
+        
+        /* --- Debug Console (NEU) --- */
+        .debug-toggle-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--debug-bg);
+            color: white;
+            border: 1px solid var(--border);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            z-index: 150;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .debug-toggle-btn.active {
+            background: #ef4444; /* Rot, wenn aktiv */
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+        }
+
+        #debugConsole {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 250px;
+            background: var(--debug-bg);
+            color: var(--debug-text);
+            border-top: 2px solid var(--primary);
+            z-index: 200;
+            font-family: monospace;
+            font-size: 0.8rem;
+            display: none;
+            flex-direction: column;
+        }
+        #debugConsoleHeader {
+            padding: 8px 15px;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #debugConsoleHeader button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        #debugConsoleContent {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px 15px;
+            white-space: pre-wrap;
+            /* Scrollbar Style */
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+        #debugConsoleContent::-webkit-scrollbar { width: 8px; }
+        #debugConsoleContent::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 4px; }
     </style>
 </head>
 <body>
+
+    <!-- Debug Console (NEU) -->
+    <div id="debugConsole">
+        <div id="debugConsoleHeader">
+            DEBUG KONSOLE (Fängt F12-Ausgaben ab)
+            <button onclick="toggleDebugConsole()">X</button>
+        </div>
+        <div id="debugConsoleContent"></div>
+    </div>
+    <!-- Debug Toggle Button (NEU) -->
+    <button class="debug-toggle-btn" id="debugToggleBtn" onclick="toggleDebugConsole()">🐛</button>
 
     <!-- Drawer Menu (Multi-List) -->
     <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
@@ -359,7 +291,7 @@
         <div class="progress-bar" id="progressBar"></div>
     </div>
     
-    <!-- Filter/Sort Bar (NEU) -->
+    <!-- Filter/Sort Bar -->
     <div class="control-bar">
         <div>
             Sortierung: 
@@ -431,18 +363,113 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // FIREBASE SETUP
-        const firebaseConfig = JSON.parse(__firebase_config);
+
+        // =========================================================================
+        // NEU: KONSOLE INTERCEPTOR
+        // Überschreibt console.log/warn/error, um Ausgaben abzufangen und in die Debug-Konsole zu leiten.
+        // MUSS VOR Firebase-Initialisierung ausgeführt werden.
+        // =========================================================================
+
+        function logToDebugConsole(level, message, color) {
+            const consoleEl = document.getElementById('debugConsoleContent');
+            if (!consoleEl) return;
+
+            const entry = document.createElement('div');
+            entry.style.color = color;
+            entry.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+            entry.style.padding = '5px 0';
+            
+            const now = new Date();
+            const timeString = now.toTimeString().split(' ')[0];
+            
+            const args = Array.from(message);
+            let messageText = args.map(arg => {
+                if (typeof arg === 'object' && arg !== null) {
+                    try {
+                        return JSON.stringify(arg, null, 2);
+                    } catch (e) {
+                        return arg.toString();
+                    }
+                }
+                return arg;
+            }).join(' ');
+
+            entry.innerHTML = `<span style="font-weight: bold; margin-right: 5px;">[${timeString} ${level.toUpperCase()}]</span> ${messageText.replace(/\n/g, '<br>')}`;
+            
+            consoleEl.appendChild(entry);
+            consoleEl.scrollTop = consoleEl.scrollHeight; // Auto-scroll
+        }
+
+        const originalConsole = {
+            log: console.log.bind(console),
+            warn: console.warn.bind(console),
+            error: console.error.bind(console)
+        };
+
+        // Überschreibe native Methoden, leite an Original und Custom Konsole weiter
+        console.log = function(...args) {
+            originalConsole.log(...args);
+            logToDebugConsole('log', args, '#ccc');
+        };
+
+        console.warn = function(...args) {
+            originalConsole.warn(...args);
+            logToDebugConsole('warn', args, '#fbc531'); 
+        };
+
+        console.error = function(...args) {
+            originalConsole.error(...args);
+            logToDebugConsole('error', args, '#ff6b6b'); 
+        };
+        
+        window.toggleDebugConsole = () => {
+            const consoleEl = document.getElementById('debugConsole');
+            const toggleBtn = document.getElementById('debugToggleBtn');
+            const isVisible = consoleEl.style.display === 'flex'; 
+
+            if (isVisible) {
+                consoleEl.style.display = 'none';
+                toggleBtn.classList.remove('active');
+                localStorage.setItem('debugConsoleVisible', 'false');
+            } else {
+                consoleEl.style.display = 'flex'; // Wichtig: Flex statt Block wegen CSS
+                toggleBtn.classList.add('active');
+                localStorage.setItem('debugConsoleVisible', 'true');
+            }
+        };
+
+        // Initialisiere den Zustand der Debug-Konsole
+        document.addEventListener('DOMContentLoaded', () => {
+             if (localStorage.getItem('debugConsoleVisible') === 'true') {
+                 document.getElementById('debugConsole').style.display = 'flex';
+                 document.getElementById('debugToggleBtn').classList.add('active');
+             }
+        });
+
+        // =========================================================================
+        // FIREBASE INITIALISIERUNG
+        // =========================================================================
+
+        const externalFirebaseConfig = {
+            apiKey: "DEIN_API_KEY_HIER_EINTRAGEN", 
+            authDomain: "DEIN_AUTH_DOMAIN_HIER_EINTRAGEN",
+            projectId: "DEIN_PROJECT_ID_HIER_EINTRAGEN",
+            storageBucket: "DEIN_STORAGE_BUCKET_HIER_EINTRAGEN",
+            messagingSenderId: "DEIN_SENDER_ID_HIER_EINTRAGEN",
+            appId: "DEINE_APP_ID_HIER_EINTRAGEN"
+        };
+        
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : externalFirebaseConfig;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // Debug Logging aktivieren
+        // Debug Logging aktivieren, um alle Firebase-Meldungen abzufangen
         setLogLevel('debug');
 
-        // STATE
+        // STATE (Unverändert)
         let currentListId = "Einkauf";
         let items = [];
         let smartMode = true;
@@ -454,13 +481,10 @@
         let editItemId = null;
         let currentUser = null;
         let suggestionTimeout;
-        
-        // DRAG AND DROP STATE
         let draggedId = null; 
 
-        // FILTER/SORT STATE (NEU)
-        let sortMode = 'category'; // 'category' oder 'added'
-        let filterMode = 'all';    // 'all' oder 'unchecked'
+        let sortMode = 'category'; 
+        let filterMode = 'all';    
 
         let darkModePreference = localStorage.getItem('darkModePreference'); 
         let myLists = JSON.parse(localStorage.getItem('myLists')) || ["Einkauf"];
@@ -498,16 +522,19 @@
 
         // INIT AUTH
         const initAuth = async () => {
+            console.log("Starte Authentifizierung...");
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    console.log("Verwende Canvas Auth Token.");
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
+                    console.log("Verwende Anonyme Anmeldung (Webspace Modus).");
                     await signInAnonymously(auth);
                 }
             } catch (error) {
                 console.error("Auth Error (Anmeldefehler):", error);
                 document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Verbindungsproblem: Anmeldefehler. Siehe Konsole für Details.";
+                document.getElementById('errorMsg').innerText = "Verbindungsproblem: Anmeldefehler. Bitte eigene Firebase-Konfiguration prüfen (Orange Status).";
             }
         };
 
@@ -518,6 +545,7 @@
             if (user) {
                 currentUser = user;
                 document.getElementById('statusDot').classList.add('online'); 
+                console.log("AUTH OK: Benutzer erfolgreich angemeldet. UID:", user.uid);
                 
                 const urlParams = new URLSearchParams(window.location.search);
                 const sharedList = urlParams.get('list');
@@ -533,6 +561,7 @@
             } else {
                 currentUser = null;
                 document.getElementById('statusDot').classList.remove('online'); 
+                console.error("AUTH FEHLER: Benutzer nicht angemeldet. Speichern nicht möglich.");
                 document.getElementById('errorMsg').style.display = 'block';
                 document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden (Orange Status).";
             }
@@ -548,6 +577,7 @@
             if(unsubscribe) unsubscribe();
             if(!currentUser) return; 
             
+            console.log("Starte Subscription für Liste:", listId);
             currentListId = listId;
             document.getElementById('headerTitle').innerText = listId;
             
@@ -559,10 +589,11 @@
 
             unsubscribe = onSnapshot(listRef, (snap) => {
                 if (snap.exists()) {
-                    // Wichtig: Daten kommen aus der DB und überschreiben die aktuelle Reihenfolge
                     items = snap.data().items || [];
+                    console.log("DB Update erhalten. Anzahl Items:", items.length);
                     renderList();
                 } else {
+                    console.warn("DB Dokument existiert nicht. Erstelle leeres Dokument.");
                     saveItems([]); 
                     items = [];
                     renderList();
@@ -576,7 +607,7 @@
 
         async function saveItems(newItems) {
             if(!currentUser) {
-                console.error("FIREBASE ERROR: Cannot save items. User is not authenticated (currentUser is null).");
+                console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
                 document.getElementById('errorMsg').style.display = 'block';
                 document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden.";
                 return;
@@ -584,6 +615,7 @@
             try {
                 const listRef = getListDocRef(currentListId);
                 await setDoc(listRef, { items: newItems }, { merge: true });
+                console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
                 document.getElementById('errorMsg').style.display = 'none';
             } catch (e) { 
                 console.error("Save Error (Speicherfehler):", e);
@@ -599,9 +631,9 @@
             const text = overrideText || input.value.trim();
             if(!text) return;
             
-            // NEU: Hinzugefügt-Zeitstempel speichern
             const newItem = smartMode ? parseSmart(text) : { id: Date.now(), name: text, amount: 1, unit: '', category: 'Manuell', price: 0, checked: false, added: Date.now() };
             if (!newItem.added) newItem.added = Date.now();
+            console.log("Füge Item hinzu:", newItem.name, "Kategorie:", newItem.category);
 
             if(!topItems[newItem.name]) topItems[newItem.name] = 0;
             topItems[newItem.name]++;
@@ -642,7 +674,7 @@
             return { id: Date.now() + Math.random(), name: clean.charAt(0).toUpperCase() + clean.slice(1), amount, unit, category, price: 0, checked: false, added: Date.now() };
         }
 
-        // --- AUTOSUGGEST ---
+        // --- AUTOSUGGEST (Unverändert) ---
         window.showSuggestions = () => {
             clearTimeout(suggestionTimeout);
             suggestionTimeout = setTimeout(() => {
@@ -678,7 +710,7 @@
             document.getElementById('inputField').focus();
         };
 
-        // --- FILTER / SORT LOGIC (NEU) ---
+        // --- FILTER / SORT LOGIC (Unverändert) ---
         window.toggleSort = (mode) => {
             sortMode = mode;
             document.getElementById('sortCategory').classList.remove('active');
@@ -698,14 +730,19 @@
             renderList();
         };
 
-        // --- DRAG AND DROP LOGIC ---
+        // --- DRAG AND DROP LOGIC (Unverändert) ---
         window.handleDragStart = (e, id) => {
+            if (sortMode !== 'category' || filterMode !== 'all') {
+                 e.preventDefault();
+                 return;
+            }
             draggedId = id;
             e.dataTransfer.effectAllowed = 'move';
             e.target.classList.add('dragging');
         };
 
         window.handleDragOver = (e, targetId) => {
+            if (sortMode !== 'category' || filterMode !== 'all') return;
             e.preventDefault();
             const targetEl = document.getElementById(`item-${targetId}`);
             if (!targetEl || draggedId == targetId) return;
@@ -729,14 +766,13 @@
         };
 
         window.handleDrop = (e, targetId) => {
+            if (sortMode !== 'category' || filterMode !== 'all') return;
             e.preventDefault();
             
-            // Clean up drag visual cues
             window.handleDragEnd(e);
 
             if (!draggedId || draggedId == targetId) return;
 
-            // Finde das Item, das verschoben wird, und das Ziel-Item
             const itemToMove = items.find(i => i.id == draggedId);
             if (!itemToMove) return;
 
@@ -745,7 +781,6 @@
             const midpoint = rect.y + rect.height / 2;
             const insertAfter = e.clientY > midpoint;
 
-            // Erstelle eine neue Liste und berechne den neuen Index
             const newItems = items.filter(i => i.id != draggedId);
             let targetIndex = newItems.findIndex(i => i.id == targetId);
 
@@ -755,13 +790,14 @@
             
             newItems.splice(targetIndex, 0, itemToMove);
             
-            // Speichern der neu sortierten Liste
             saveItems(newItems);
         };
         
         window.handleDragEnd = (e) => {
             draggedId = null;
-            e.target.classList.remove('dragging');
+            if (e && e.target) {
+                e.target.classList.remove('dragging');
+            }
             document.querySelectorAll('.item-row').forEach(el => {
                 el.classList.remove('drag-over-top', 'drag-over-bottom');
             });
@@ -769,14 +805,14 @@
         // --- END DRAG AND DROP LOGIC ---
 
 
-        // --- CATEGORY COLLAPSE LOGIC ---
+        // --- CATEGORY COLLAPSE LOGIC (Unverändert) ---
         window.toggleCategoryCollapse = (categoryName) => {
             collapsedCategories[categoryName] = !collapsedCategories[categoryName];
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             renderList();
         };
 
-        // --- EDITING ---
+        // --- EDITING, QUICK ADD, BUDGET MODE, STANDARD FUNCTIONS (Unverändert) ---
         window.openEdit = (id) => {
             const item = items.find(i => i.id === id);
             if(!item) return;
@@ -802,7 +838,6 @@
         };
         window.closeEdit = () => { document.getElementById('editModal').style.display = 'none'; editItemId = null; };
 
-        // --- QUICK ADD ---
         window.quickAddItem = async () => {
             const input = document.getElementById('quickAddInput');
             const text = input.value.trim();
@@ -822,7 +857,6 @@
             }
         };
 
-        // --- BUDGET MODE ---
         window.toggleBudgetMode = () => {
             budgetMode = !budgetMode;
             const btn = document.getElementById('budgetBtn');
@@ -847,7 +881,6 @@
             saveItems(updated);
         };
 
-        // --- STANDARD FUNCTIONS ---
         window.updateQty = async (id, change) => await saveItems(items.map(i => i.id === id ? { ...i, amount: Math.max(1, (i.amount||1) + change) } : i));
         
         window.toggleCheck = async (id) => {
@@ -890,7 +923,7 @@
              await saveItems([...items, ...add]);
         };
 
-        // UI HELPERS
+        // UI HELPERS (Unverändert)
         window.toggleMode = () => {
             smartMode = !smartMode;
             const btn = document.getElementById('modeBtn');
@@ -914,7 +947,7 @@
             setTimeout(() => t.classList.remove('show'), 2000);
         };
 
-        // MULTI LIST
+        // MULTI LIST (Unverändert)
         window.switchList = (id) => { toggleDrawer(); subscribeToList(id); };
         window.createNewList = () => {
             const n = prompt("Name der neuen Liste:"); 
@@ -947,6 +980,7 @@
             
             try {
                 await deleteDoc(getListDocRef(listToDeleteName));
+                console.log("Liste in Firestore gelöscht:", listToDeleteName);
             } catch (error) {
                 console.warn("Could not delete list document in Firestore (Konnte Listendokument nicht löschen):", error);
             }
@@ -973,7 +1007,7 @@
         }
         window.toggleDrawer = () => { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); };
 
-        // SPEECH
+        // SPEECH (Unverändert)
         function initSpeech() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -994,38 +1028,30 @@
             const container = document.getElementById('listContainer');
             container.innerHTML = '';
             
-            // 1. Filtern und Sortieren der Gesamtdaten
             let displayItems = [...items];
             
             if (filterMode === 'unchecked') {
                 displayItems = displayItems.filter(i => !i.checked);
             }
 
-            // Die Sortierung nach Kategorie findet später statt, aber wir sortieren die gesamte Liste
-            // nach 'checked' (unerledigte zuerst) ODER nach 'added' (neueste zuerst), falls so gewünscht.
             if (sortMode === 'added') {
-                // Bei Sortierung nach "Hinzugefügt" (Added) wird nach Hinzugefügt-Zeit sortiert
                 displayItems.sort((a, b) => b.added - a.added);
             } else {
-                 // Standardmäßig (Kategorie) werden erledigte Items ans Ende geschoben
                  displayItems.sort((a,b) => a.checked - b.checked);
             }
 
 
-            // 2. Gruppieren nach Kategorie
             const groups = {};
             let sum = 0;
             let completedCount = 0;
-            let totalCount = items.length; // Gesamtanzahl bleibt für den Fortschritt
+            let totalCount = items.length; 
 
-            // Berechnung der Summe und des Fortschritts basierend auf der UNGEFILTERTEN Liste
             items.forEach(i => {
                 if(i.checked) completedCount++;
                 if(!i.checked) sum += (i.price || 0);
             });
             document.getElementById('totalSum').innerText = sum.toFixed(2) + " €";
             
-            // Gruppierung basiert auf den anzuzeigenden Elementen (displayItems)
             displayItems.forEach(i => {
                 const c = i.category || "Sonstiges"; 
                 if(!groups[c]) groups[c]=[]; 
@@ -1033,7 +1059,6 @@
             });
 
 
-            // 3. Fortschrittsbalken aktualisieren
             const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
             document.getElementById('progressBar').style.width = progress.toFixed(1) + '%';
             document.getElementById('progressBarContainer').style.display = totalCount > 0 ? 'block' : 'none';
@@ -1042,14 +1067,12 @@
             document.getElementById('emptyState').style.display = 'none';
 
 
-            // 4. Render-Reihenfolge der Kategorien definieren
             const order = ["Obst & Gemüse", "Kühlregal", "Vorrat", "Getränke", "Haushalt", "Manuell", "Sonstiges"];
             
             let categoriesToRender = sortMode === 'category' 
-                ? [...order, ...Object.keys(groups)].filter((v,i,a)=>a.indexOf(v)===i) // Nach fester Reihenfolge + neue Kategorien
-                : ['Alle Artikel']; // Eine einzige Kategorie für "Nach Hinzugefügt" Sortierung
+                ? [...order, ...Object.keys(groups)].filter((v,i,a)=>a.indexOf(v)===i) 
+                : ['Alle Artikel']; 
 
-            // Wenn nach Hinzugefügt sortiert wird, gibt es nur eine Gruppe mit allen Items
             if (sortMode === 'added') {
                 groups['Alle Artikel'] = displayItems;
             }
@@ -1059,7 +1082,6 @@
                 if(itemsInCat && itemsInCat.length) {
                     const isCollapsed = collapsedCategories[cat];
                     
-                    // Nur Category Sorting hat Titel und Collapse
                     if (sortMode === 'category') {
                          const titleWrapper = document.createElement('div');
                          titleWrapper.className = `cat-title-wrapper ${isCollapsed ? 'collapsed' : ''}`;
@@ -1075,9 +1097,7 @@
                     }
 
 
-                    if (!isCollapsed || sortMode === 'added') { // Zeige immer alle, wenn nach Datum sortiert
-                        // Bei Kategorie-Sortierung itemsInCat bereits nach checked sortiert,
-                        // bei Added-Sortierung ist itemsInCat bereits nach added sortiert.
+                    if (!isCollapsed || sortMode === 'added') { 
 
                         itemsInCat.forEach(item => {
                             let rightSide = '';
@@ -1094,13 +1114,12 @@
                                 }
                             }
                             
-                            // Kühl-Symbol (NEU)
                             const isChilled = item.category === 'Kühlregal' ? '<span style="color:#63b3ed; margin-right: 5px;">❄️</span>' : '';
 
                             const el = document.createElement('div');
                             el.className = `item-row ${item.checked ? 'checked' : ''}`;
                             el.id = `item-${item.id}`; 
-                            el.draggable = true; 
+                            el.draggable = (sortMode === 'category' && filterMode === 'all');
                             
                             el.setAttribute('ondragstart', `handleDragStart(event, ${item.id})`);
                             el.setAttribute('ondragover', `handleDragOver(event, ${item.id})`);
