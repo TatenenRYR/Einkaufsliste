@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V30 👑</title>
+    <title>SmartEinkauf V31 👑</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -445,13 +445,13 @@
             <input type="text" id="shopNameInput" placeholder="Name des Ladens (z.B. 'Aldi Musterstadt')" style="display:none;">
             <div class="modal-btns">
                 <button class="btn btn-cancel" onclick="closeShopModeModal()">Abbrechen</button>
-                <button class="btn btn-save" id="shopModeStartBtn" onclick="startShoppingMode()" style="display:none;">Starten</button>
+                <button class="btn btn-save" id="shopModeStartBtn" onclick="startShoppingMode(false)" style="display:none;">Starten</button>
                 <button class="btn btn-save" id="shopModeRecognizedBtn" onclick="startShoppingMode(true)" style="display:none;">Starten in <span id="recognizedShopName"></span></button>
             </div>
         </div>
     </div>
     
-    <!-- NEU: Produkt Location Modal -->
+    <!-- Produkt Location Modal -->
     <div class="modal-overlay" id="productLocationModal">
         <div class="modal">
             <h3 id="locProductName"></h3>
@@ -667,7 +667,7 @@
         
         const firebaseConfig = externalFirebaseConfig; 
         const appId = 'default-webspace-app'; 
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+        const initialAuthToken = null; // Entfernen der Canvas-Token-Abhängigkeit
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -703,12 +703,19 @@
         let items = [];
         let smartMode = true;
         let budgetMode = false;
-        let shopModeActive = localStorage.getItem('shopModeActive') === 'true'; 
-        let currentShop = localStorage.getItem('currentShop') || '';           
+        
+        // --- Status Reset bei Initialisierung ---
+        // Sicherstellen, dass der Shop Mode bei jedem Start sauber ist
+        let shopModeActive = false; 
+        let currentShop = '';           
         let nextGeoOrderIndex = 1;                                            
-        let geoWatchId = null; // ID für den GPS-Watch-Prozess
+        let geoWatchId = null; 
 
-        let sortMode = shopModeActive ? 'roadmap' : 'category'; 
+        // Setze lokalen Speicher auf den Startwert zurück (muss nach dem Lesen des Status erfolgen)
+        localStorage.setItem('shopModeActive', 'false');
+        localStorage.removeItem('currentShop');
+        
+        let sortMode = 'category'; 
         let filterMode = 'all';    
 
         let darkModePreference = localStorage.getItem('darkModePreference'); 
@@ -738,15 +745,15 @@
         function getStoreLayoutRef(shopName) {
             return doc(db, 'artifacts', appId, 'public', 'data', 'store_layouts', shopName);
         }
-        function getKnownStoreRef(shopName) { // NEU
-             return doc(db, 'artifacts', appId, 'public', 'data', 'known_stores', shopName);
+        function getKnownStoresDocRef() { 
+             return doc(db, 'artifacts', appId, 'public', 'data', 'known_stores', 'all_stores');
         }
 
         // =========================================================================
-        // SHOP MODE LOGIK (AKTUALISIERT FÜR GEOCENTER)
+        // GPS & GEOCENTER LOGIK
         // =========================================================================
         
-        // Haversine-Formel (GPS Distanz in Metern) - Mock da wir keine echten Karten haben
+        // Haversine-Formel (GPS Distanz in Metern)
         function getDistanceMeters(lat1, lon1, lat2, lon2) {
             const R = 6371000; // Erdradius in Metern
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -782,7 +789,7 @@
                 let recognizedStore = null;
 
                 try {
-                    const knownStoresRef = doc(db, 'artifacts', appId, 'public', 'data', 'known_stores', 'all_stores');
+                    const knownStoresRef = getKnownStoresDocRef();
                     const snap = await getDoc(knownStoresRef);
                     const allStores = snap.exists() ? snap.data().stores || [] : [];
                     
@@ -799,7 +806,7 @@
                     }
 
                     if (recognizedStore) {
-                        document.getElementById('shopModePrompt').innerText = `Laden erkannt. Möchtest du den Shopping-Modus hier starten?`;
+                        document.getElementById('shopModePrompt').innerText = `Laden erkannt: ${recognizedStore}. Möchtest du den Shopping-Modus starten?`;
                         document.getElementById('recognizedShopName').innerText = recognizedStore;
                         document.getElementById('shopNameInput').value = recognizedStore;
                         document.getElementById('shopModeRecognizedBtn').style.display = 'block';
@@ -846,7 +853,7 @@
                      await saveStoreLocation(shopName, position.coords.latitude, position.coords.longitude);
                 }, (error) => {
                     console.warn("[GEO] Konnte Standort zum Speichern des neuen Ladens nicht abrufen.", error);
-                });
+                }, { enableHighAccuracy: false, timeout: 2000 });
             }
 
             // 2. Zustand aktualisieren
@@ -867,20 +874,49 @@
             document.getElementById('inputField').focus();
         };
 
-        window.closeProductLocationModal = () => {
-            document.getElementById('productLocationModal').style.display = 'none';
+        window.finalizeShoppingTrip = async () => {
+            if (!shopModeActive) return;
+
+            // 1. GPS Tracking stoppen
+            stopLocationTracking(); 
+
+            // 2. Lernprozess starten (Geo-Order in Store Layout speichern)
+            await learnFromShoppingTrip(currentShop);
+
+            // 3. Erledigte Items löschen
+            const toDel = items.filter(i => i.checked); 
+            if(toDel.length) {
+                let lastDeleted = toDel; 
+                await saveItems(items.filter(i => !i.checked)); 
+            } else {
+                await saveItems(items);
+            }
+            
+            // 4. Zustand zurücksetzen
+            shopModeActive = false;
+            currentShop = '';
+            localStorage.setItem('shopModeActive', 'false');
+            localStorage.removeItem('currentShop');
+            sortMode = 'category';
+            
+            // 5. UI aktualisieren
+            document.getElementById('sortCategory').classList.add('active');
+            document.getElementById('sortAdded').classList.remove('active');
+            renderList();
+            renderFabBar();
+            document.getElementById('inputField').focus();
         };
+        
+        window.stopShoppingMode = window.finalizeShoppingTrip; 
 
         async function saveStoreLocation(shopName, lat, lon) {
              try {
-                const knownStoresRef = doc(db, 'artifacts', appId, 'public', 'data', 'known_stores', 'all_stores');
+                const knownStoresRef = getKnownStoresDocRef();
                 const snap = await getDoc(knownStoresRef);
                 const allStores = snap.exists() ? snap.data().stores || [] : [];
                 
-                // Entferne alte Instanz, falls vorhanden
                 const filteredStores = allStores.filter(s => s.name !== shopName);
                 
-                // Füge neue/aktualisierte Position hinzu
                 filteredStores.push({ name: shopName, lat: lat, lon: lon });
                 
                 await setDoc(knownStoresRef, { stores: filteredStores }, { merge: true });
@@ -896,7 +932,19 @@
                 if (navigator.geolocation) {
                     if (geoWatchId !== null) navigator.geolocation.clearWatch(geoWatchId);
 
-                    // Nur beim ersten erfolgreichen Abruf auflösen, ansonsten Fallback
+                    const errorCallback = (error) => {
+                        console.error(`[GPS LIVE] Standortfehler: ${error.message} (Code: ${error.code})`);
+                        
+                        if (error.code === error.PERMISSION_DENIED && !isRecognized) {
+                            resolve(false);
+                            return;
+                        }
+                        
+                        console.warn("[GPS] Standortzugriff fehlgeschlagen. Verwende Fallback-Modus.");
+                        document.getElementById('shopModeStatus').innerText = `Im Laden: ${currentShop} (GPS Fallback)`;
+                        resolve(true); 
+                    };
+
                     const successCallback = (position) => {
                         const lat = position.coords.latitude.toFixed(4);
                         const lon = position.coords.longitude.toFixed(4);
@@ -905,35 +953,24 @@
                         document.getElementById('mainHeader').classList.add('shop-mode');
                         document.getElementById('shopModeStatus').innerText = `Im Laden: ${currentShop} (GPS LIVE)`;
                         resolve(true);
-
-                        // Nach dem ersten erfolgreichen Abruf den Watcher behalten, aber Callback entfernen
-                        navigator.geolocation.clearWatch(geoWatchId);
-                        geoWatchId = navigator.geolocation.watchPosition(
-                            (p) => console.log(`[GPS LIVE] Standort-Update: Lat=${p.coords.latitude.toFixed(4)}, Lon=${p.coords.longitude.toFixed(4)}`),
-                            (e) => console.error(`[GPS LIVE] Watch Fehler: ${e.message}`),
-                            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-                        );
                     };
 
-                    const errorCallback = (error) => {
-                        console.error(`[GPS LIVE] Standortfehler: ${error.message} (Code: ${error.code})`);
-                        
-                        if (error.code === error.PERMISSION_DENIED && !isRecognized) {
-                            // Wenn der Zugriff verweigert wird und der Laden nicht erkannt wurde, breche ab.
-                            resolve(false);
-                            return;
-                        }
-                        
-                        console.warn("[GPS] Standortzugriff fehlgeschlagen. Verwende Fallback-Modus.");
-                        document.getElementById('mainHeader').classList.add('shop-mode');
-                        document.getElementById('shopModeStatus').innerText = `Im Laden: ${currentShop} (GPS Fallback)`;
-                        resolve(true); // Erlaube Start im Fallback-Modus
-                    };
-
+                    // Starte Watch Position nach dem ersten Abruf
                     navigator.geolocation.getCurrentPosition(successCallback, errorCallback, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
+
+                    // Setze den Watcher für kontinuierliche Updates (zum Lernen der Route)
+                    geoWatchId = navigator.geolocation.watchPosition(
+                        (position) => {
+                             // Hier würde in einer echten App die KI-Logik kontinuierlich die Route optimieren
+                             // Wir nutzen es hier nur zum Logging
+                             console.log(`[GPS LIVE] Watch Update: Lat=${position.coords.latitude.toFixed(4)}, Lon=${position.coords.longitude.toFixed(4)}`);
+                        }, 
+                        errorCallback,
+                        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                    );
+
                 } else {
                     console.warn("[GPS] Geolocation nicht unterstützt. Verwende Fallback.");
-                    document.getElementById('mainHeader').classList.add('shop-mode');
                     document.getElementById('shopModeStatus').innerText = `Im Laden: ${currentShop} (GPS Fallback)`;
                     resolve(true); 
                 }
@@ -1036,83 +1073,116 @@
         }
         
         // =========================================================================
-        // UI HILFSFUNKTIONEN (Produkt Location)
+        // AUTH & DB HANDLER (Hardening)
         // =========================================================================
 
-        window.openProductLocationModal = (id) => {
-            if (!shopModeActive) return; // Nur im Shop Mode aktiv
-
-            const item = items.find(i => i.id === id);
-            if (!item || item.checked) return; // Nicht für erledigte Items
-
-            document.getElementById('locProductName').innerText = item.name;
-            document.getElementById('locShopName').innerText = currentShop;
-
-            let learnedLocation = 'Unbekannt, gehe zur Kategorie.';
-            let locationColor = 'var(--text-light)';
-
-            if (item.geoOrderIndex !== undefined) {
-                 // Mockup der Position basierend auf dem gelernten Index
-                 const avgIndex = item.geoOrderIndex;
-                 const aisle = Math.floor(avgIndex / 5) + 1; // Alle 5 Items ein neuer Gang
-                 const shelfSection = ['Anfang', 'Mitte links', 'Mitte rechts', 'Ende'][Math.floor((avgIndex % 5) / 1.25)];
-                 
-                 learnedLocation = `Gang ${aisle}, Regal ${shelfSection}`;
-                 locationColor = 'var(--shop-mode)';
-
-            } else {
-                 learnedLocation = `Keine Route gelernt. (Kategorie: ${item.category})`;
-                 locationColor = 'var(--danger-text)';
+        // INIT AUTH
+        const initAuth = async () => {
+            console.log("Starte Authentifizierung...");
+            try {
+                // Nur anonyme Anmeldung für Webspace/öffentliche Listen
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Auth Error (Anmeldefehler):", error);
+                const errorCode = error.code || 'unknown';
+                console.error(`AUTH Error Code: ${errorCode}`);
+                displayError("Anmeldung fehlgeschlagen. Bitte Firebase-Konfiguration prüfen.", true, errorCode);
             }
-            
-            document.getElementById('locProductLocation').innerText = learnedLocation;
-            document.getElementById('locProductLocation').style.color = locationColor;
-            document.getElementById('productLocationModal').style.display = 'flex';
-        }
-
-        window.toggleCheck = async (id) => {
-            hapticFeedback('check'); 
-            
-            const updated = items.map(i => {
-                if (i.id === id) {
-                    const isChecked = !i.checked;
-                    
-                    if (shopModeActive && !isChecked && !item.checked) {
-                        // Wenn der Benutzer den Artikel im SSM anklickt, um ihn zu lokalisieren,
-                        // zeigen wir das Modal, anstatt ihn sofort abzuhaken.
-                        openProductLocationModal(id);
-                        return i; // Item bleibt ungecheckt
-                    }
-                    
-                    // Roadmap-Logik im Shop Mode: GeoIndex beim Abhaken setzen
-                    if (shopModeActive && isChecked) {
-                        i.geoOrderIndex = nextGeoOrderIndex++;
-                        console.log(`[SSM] Item ${i.name} hat Geo-Index ${i.geoOrderIndex.toFixed(1)} erhalten.`);
-                    }
-                    
-                    return { ...i, checked: isChecked };
-                }
-                return i;
-            });
-
-            await saveItems(updated);
         };
-        
-        // --- Anpassen des Klick-Handlings in der Liste ---
-        
-        function handleItemClick(id) {
-             const item = items.find(i => i.id === id);
 
-             if (shopModeActive && !item.checked) {
-                 // Im SSM: Klick auf Details zeigt Lokalisierung
-                 openProductLocationModal(id);
-             } else {
-                 // Normal: Klick auf Details öffnet Edit Modal
-                 openEdit(id);
-             }
+        initAuth();
+
+        // AUTH LISTENER
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('statusDot').classList.add('online'); 
+                console.log("AUTH OK: Benutzer erfolgreich anonym angemeldet. UID:", user.uid);
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const sharedList = urlParams.get('list');
+                if (sharedList && !myLists.includes(sharedList)) {
+                    myLists.push(sharedList);
+                    localStorage.setItem('myLists', JSON.stringify(myLists));
+                    currentListId = sharedList;
+                }
+                
+                subscribeToList(currentListId);
+                renderDrawer();
+                renderFavorites();
+                renderFabBar(); 
+                
+                if (shopModeActive) {
+                    // Falls die Seite im Shop Mode neu geladen wurde, Tracking re-initialisieren
+                    startLocationTracking(true); 
+                }
+
+                document.getElementById('errorMsg').style.display = 'none'; 
+            } else {
+                currentUser = null;
+                document.getElementById('statusDot').classList.remove('online'); 
+                console.warn("AUTH FEHLER: Anonyme Anmeldung fehlgeschlagen.");
+            }
+        });
+
+        // DB SYNC 
+        function subscribeToList(listId) {
+            if(unsubscribe) unsubscribe();
+            if(!currentUser) return; 
+            
+            console.log("Starte Subscription für Liste:", listId);
+            currentListId = listId;
+            document.getElementById('headerTitle').innerText = listId;
+            
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
+            window.history.pushState({path:newUrl},'',newUrl);
+            renderDrawer();
+
+            const listRef = getListDocRef(listId);
+
+            unsubscribe = onSnapshot(listRef, (snap) => {
+                if (snap.exists()) {
+                    items = snap.data().items || [];
+                    console.log("DB Update erhalten. Anzahl Items:", items.length);
+                    renderList();
+                } else {
+                    console.warn("DB Dokument existiert nicht. Versuche, leeres Dokument zu erstellen.");
+                    // V31 Hardening: Versuche hier, das Dokument zu erstellen
+                    saveItems([], true); 
+                    items = [];
+                    renderList();
+                }
+            }, (error) => {
+                console.error("Snapshot Error (Abonnement-Fehler):", error);
+                const errorCode = error.code || 'unknown';
+                console.error(`DB Error Code (Snapshot): ${errorCode}`);
+                displayError("Fehler beim Abonnieren der Liste (Regelfehler oder Verbindung).", false, errorCode);
+            });
+        }
+
+        async function saveItems(newItems, isInitialCreation = false) {
+            if(!currentUser) {
+                console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
+                displayError("Du bist nicht angemeldet. Daten können nicht gespeichert werden.", true, 'auth/unauthenticated');
+                return;
+            }
+            try {
+                const listRef = getListDocRef(currentListId);
+                // Beim Initialisieren setzen wir force Merge false, sonst true
+                await setDoc(listRef, { items: newItems }, { merge: !isInitialCreation });
+                console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
+                document.getElementById('errorMsg').style.display = 'none';
+            } catch (e) { 
+                console.error("Save Error (Speicherfehler):", e);
+                const errorCode = e.code || 'unknown';
+                console.error(`DB Error Code (Write): ${errorCode}`);
+                displayError("Speicherfehler: Konnte Daten nicht speichern (Sicherheitsregeln verletzt?).", false, errorCode);
+            }
         }
         
-        // RENDER (AKTUALISIERT FÜR ROADMAP SORTIERUNG)
+        // --- Restliche Logik (renderList, Drag & Drop, etc.) ist identisch zu V30 ---
+
+        // RENDER (Unverändert)
         function renderList() {
             const container = document.getElementById('listContainer');
             container.innerHTML = '';
@@ -1246,7 +1316,6 @@
                             
                             const isChilled = item.category === 'Kühlregal' ? '<span style="color:#63b3ed; margin-right: 5px;">❄️</span>' : '';
                             
-                            // Roadmap Indikator
                             const geoIndicator = (shopModeActive && item.geoOrderIndex !== undefined) ? 
                                 `<span style="font-size:0.7rem; color: var(--shop-mode); font-weight: bold; margin-right: 5px;">#${item.geoOrderIndex.toFixed(1)}</span>` : '';
 
@@ -1265,9 +1334,7 @@
 
 
                             el.innerHTML = `
-                                <!-- WICHTIG: Im SSM hakt der Klick auf die Checkbox ab -->
                                 <div class="check-box" onclick="toggleCheck(${item.id})"></div>
-                                <!-- WICHTIG: Im SSM zeigt Klick auf Details die Lokalisierung -->
                                 <div class="details" onclick="handleItemClick(${item.id})">
                                     ${geoIndicator}
                                     ${isChilled}
@@ -1412,7 +1479,6 @@
             let locationColor = 'var(--shop-mode)';
 
             if (item.geoOrderIndex !== undefined) {
-                 // KI-Simulation der Position
                  const avgIndex = item.geoOrderIndex;
                  const aisle = Math.floor(avgIndex / 5) + 1; 
                  const shelfSection = ['Anfang', 'Mitte links', 'Mitte rechts', 'Ende'][Math.floor((avgIndex % 5) / 1.25)];
@@ -1437,15 +1503,13 @@
              const item = items.find(i => i.id === id);
 
              if (shopModeActive && !item.checked) {
-                 // Im SSM: Klick auf Details zeigt Lokalisierung
                  openProductLocationModal(id);
              } else {
-                 // Normal: Klick auf Details öffnet Edit Modal
                  openEdit(id);
              }
         }
         
-        // --- Vereinfachte UI Funktionen (Unverändert) ---
+        // --- Restliche UI Funktionen (Unverändert) ---
         function hapticFeedback(style) {
             if (!('vibrate' in navigator) || !navigator.vibrate) return;
             if (style === 'check' || style === 'start_drag') {
@@ -1487,9 +1551,27 @@
             listToDeleteName = null;
         };
 
-        // ... (restliche UI-Funktionen, die keinen Firebase- oder Shop Mode-Kontext benötigen, bleiben unverändert)
-        // ... (Der restliche Code ist der gleiche wie in V29, um Platz zu sparen, da die Änderungen in den oberen Abschnitten konzentriert sind.)
+        window.toggleSort = (mode) => {
+            sortMode = mode;
+            document.getElementById('sortCategory').classList.remove('active');
+            document.getElementById('sortAdded').classList.remove('active');
+            document.getElementById(`sort${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add('active');
+            renderList();
+        };
+
+        window.toggleFilter = (mode) => {
+            if (mode === 'unchecked' && filterMode === 'unchecked') {
+                filterMode = 'all';
+                document.getElementById('filterUnchecked').classList.remove('active');
+            } else {
+                filterMode = 'unchecked';
+                document.getElementById('filterUnchecked').classList.add('active');
+            }
+            renderList();
+        };
+        
+        // ... (Der Rest der Standardfunktionen bleibt unverändert)
+
     </script>
 </body>
 </html>
-
