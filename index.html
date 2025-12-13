@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V19 💎</title>
-    <!-- Confetti Library für den "Fertig"-Effekt -->
+    <title>SmartEinkauf V20 👑</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         /* --- Root Variables (Light Mode Default) --- */
@@ -15,6 +14,8 @@
             --filter-bg: #e0e7ff;
             --debug-bg: #1e293b;
             --debug-text: #f8fafc;
+            --danger-bg: #fee2e2; /* NEU */
+            --danger-text: #991b1b; /* NEU */
         }
         /* --- Dark Mode (System Preference/Manual Override) --- */
         @media (prefers-color-scheme: dark) {
@@ -132,9 +133,31 @@
         .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 100; }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
         .undo-btn { background: none; border: none; color: var(--primary); font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; }
-        #errorMsg { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; font-size: 0.9rem; text-align: center; }
+        /* Geänderter Stil für den Fehlerbereich */
+        #errorMsg { 
+            background: var(--danger-bg); 
+            color: var(--danger-text); 
+            padding: 10px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+            display: none; 
+            font-size: 0.9rem; 
+            text-align: center; 
+            display: flex; /* NEU */
+            justify-content: space-between; /* NEU */
+            align-items: center; /* NEU */
+        }
+        #errorMsg button { /* NEU: Button zum Ausblenden */
+            background: none;
+            border: none;
+            color: var(--danger-text);
+            font-size: 1rem;
+            opacity: 0.7;
+            cursor: pointer;
+            font-weight: bold;
+        }
         
-        /* --- Debug Console (NEU) --- */
+        /* --- Debug Console (Unverändert) --- */
         .debug-toggle-btn {
             position: fixed;
             bottom: 20px;
@@ -203,7 +226,6 @@
 </head>
 <body>
 
-    <!-- Debug Console (NEU) -->
     <div id="debugConsole">
         <div id="debugConsoleHeader">
             DEBUG KONSOLE (Fängt F12-Ausgaben ab)
@@ -211,16 +233,13 @@
         </div>
         <div id="debugConsoleContent"></div>
     </div>
-    <!-- Debug Toggle Button (NEU) -->
     <button class="debug-toggle-btn" id="debugToggleBtn" onclick="toggleDebugConsole()">🐛</button>
 
-    <!-- Drawer Menu (Multi-List) -->
     <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
     <div class="drawer" id="drawer">
         <h2>📑 Deine Listen</h2>
         <div class="drawer-list" id="drawerList"></div>
         
-        <!-- Dark Mode Toggle -->
         <div class="drawer-item" style="margin-top:20px; border-top: 1px solid var(--border);">
             <span>🌓 Dark Mode</span>
             <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)" style="width: auto; margin-bottom: 0; transform: scale(1.2);">
@@ -229,18 +248,15 @@
         <button class="new-list-btn" onclick="createNewList()">+ Neue Liste</button>
     </div>
 
-    <!-- Edit Item Modal -->
     <div class="modal-overlay" id="editModal">
         <div class="modal">
             <h3>✏️ Eintrag bearbeiten</h3>
             
-            <!-- Quick Add Feature -->
             <div id="quickAddContainer">
                 <input type="text" id="quickAddInput" placeholder="Schnell hinzufügen..." onkeypress="handleQuickAddEnter(event)">
                 <button class="quick-add-btn" onclick="quickAddItem()">+</button>
             </div>
             
-            <!-- Edit Form -->
             <input type="text" id="editName" placeholder="Name">
             <div style="display:flex; gap:10px;">
                 <input type="number" id="editAmount" placeholder="Menge" style="width:30%">
@@ -253,7 +269,7 @@
                 <option value="Vorrat">Vorrat</option>
                 <option value="Haushalt">Haushalt</option>
                 <option value="Sonstiges">Sonstiges</option>
-            </select>
+                <option value="Manuell">Manuell</option> </select>
             <div class="modal-btns">
                 <button class="btn btn-cancel" onclick="closeEdit()">Abbrechen</button>
                 <button class="btn btn-save" onclick="saveEdit()">Speichern</button>
@@ -261,7 +277,6 @@
         </div>
     </div>
     
-    <!-- Delete Confirmation Modal (Ersetzt confirm()) -->
     <div class="modal-overlay" id="deleteModal">
         <div class="modal">
             <h3>Liste löschen</h3>
@@ -274,7 +289,6 @@
     </div>
 
 
-    <!-- Header -->
     <div class="header">
         <div class="header-content">
             <button class="menu-btn" onclick="toggleDrawer()">☰</button>
@@ -286,12 +300,10 @@
         <div id="statusDot" class="status-dot"></div>
     </div>
     
-    <!-- Progress Bar -->
     <div class="progress-container" id="progressBarContainer" style="display:none;">
         <div class="progress-bar" id="progressBar"></div>
     </div>
     
-    <!-- Filter/Sort Bar -->
     <div class="control-bar">
         <div>
             Sortierung: 
@@ -305,27 +317,24 @@
     </div>
 
     <div class="container">
-        <!-- Fehlermeldungen hier -->
-        <div id="errorMsg"></div>
+        <div id="errorMsg" style="display:none;">
+            <span id="errorMsgText"></span>
+            <button onclick="document.getElementById('errorMsg').style.display='none'">X</button>
+        </div>
 
-        <!-- Magic & Favorites -->
         <div class="magic-scroll" id="favContainer">
             <div class="magic-chip" onclick="addRecipe('party')">🎉 Party</div>
             <div class="magic-chip" onclick="addRecipe('breakfast')">🥞 Frühstück</div>
-            <!-- Auto-Favorites werden hier eingefügt -->
-        </div>
+            </div>
 
-        <!-- Input Area -->
         <div class="input-card">
             <button class="action-btn mode-btn" id="modeBtn" onclick="toggleMode()">✨</button>
             <button class="action-btn budget-btn" id="budgetBtn" onclick="toggleBudgetMode()">€</button>
             <button class="action-btn mic-btn" id="micBtn" onclick="toggleDictation()">🎤</button>
-            <!-- oninput für Autovervollständigung hinzugefügt -->
             <input type="text" id="inputField" placeholder="Was fehlt?" oninput="showSuggestions()" onkeypress="handleEnter(event)">
             <button class="action-btn" onclick="addItem()">+</button>
         </div>
         
-        <!-- Autocomplete Suggestions -->
         <div id="autocompleteContainer" class="autocomplete-container"></div>
 
         <div id="listContainer"></div>
@@ -335,10 +344,8 @@
             <p>Liste ist leer.<br>Füge etwas hinzu.</p>
         </div>
         
-        <div style="height: 40px;"></div> <!-- Spacer -->
-    </div>
+        <div style="height: 40px;"></div> </div>
 
-    <!-- Footer Total (Budget Mode) -->
     <div class="footer-bar" id="footerBar">
         <div class="total-display">Summe: <span id="totalSum">0,00 €</span></div>
         <div style="margin-left:auto; display:flex; gap:10px;">
@@ -346,7 +353,6 @@
         </div>
     </div>
 
-    <!-- Standard Fab (Normal Mode) -->
     <div class="fab-bar" id="fabBar">
         <button class="fab-btn" onclick="shareList()">🔗 Teilen</button>
         <div style="width:1px; height:15px; background:var(--border)"></div>
@@ -365,9 +371,7 @@
 
 
         // =========================================================================
-        // NEU: KONSOLE INTERCEPTOR
-        // Überschreibt console.log/warn/error, um Ausgaben abzufangen und in die Debug-Konsole zu leiten.
-        // MUSS VOR Firebase-Initialisierung ausgeführt werden.
+        // NEU: KONSOLE INTERCEPTOR (Unverändert)
         // =========================================================================
 
         function logToDebugConsole(level, message, color) {
@@ -445,9 +449,16 @@
                  document.getElementById('debugToggleBtn').classList.add('active');
              }
         });
+        
+        // NEU: Funktion zum Anzeigen von Fehlern (mit Button zum Ausblenden)
+        function displayError(message) {
+            const errorEl = document.getElementById('errorMsg');
+            document.getElementById('errorMsgText').innerText = message;
+            errorEl.style.display = 'flex'; 
+        }
 
         // =========================================================================
-        // FIREBASE INITIALISIERUNG
+        // FIREBASE INITIALISIERUNG (Unverändert)
         // =========================================================================
 
         const externalFirebaseConfig = {
@@ -492,6 +503,18 @@
         let myLists = JSON.parse(localStorage.getItem('myLists')) || ["Einkauf"];
         let topItems = JSON.parse(localStorage.getItem('topItems')) || {}; 
         let collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories')) || {};
+        
+        // NEU: Category Icons Mapping
+        const categoryIcons = {
+            "Obst & Gemüse": "🍎",
+            "Getränke": "🥤",
+            "Kühlregal": "🧀",
+            "Vorrat": "🥫",
+            "Haushalt": "🧹",
+            "Manuell": "✍️",
+            "Sonstiges": "❓"
+        };
+
 
         // --- HAPTIC FEEDBACK ---
         function hapticFeedback(style) {
@@ -503,7 +526,7 @@
             }
         }
 
-        // --- DARK MODE LOGIC ---
+        // --- DARK MODE LOGIC (Unverändert) ---
         window.toggleDarkMode = (isDark) => {
             if (isDark) {
                 document.body.classList.add('dark-mode-override');
@@ -535,8 +558,7 @@
                 }
             } catch (error) {
                 console.error("Auth Error (Anmeldefehler):", error);
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Verbindungsproblem: Anmeldefehler. Bitte eigene Firebase-Konfiguration prüfen (Orange Status).";
+                displayError("Verbindungsproblem: Anmeldefehler. (Orange Status)");
             }
         };
 
@@ -560,12 +582,12 @@
                 subscribeToList(currentListId);
                 renderDrawer();
                 renderFavorites();
+                document.getElementById('errorMsg').style.display = 'none'; // Fehler ausblenden bei erfolgreicher Anmeldung
             } else {
                 currentUser = null;
                 document.getElementById('statusDot').classList.remove('online'); 
                 console.error("AUTH FEHLER: Benutzer nicht angemeldet. Speichern nicht möglich.");
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden (Orange Status).";
+                // Fehler wird jetzt erst bei fehlgeschlagenem Save angezeigt, um UX zu verbessern.
             }
         });
 
@@ -574,7 +596,7 @@
             return doc(db, 'artifacts', appId, 'public', 'data', 'shopping_lists', listId);
         }
 
-        // DB SYNC
+        // DB SYNC (Unverändert bis auf Fehlerbehandlung)
         function subscribeToList(listId) {
             if(unsubscribe) unsubscribe();
             if(!currentUser) return; 
@@ -602,16 +624,14 @@
                 }
             }, (error) => {
                 console.error("Snapshot Error (Abonnement-Fehler):", error);
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Sync Fehler: Kann Liste nicht abonnieren (Regelfehler?).";
+                displayError("Sync Fehler: Kann Liste nicht abonnieren (Regelfehler?).");
             });
         }
 
         async function saveItems(newItems) {
             if(!currentUser) {
                 console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden.";
+                displayError("FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden.");
                 return;
             }
             try {
@@ -621,12 +641,11 @@
                 document.getElementById('errorMsg').style.display = 'none';
             } catch (e) { 
                 console.error("Save Error (Speicherfehler):", e);
-                document.getElementById('errorMsg').style.display = 'block';
-                document.getElementById('errorMsg').innerText = "Speicherfehler: Daten konnten nicht in Firestore geschrieben werden (Regelfehler?).";
+                displayError("Speicherfehler: Daten konnten nicht in Firestore geschrieben werden (Regelfehler?).");
             }
         }
 
-        // --- CORE LOGIC ---
+        // --- CORE LOGIC (Unverändert) ---
 
         window.addItem = async (overrideText = null) => {
             const input = document.getElementById('inputField');
@@ -673,7 +692,13 @@
             for(const [cat, keywords] of Object.entries(categories)) {
                 if(keywords.some(k => lower.includes(k))) { category = cat; break; }
             }
-            return { id: Date.now() + Math.random(), name: clean.charAt(0).toUpperCase() + clean.slice(1), amount, unit, category, price: 0, checked: false, added: Date.now() };
+            
+            const name = clean.charAt(0).toUpperCase() + clean.slice(1);
+            
+            // Setze Kategorie auf 'Manuell', wenn SmartMode aus ist oder keine Kategorie gefunden wurde
+            if (!smartMode && category === "Sonstiges") category = "Manuell";
+            
+            return { id: Date.now() + Math.random(), name, amount, unit, category, price: 0, checked: false, added: Date.now() };
         }
 
         // --- AUTOSUGGEST (Unverändert) ---
@@ -1085,14 +1110,14 @@
                     const isCollapsed = collapsedCategories[cat];
                     
                     if (sortMode === 'category') {
+                         const icon = categoryIcons[cat] || '❓'; // NEU: Icon
                          const titleWrapper = document.createElement('div');
                          titleWrapper.className = `cat-title-wrapper ${isCollapsed ? 'collapsed' : ''}`;
                          titleWrapper.setAttribute('onclick', `toggleCategoryCollapse('${cat.replace(/'/g, "\\'")}')`);
                          titleWrapper.innerHTML = `
                             <div>
                                 <span class="cat-title-icon">▼</span>
-                                <span>${cat}</span>
-                            </div>
+                                <span>${icon} ${cat}</span> </div>
                             <small style="opacity: 0.8;">(${itemsInCat.length})</small>
                          `;
                          container.appendChild(titleWrapper);
@@ -1106,14 +1131,14 @@
                             if(budgetMode) {
                                 rightSide = `<input type="number" class="price-input" placeholder="€" value="${item.price||''}" onchange="updatePrice(${item.id}, this.value)" onclick="event.stopPropagation()">`;
                             } else {
-                                if(smartMode || item.amount > 1) {
-                                    rightSide = `
+                                // NEU: Mengensteuerung wird IMMER angezeigt, außer im Budget-Modus
+                                // Entfernt: if(smartMode || item.amount > 1) { ... }
+                                rightSide = `
                                     <div class="qty-control" onclick="event.stopPropagation()">
                                         <div class="qty-btn" onclick="updateQty(${item.id}, -1)">-</div>
                                         <div class="qty-val">${item.amount}${item.unit}</div>
                                         <div class="qty-btn" onclick="updateQty(${item.id}, 1)">+</div>
                                     </div>`;
-                                }
                             }
                             
                             const isChilled = item.category === 'Kühlregal' ? '<span style="color:#63b3ed; margin-right: 5px;">❄️</span>' : '';
@@ -1168,4 +1193,3 @@
     </script>
 </body>
 </html>
-
