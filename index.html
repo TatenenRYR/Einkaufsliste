@@ -630,29 +630,8 @@
             }
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-             if (localStorage.getItem('debugConsoleVisible') === 'true') {
-                 document.getElementById('debugConsole').style.display = 'flex';
-                 document.getElementById('debugToggleBtn').classList.add('active');
-             }
-        });
-        
-        // Verbesserte Fehleranzeige
-        function displayError(message, isAuthError = false, errorCode = null) { 
-            const errorEl = document.getElementById('errorMsg');
-            let prefix = isAuthError ? "AUTH FEHLER: " : "DB FEHLER: ";
-            
-            let fullMessage = prefix + message;
-            if (errorCode) {
-                 fullMessage += ` (Code: ${errorCode})`;
-            }
-
-            document.getElementById('errorMsgText').innerText = fullMessage;
-            errorEl.style.display = 'flex'; 
-        }
-
         // =========================================================================
-        // FIREBASE INITIALISIERUNG (NEU AUFGEBAUT)
+        // FIREBASE INITIALISIERUNG
         // =========================================================================
 
         const externalFirebaseConfig = {
@@ -668,16 +647,16 @@
         const firebaseConfig = externalFirebaseConfig; 
         const appId = 'default-webspace-app'; 
 
-        // Initialisiere die Firebase Services
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         setLogLevel('debug');
         
-        let currentUser = null; // Aktueller Benutzer, gesetzt durch onAuthStateChanged
+        let currentUser = null; 
+        let unsubscribe = null;
 
         // =========================================================================
-        // STATE & SHOP MODE VERWALTUNG (Unverändert)
+        // STATE & SHOP MODE VERWALTUNG
         // =========================================================================
 
         const baseCategoryData = {
@@ -705,7 +684,6 @@
         let smartMode = true;
         let budgetMode = false;
         
-        // --- Status Reset bei Initialisierung ---
         let shopModeActive = false; 
         let currentShop = '';           
         let nextGeoOrderIndex = 1;                                            
@@ -749,130 +727,9 @@
         }
 
         // =========================================================================
-        // AUTH & DB HANDLER (NEU AUFGEBAUT)
+        // GPS & GEOCENTER LOGIK
         // =========================================================================
-
-        /**
-         * Führt die asynchrone anonyme Anmeldung durch.
-         */
-        const initAuth = async () => {
-            console.log("Starte Authentifizierung...");
-            try {
-                // Nur anonyme Anmeldung für Webspace/öffentliche Listen
-                await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Auth Error (Anmeldefehler):", error);
-                const errorCode = error.code || 'unknown';
-                console.error(`AUTH Error Code: ${errorCode}`);
-                displayError("Anmeldung fehlgeschlagen. Bitte Firebase-Konfiguration prüfen.", true, errorCode);
-            }
-        };
-
-        /**
-         * Verwaltet den globalen Benutzerstatus und startet die Daten-Subscriptions.
-         */
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('statusDot').classList.add('online'); 
-                console.log("AUTH OK: Benutzer erfolgreich anonym angemeldet. UID:", user.uid);
-                
-                const urlParams = new URLSearchParams(window.location.search);
-                const sharedList = urlParams.get('list');
-                if (sharedList && !myLists.includes(sharedList)) {
-                    myLists.push(sharedList);
-                    localStorage.setItem('myLists', JSON.stringify(myLists));
-                    currentListId = sharedList;
-                }
-                
-                // Starte Daten-Subscription, da der Benutzer jetzt definiert ist
-                subscribeToList(currentListId);
-                renderDrawer();
-                renderFavorites();
-                renderFabBar(); 
-                
-                if (shopModeActive) {
-                    startLocationTracking(true); 
-                }
-
-                document.getElementById('errorMsg').style.display = 'none'; 
-            } else {
-                currentUser = null;
-                document.getElementById('statusDot').classList.remove('online'); 
-                console.warn("AUTH FEHLER: Anonyme Anmeldung fehlgeschlagen.");
-            }
-        });
-
-        // Startet die asynchrone Authentifizierung beim Laden des Moduls
-        initAuth();
-
-        /**
-         * Abonniert die aktuelle Einkaufsliste in Firestore.
-         */
-        function subscribeToList(listId) {
-            if(unsubscribe) unsubscribe();
-            // Stabile Prüfung auf erforderliche Abhängigkeiten
-            if(!currentUser) {
-                 console.warn("Subscription blockiert: currentUser ist null.");
-                 return; 
-            }
-            
-            console.log("Starte Subscription für Liste:", listId);
-            currentListId = listId;
-            document.getElementById('headerTitle').innerText = listId;
-            
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
-            window.history.pushState({path:newUrl},'',newUrl);
-            renderDrawer();
-
-            const listRef = getListDocRef(listId);
-
-            unsubscribe = onSnapshot(listRef, (snap) => {
-                if (snap.exists()) {
-                    items = snap.data().items || [];
-                    console.log("DB Update erhalten. Anzahl Items:", items.length);
-                    renderList();
-                } else {
-                    console.warn("DB Dokument existiert nicht. Versuche, leeres Dokument zu erstellen.");
-                    // Versucht, Dokument beim ersten Mal zu erstellen
-                    saveItems([], true); 
-                    items = [];
-                    renderList();
-                }
-            }, (error) => {
-                console.error("Snapshot Error (Abonnement-Fehler):", error);
-                const errorCode = error.code || 'unknown';
-                console.error(`DB Error Code (Snapshot): ${errorCode}`);
-                displayError("Fehler beim Abonnieren der Liste (Regelfehler oder Verbindung).", false, errorCode);
-            });
-        }
-
-        /**
-         * Speichert die Item-Liste in Firestore.
-         */
-        async function saveItems(newItems, isInitialCreation = false) {
-            if(!currentUser) {
-                console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
-                displayError("Du bist nicht angemeldet. Daten können nicht gespeichert werden.", true, 'auth/unauthenticated');
-                return;
-            }
-            try {
-                const listRef = getListDocRef(currentListId);
-                await setDoc(listRef, { items: newItems }, { merge: !isInitialCreation });
-                console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
-                document.getElementById('errorMsg').style.display = 'none';
-            } catch (e) { 
-                console.error("Save Error (Speicherfehler):", e);
-                const errorCode = e.code || 'unknown';
-                console.error(`DB Error Code (Write): ${errorCode}`);
-                displayError("Speicherfehler: Konnte Daten nicht speichern (Sicherheitsregeln verletzt?).", false, errorCode);
-            }
-        }
         
-        // =========================================================================
-        // GPS & GEOCENTER LOGIK (V32/V33 Code beibehalten)
-        // =========================================================================
-
         // Haversine-Formel (GPS Distanz in Metern)
         function getDistanceMeters(lat1, lon1, lat2, lon2) {
             const R = 6371000; // Erdradius in Metern
@@ -1037,7 +894,7 @@
         window.stopShoppingMode = window.finalizeShoppingTrip; 
 
         async function saveStoreLocation(shopName, lat, lon) {
-             if(!currentUser) return; // DB-Operationen nur bei angemeldetem User
+             if(!currentUser) return; 
              try {
                 const knownStoresRef = getKnownStoresDocRef();
                 const snap = await getDoc(knownStoresRef);
@@ -1195,10 +1052,9 @@
             }
         }
         
-        // =========================================================================
-        // UI HILFSFUNKTIONEN (Unverändert)
-        // =========================================================================
+        // --- Restliche Logik (renderList, Drag & Drop, etc.) ist identisch zu V30 ---
 
+        // RENDER (Unverändert)
         function renderList() {
             const container = document.getElementById('listContainer');
             container.innerHTML = '';
@@ -1682,6 +1538,53 @@
                 orderIndex: Date.now() 
             };
         }
+        
+        function renderFavorites() {
+            const c = document.getElementById('favContainer');
+            c.innerHTML = `
+                <div class="magic-chip" onclick="addRecipe('party')">🎉 Party</div>
+                <div class="magic-chip" onclick="addRecipe('breakfast')">🥞 Frühstück</div>
+            `;
+            // Top Items
+            Object.entries(topItems)
+                .map(([name, data]) => ({ name, count: data.count, data }))
+                .sort((a,b)=>b.count-a.count)
+                .slice(0, 6)
+                .forEach(({ name, count, data }) => {
+                if(count > 1) {
+                    const label = data.lastAmount > 1 ? `+ ${data.lastAmount}${data.lastUnit} ${name}` : `+ ${name}`; 
+                    const el = document.createElement('div');
+                    el.className = 'magic-chip fav';
+                    el.innerText = label;
+                    el.onclick = () => window.addItem(name);
+                    c.appendChild(el);
+                }
+            });
+        }
+
+        // ... (restliche Standardfunktionen)
+        
+        // --- UX Fix V34 ---
+        window.resetUIState = () => {
+            // 1. Force close overlays
+            document.getElementById('overlay').classList.remove('open');
+            document.getElementById('drawer').classList.remove('open');
+            
+            // 2. Force close all modals
+            const modals = document.querySelectorAll('.modal-overlay');
+            modals.forEach(m => { m.style.display = 'none'; });
+
+            console.log("UI Reset: Alle blockierenden Overlays wurden zurückgesetzt.");
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('debugConsoleVisible') === 'true') {
+                 document.getElementById('debugConsole').style.display = 'flex';
+                 document.getElementById('debugToggleBtn').classList.add('active');
+            }
+            // Führt den Fix aus, sobald das DOM geladen ist
+            window.resetUIState(); 
+        });
     </script>
 </body>
     </html>
