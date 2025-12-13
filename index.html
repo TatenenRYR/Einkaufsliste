@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V35 👑</title>
+    <title>SmartEinkauf V36 👑</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -946,6 +946,10 @@
             }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
         };
 
+        window.closeShopModeModal = () => {
+            document.getElementById('shopModeModal').style.display = 'none';
+        };
+
 
         window.startShoppingMode = async (recognized = false) => {
             console.log("[SSM] Starte Shopping Mode...");
@@ -984,8 +988,8 @@
             renderList();
             renderFabBar();
             
-            // KORREKTUR: Das Modal muss nach Abschluss der asynchronen Operationen geschlossen werden.
-            closeShopModeModal(); 
+            // KORREKTUR V35: Timeout erzwingen, um asynchrone UI-Updates zu ermöglichen.
+            setTimeout(closeShopModeModal, 10);
             
             document.getElementById('inputField').focus();
         };
@@ -1706,6 +1710,29 @@
             };
         }
         
+        function renderFavorites() {
+            const c = document.getElementById('favContainer');
+            c.innerHTML = `
+                <div class="magic-chip" onclick="addRecipe('party')">🎉 Party</div>
+                <div class="magic-chip" onclick="addRecipe('breakfast')">🥞 Frühstück</div>
+            `;
+            // Top Items
+            Object.entries(topItems)
+                .map(([name, data]) => ({ name, count: data.count, data }))
+                .sort((a,b)=>b.count-a.count)
+                .slice(0, 6)
+                .forEach(({ name, count, data }) => {
+                if(count > 1) {
+                    const label = data.lastAmount > 1 ? `+ ${data.lastAmount}${data.lastUnit} ${name}` : `+ ${name}`; 
+                    const el = document.createElement('div');
+                    el.className = 'magic-chip fav';
+                    el.innerText = label;
+                    el.onclick = () => window.addItem(name);
+                    c.appendChild(el);
+                }
+            });
+        }
+        
         window.resetUIState = () => {
             // 1. Force close overlays
             document.getElementById('overlay').classList.remove('open');
@@ -1728,4 +1755,4 @@
         });
     </script>
 </body>
-                </html>
+</html>
