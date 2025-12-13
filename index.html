@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V31 👑</title>
+    <title>SmartEinkauf V32 👑</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -445,7 +445,7 @@
             <input type="text" id="shopNameInput" placeholder="Name des Ladens (z.B. 'Aldi Musterstadt')" style="display:none;">
             <div class="modal-btns">
                 <button class="btn btn-cancel" onclick="closeShopModeModal()">Abbrechen</button>
-                <button class="btn btn-save" id="shopModeStartBtn" onclick="startShoppingMode(false)" style="display:none;">Starten</button>
+                <button class="btn btn-save" id="shopModeStartBtn" onclick="startShoppingMode(false)" style="display:none;">Manuell starten</button>
                 <button class="btn btn-save" id="shopModeRecognizedBtn" onclick="startShoppingMode(true)" style="display:none;">Starten in <span id="recognizedShopName"></span></button>
             </div>
         </div>
@@ -667,7 +667,7 @@
         
         const firebaseConfig = externalFirebaseConfig; 
         const appId = 'default-webspace-app'; 
-        const initialAuthToken = null; // Entfernen der Canvas-Token-Abhängigkeit
+        const initialAuthToken = null; 
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -705,13 +705,11 @@
         let budgetMode = false;
         
         // --- Status Reset bei Initialisierung ---
-        // Sicherstellen, dass der Shop Mode bei jedem Start sauber ist
         let shopModeActive = false; 
         let currentShop = '';           
         let nextGeoOrderIndex = 1;                                            
         let geoWatchId = null; 
 
-        // Setze lokalen Speicher auf den Startwert zurück (muss nach dem Lesen des Status erfolgen)
         localStorage.setItem('shopModeActive', 'false');
         localStorage.removeItem('currentShop');
         
@@ -750,7 +748,7 @@
         }
 
         // =========================================================================
-        // GPS & GEOCENTER LOGIK
+        // GPS & GEOCENTER LOGIK (AKTUALISIERT FÜR GESCHWINDIGKEIT)
         // =========================================================================
         
         // Haversine-Formel (GPS Distanz in Metern)
@@ -785,6 +783,12 @@
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const currentLat = position.coords.latitude;
                 const currentLon = position.coords.longitude;
+                const speedMps = position.coords.speed || 0; // Geschwindigkeit in Meter pro Sekunde
+                const speedKmh = speedMps * 3.6; // Umrechnung in km/h
+
+                const NEARBY_THRESHOLD = 50; // Meter
+                const WALKING_SPEED_MAX = 5; // km/h
+                const DRIVING_SPEED_MIN = 15; // km/h
                 
                 let recognizedStore = null;
 
@@ -793,25 +797,38 @@
                     const snap = await getDoc(knownStoresRef);
                     const allStores = snap.exists() ? snap.data().stores || [] : [];
                     
-                    const NEARBY_THRESHOLD = 50; // Meter
-                    
                     for (const store of allStores) {
                         const distance = getDistanceMeters(currentLat, currentLon, store.lat, store.lon);
                         
                         if (distance <= NEARBY_THRESHOLD) {
                             recognizedStore = store.name;
-                            console.log(`[GEO] Laden erkannt: ${store.name} (${distance.toFixed(1)}m entfernt)`);
                             break;
                         }
                     }
 
                     if (recognizedStore) {
-                        document.getElementById('shopModePrompt').innerText = `Laden erkannt: ${recognizedStore}. Möchtest du den Shopping-Modus starten?`;
-                        document.getElementById('recognizedShopName').innerText = recognizedStore;
-                        document.getElementById('shopNameInput').value = recognizedStore;
-                        document.getElementById('shopModeRecognizedBtn').style.display = 'block';
+                        if (speedKmh > DRIVING_SPEED_MIN) {
+                            // Fahren: Keine automatische Nachfrage, User ist noch nicht bereit
+                            document.getElementById('shopModePrompt').innerText = `Laden (${recognizedStore}) erkannt, aber du fährst zu schnell (${speedKmh.toFixed(1)} km/h). Bitte anhalten und dann starten.`;
+                            document.getElementById('shopNameInput').style.display = 'block'; // Zeige Eingabefeld als Info
+                            document.getElementById('shopNameInput').value = recognizedStore;
+                            document.getElementById('shopModeStartBtn').style.display = 'block'; // Manuell starten (z.B. wenn man drin sitzt)
+
+                        } else if (speedKmh <= WALKING_SPEED_MAX) {
+                            // Gehen/Stehen: Frage automatisch
+                            document.getElementById('shopModePrompt').innerText = `Laden erkannt. Möchtest du den Shopping-Modus hier starten?`;
+                            document.getElementById('recognizedShopName').innerText = recognizedStore;
+                            document.getElementById('shopNameInput').value = recognizedStore;
+                            document.getElementById('shopModeRecognizedBtn').style.display = 'block';
+                        } else {
+                            // Mittlere Geschwindigkeit (Radfahren)
+                            document.getElementById('shopModePrompt').innerText = `Laden (${recognizedStore}) erkannt. Geschwindigkeit ist ${speedKmh.toFixed(1)} km/h. Manuell starten?`;
+                            document.getElementById('shopNameInput').style.display = 'block';
+                            document.getElementById('shopNameInput').value = recognizedStore;
+                            document.getElementById('shopModeStartBtn').style.display = 'block';
+                        }
                     } else {
-                        document.getElementById('shopModePrompt').innerText = `Kein bekannter Laden in der Nähe. Bitte Laden manuell eingeben, um Layout zu lernen:`;
+                        document.getElementById('shopModePrompt').innerText = `Kein bekannter Laden in der Nähe. Bitte Laden manuell eingeben:`;
                         document.getElementById('shopNameInput').style.display = 'block';
                         document.getElementById('shopNameInput').value = '';
                         document.getElementById('shopModeStartBtn').style.display = 'block';
@@ -820,6 +837,7 @@
                     console.error("[GEO] Fehler beim Abrufen bekannter Läden:", e);
                     document.getElementById('shopModePrompt').innerText = 'Fehler beim Laden der Laden-Daten. Bitte manuell eingeben:';
                     document.getElementById('shopNameInput').style.display = 'block';
+                    document.getElementById('shopNameInput').value = '';
                     document.getElementById('shopModeStartBtn').style.display = 'block';
                 }
             }, (error) => {
@@ -839,7 +857,6 @@
             
             currentShop = shopName;
 
-            // 1. Standortabfrage und Start des kontinuierlichen Trackings
             const locationSuccess = await startLocationTracking(recognized);
             if (!locationSuccess) {
                  displayError("Standort konnte nicht ermittelt werden. Start abgebrochen.", false, 'geo/denied');
@@ -847,7 +864,6 @@
                  return;
             }
 
-            // NEU: Speichere den Laden, wenn es ein neuer/manuell eingegebener Laden ist
             if (!recognized) {
                 navigator.geolocation.getCurrentPosition(async (position) => {
                      await saveStoreLocation(shopName, position.coords.latitude, position.coords.longitude);
@@ -856,7 +872,6 @@
                 }, { enableHighAccuracy: false, timeout: 2000 });
             }
 
-            // 2. Zustand aktualisieren
             shopModeActive = true;
             localStorage.setItem('shopModeActive', 'true');
             localStorage.setItem('currentShop', shopName);
@@ -864,10 +879,8 @@
             filterMode = 'unchecked';
             document.getElementById('filterUnchecked').classList.add('active');
 
-            // 3. Roadmap laden und Sortierung anwenden
             await generateRoadmap(shopName);
 
-            // 4. UI aktualisieren
             renderList();
             renderFabBar();
             closeShopModeModal();
@@ -877,13 +890,10 @@
         window.finalizeShoppingTrip = async () => {
             if (!shopModeActive) return;
 
-            // 1. GPS Tracking stoppen
             stopLocationTracking(); 
 
-            // 2. Lernprozess starten (Geo-Order in Store Layout speichern)
             await learnFromShoppingTrip(currentShop);
 
-            // 3. Erledigte Items löschen
             const toDel = items.filter(i => i.checked); 
             if(toDel.length) {
                 let lastDeleted = toDel; 
@@ -892,14 +902,12 @@
                 await saveItems(items);
             }
             
-            // 4. Zustand zurücksetzen
             shopModeActive = false;
             currentShop = '';
             localStorage.setItem('shopModeActive', 'false');
             localStorage.removeItem('currentShop');
             sortMode = 'category';
             
-            // 5. UI aktualisieren
             document.getElementById('sortCategory').classList.add('active');
             document.getElementById('sortAdded').classList.remove('active');
             renderList();
@@ -955,16 +963,9 @@
                         resolve(true);
                     };
 
-                    // Starte Watch Position nach dem ersten Abruf
-                    navigator.geolocation.getCurrentPosition(successCallback, errorCallback, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
-
                     // Setze den Watcher für kontinuierliche Updates (zum Lernen der Route)
                     geoWatchId = navigator.geolocation.watchPosition(
-                        (position) => {
-                             // Hier würde in einer echten App die KI-Logik kontinuierlich die Route optimieren
-                             // Wir nutzen es hier nur zum Logging
-                             console.log(`[GPS LIVE] Watch Update: Lat=${position.coords.latitude.toFixed(4)}, Lon=${position.coords.longitude.toFixed(4)}`);
-                        }, 
+                        successCallback, 
                         errorCallback,
                         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
                     );
@@ -1056,24 +1057,9 @@
                 displayError("Fehler beim Speichern der gelernten Route.", false, e.code);
             }
         }
-
-        function renderFabBar() {
-            const fabBar = document.getElementById('fabBar');
-            const modeDependentFab = document.getElementById('modeDependentFab');
-            
-            if (shopModeActive) {
-                modeDependentFab.innerText = '✅ Einkauf beenden (Roadmap speichern)';
-                modeDependentFab.onclick = window.finalizeShoppingTrip;
-                modeDependentFab.style.background = `var(--shop-mode)`;
-            } else {
-                modeDependentFab.innerText = '📍 Laden betreten';
-                modeDependentFab.onclick = window.checkAndOpenShopModeModal;
-                modeDependentFab.style.background = `var(--primary)`;
-            }
-        }
         
         // =========================================================================
-        // AUTH & DB HANDLER (Hardening)
+        // AUTH & DB HANDLER (Fixes)
         // =========================================================================
 
         // INIT AUTH
@@ -1107,13 +1093,14 @@
                     currentListId = sharedList;
                 }
                 
+                // Wichtig: Subscribe nur, wenn Auth erfolgreich ist
                 subscribeToList(currentListId);
                 renderDrawer();
                 renderFavorites();
                 renderFabBar(); 
                 
+                // Wenn die Seite im Shop Mode neu geladen wurde, Tracking re-initialisieren
                 if (shopModeActive) {
-                    // Falls die Seite im Shop Mode neu geladen wurde, Tracking re-initialisieren
                     startLocationTracking(true); 
                 }
 
@@ -1147,7 +1134,6 @@
                     renderList();
                 } else {
                     console.warn("DB Dokument existiert nicht. Versuche, leeres Dokument zu erstellen.");
-                    // V31 Hardening: Versuche hier, das Dokument zu erstellen
                     saveItems([], true); 
                     items = [];
                     renderList();
@@ -1168,7 +1154,6 @@
             }
             try {
                 const listRef = getListDocRef(currentListId);
-                // Beim Initialisieren setzen wir force Merge false, sonst true
                 await setDoc(listRef, { items: newItems }, { merge: !isInitialCreation });
                 console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
                 document.getElementById('errorMsg').style.display = 'none';
@@ -1569,9 +1554,6 @@
             }
             renderList();
         };
-        
-        // ... (Der Rest der Standardfunktionen bleibt unverändert)
-
     </script>
 </body>
 </html>
