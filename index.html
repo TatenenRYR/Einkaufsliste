@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V24 👑</title>
+    <title>SmartEinkauf V25 👑</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -558,10 +558,16 @@
         });
         
         // Verbesserte Fehleranzeige
-        function displayError(message, isAuthError = false) {
+        function displayError(message, isAuthError = false, errorCode = null) { // NEU: errorCode
             const errorEl = document.getElementById('errorMsg');
             let prefix = isAuthError ? "AUTH FEHLER: " : "DB FEHLER: ";
-            document.getElementById('errorMsgText').innerText = prefix + message;
+            
+            let fullMessage = prefix + message;
+            if (errorCode) {
+                 fullMessage += ` (Code: ${errorCode})`;
+            }
+
+            document.getElementById('errorMsgText').innerText = fullMessage;
             errorEl.style.display = 'flex'; 
         }
 
@@ -669,7 +675,7 @@
         }
 
         // =========================================================================
-        // KATEGORIE MANAGEMENT FUNKTIONEN
+        // KATEGORIE MANAGEMENT FUNKTIONEN (Unverändert)
         // =========================================================================
         
         window.openCategoryModal = () => {
@@ -751,7 +757,6 @@
             renderCategoryList();
             closeCategoryEditForm();
             renderList(); 
-            // NEU: Fokus auf Input setzen
             document.getElementById('inputField').focus();
         };
 
@@ -879,6 +884,339 @@
             `).join('');
         }
         
+        // =========================================================================
+        // AUTH & DB HANDLER (FEHLERBEHANDLUNG AKTUALISIERT)
+        // =========================================================================
+
+        // INIT AUTH
+        const initAuth = async () => {
+            console.log("Starte Authentifizierung...");
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    console.log("Verwende Canvas Auth Token.");
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    console.log("Verwende Anonyme Anmeldung (Webspace Modus).");
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth Error (Anmeldefehler):", error);
+                // NEU: Logge den Code und zeige ihn dem Benutzer an
+                const errorCode = error.code || 'unknown';
+                console.error(`AUTH Error Code: ${errorCode}`);
+                displayError("Anmeldung fehlgeschlagen. Überprüfe die Firebase-Konfiguration.", true, errorCode);
+            }
+        };
+
+        initAuth();
+
+        // AUTH LISTENER
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('statusDot').classList.add('online'); 
+                console.log("AUTH OK: Benutzer erfolgreich angemeldet. UID:", user.uid);
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const sharedList = urlParams.get('list');
+                if (sharedList && !myLists.includes(sharedList)) {
+                    myLists.push(sharedList);
+                    localStorage.setItem('myLists', JSON.stringify(myLists));
+                    currentListId = sharedList;
+                }
+                
+                subscribeToList(currentListId);
+                renderDrawer();
+                renderFavorites();
+                document.getElementById('errorMsg').style.display = 'none'; 
+            } else {
+                currentUser = null;
+                document.getElementById('statusDot').classList.remove('online'); 
+                // Fehler wird nur bei initAuth oder DB-Aktion angezeigt.
+            }
+        });
+
+        // HELPER: Pfad-Generator
+        function getListDocRef(listId) {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'shopping_lists', listId);
+        }
+
+        // DB SYNC 
+        function subscribeToList(listId) {
+            if(unsubscribe) unsubscribe();
+            if(!currentUser) return; 
+            
+            console.log("Starte Subscription für Liste:", listId);
+            currentListId = listId;
+            document.getElementById('headerTitle').innerText = listId;
+            
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
+            window.history.pushState({path:newUrl},'',newUrl);
+            renderDrawer();
+
+            const listRef = getListDocRef(listId);
+
+            unsubscribe = onSnapshot(listRef, (snap) => {
+                if (snap.exists()) {
+                    items = snap.data().items || [];
+                    console.log("DB Update erhalten. Anzahl Items:", items.length);
+                    renderList();
+                } else {
+                    console.warn("DB Dokument existiert nicht. Erstelle leeres Dokument.");
+                    saveItems([]); 
+                    items = [];
+                    renderList();
+                }
+            }, (error) => {
+                console.error("Snapshot Error (Abonnement-Fehler):", error);
+                // NEU: Logge den Code und zeige ihn dem Benutzer an
+                const errorCode = error.code || 'unknown';
+                console.error(`DB Error Code (Snapshot): ${errorCode}`);
+                displayError("Fehler beim Abonnieren der Liste (Regelfehler oder Verbindung).", false, errorCode);
+            });
+        }
+
+        async function saveItems(newItems) {
+            if(!currentUser) {
+                console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
+                displayError("Du bist nicht angemeldet. Daten können nicht gespeichert werden.", true, 'auth/unauthenticated');
+                return;
+            }
+            try {
+                const listRef = getListDocRef(currentListId);
+                await setDoc(listRef, { items: newItems }, { merge: true });
+                console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
+                document.getElementById('errorMsg').style.display = 'none';
+            } catch (e) { 
+                console.error("Save Error (Speicherfehler):", e);
+                // NEU: Logge den Code und zeige ihn dem Benutzer an
+                const errorCode = e.code || 'unknown';
+                console.error(`DB Error Code (Write): ${errorCode}`);
+                displayError("Speicherfehler: Konnte Daten nicht speichern (Sicherheitsregeln verletzt?).", false, errorCode);
+            }
+        }
+
+        // =========================================================================
+        // CORE LOGIC & DRAG & DROP (Unverändert)
+        // =========================================================================
+
+        window.addItem = async (overrideText = null) => {
+            const input = document.getElementById('inputField');
+            const text = overrideText || input.value.trim();
+            if(!text) return;
+            
+            // 1. Parse based on input
+            let newItem = smartMode ? parseSmart(text) : { 
+                id: Date.now(), 
+                name: text, 
+                amount: 1, 
+                unit: '', 
+                category: 'Manuell', 
+                price: 0, 
+                checked: false, 
+                added: Date.now(),
+                orderIndex: Date.now() 
+            };
+            if (!newItem.added) newItem.added = Date.now();
+            if (!newItem.orderIndex) newItem.orderIndex = newItem.added;
+            
+            const itemNameKey = newItem.name; 
+            
+            // 2. Load from Cache (wenn über Favorit/Autocomplete hinzugefügt)
+            if (overrideText && topItems[itemNameKey]) {
+                const cached = topItems[itemNameKey];
+                
+                // Verwende die gespeicherten Details, wenn der Parser keine spezifischen Details gefunden hat 
+                if (smartMode && newItem.amount === 1 && !newItem.unit && cached.lastAmount && cached.lastAmount > 1) {
+                     newItem.amount = cached.lastAmount;
+                     newItem.unit = cached.lastUnit;
+                     newItem.category = cached.lastCategory; 
+                }
+                
+                // Wenn im Smart-Mode keine Kategorie erkannt wurde, nutze die zuletzt gespeicherte.
+                if (smartMode && newItem.category === 'Sonstiges' && cached.lastCategory !== 'Sonstiges' && cached.lastCategory !== 'Manuell') {
+                    newItem.category = cached.lastCategory;
+                }
+            }
+
+            // 3. Update Cache (immer mit den *neuesten* Details)
+            if (!topItems[itemNameKey]) {
+                topItems[itemNameKey] = { count: 0, lastAmount: newItem.amount, lastUnit: newItem.unit, lastCategory: newItem.category };
+            }
+            topItems[itemNameKey].count++;
+            topItems[itemNameKey].lastAmount = newItem.amount;
+            topItems[itemNameKey].lastUnit = newItem.unit;
+            topItems[itemNameKey].lastCategory = newItem.category;
+
+            localStorage.setItem('topItems', JSON.stringify(topItems));
+            renderFavorites();
+
+            await saveItems([...items, newItem]);
+            if(!overrideText) input.value = '';
+            
+            document.getElementById('autocompleteContainer').style.display = 'none';
+        };
+
+        function parseSmart(text) {
+            const allCategories = getCategoryData();
+
+            let clean = text;
+            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg|kasten|flasche|pck|packung)?/i;
+            let amount = 1, unit = "";
+            const match = clean.match(amountRegex);
+            if(match) { 
+                amount = parseFloat(match[1].replace(',','.')); 
+                unit = match[2] || ""; 
+                clean = clean.replace(match[0], "").trim(); 
+            }
+            if(unit.toLowerCase() === 'kasten') clean += " Getränk";
+
+            let category = "Sonstiges";
+            const lower = clean.toLowerCase();
+
+            // Priorisiere Custom Categories, dann Base Categories
+            const allCategoryNames = Object.keys(allCategories);
+            for(const catName of allCategoryNames) {
+                if (catName === 'Manuell' || catName === 'Sonstiges') continue; 
+
+                const keywords = allCategories[catName].keywords;
+                if(keywords.some(k => lower.includes(k))) { 
+                    category = catName; 
+                    break; 
+                }
+            }
+            
+            const name = clean.charAt(0).toUpperCase() + clean.slice(1);
+            
+            // Setze Kategorie auf 'Manuell', wenn SmartMode aus ist oder keine Kategorie gefunden wurde
+            if (!smartMode && category === "Sonstiges") category = "Manuell";
+            
+            return { 
+                id: Date.now() + Math.random(), 
+                name, 
+                amount, 
+                unit, 
+                category, 
+                price: 0, 
+                checked: false, 
+                added: Date.now(),
+                orderIndex: Date.now() 
+            };
+        }
+
+        // --- Drag & Drop Handler (Unverändert) ---
+        window.handleDragStart = (e, id) => {
+            if (sortMode !== 'category' || filterMode !== 'all') {
+                 e.preventDefault();
+                 return;
+            }
+            draggedId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.classList.add('dragging');
+            hapticFeedback('start_drag'); 
+        };
+
+        window.handleDragOver = (e, targetId) => {
+            if (sortMode !== 'category' || filterMode !== 'all') return;
+            e.preventDefault();
+            
+            const draggedItem = items.find(i => i.id == draggedId);
+            const targetItem = items.find(i => i.id == targetId);
+
+            if (!draggedItem || !targetItem || draggedItem.category !== targetItem.category || draggedId == targetId) return;
+
+            const targetEl = document.getElementById(`item-${targetId}`);
+            if (!targetEl) return;
+
+            document.querySelectorAll('.item-row').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+
+            const rect = targetEl.getBoundingClientRect();
+            const midpoint = rect.y + rect.height / 2;
+
+            if (e.clientY < midpoint) {
+                targetEl.classList.add('drag-over-top');
+            } else {
+                targetEl.classList.add('drag-over-bottom');
+            }
+        };
+
+        window.handleDragLeave = (e, id) => {
+            e.target.classList.remove('drag-over-top', 'drag-over-bottom');
+        };
+
+        window.handleDrop = (e, targetId) => {
+            if (sortMode !== 'category' || filterMode !== 'all') return;
+            e.preventDefault();
+            
+            window.handleDragEnd(e);
+
+            if (!draggedId || draggedId == targetId) return;
+
+            const draggedItem = items.find(i => i.id == draggedId);
+            const targetItem = items.find(i => i.id == targetId);
+
+            if (!draggedItem || !targetItem || draggedItem.category !== targetItem.category) return;
+            
+            let relevantItems = items.filter(i => i.category === draggedItem.category);
+            relevantItems.sort((a, b) => {
+                if (a.checked !== b.checked) return a.checked - b.checked;
+                const orderA = a.orderIndex !== undefined ? a.orderIndex : a.added;
+                const orderB = b.orderIndex !== undefined ? b.orderIndex : b.added;
+                if (orderA !== orderB) return orderA - orderB;
+                return b.added - a.added;
+            });
+            
+            const targetIndexInCat = relevantItems.findIndex(i => i.id === targetId);
+            const insertAfter = e.clientY > document.getElementById(`item-${targetId}`).getBoundingClientRect().y + document.getElementById(`item-${targetId}`).offsetHeight / 2;
+
+            let indexBefore = -1;
+            let indexAfter = Infinity;
+
+            if (insertAfter) {
+                indexBefore = targetItem.orderIndex !== undefined ? targetItem.orderIndex : targetItem.added;
+                
+                const itemAfter = relevantItems[targetIndexInCat + 1];
+                if (itemAfter && !itemAfter.checked) { 
+                    indexAfter = itemAfter.orderIndex !== undefined ? itemAfter.orderIndex : itemAfter.added;
+                } else if (itemAfter && itemAfter.checked) {
+                     indexAfter = indexBefore + 1000;
+                }
+            } else {
+                indexAfter = targetItem.orderIndex !== undefined ? targetItem.orderIndex : targetItem.added;
+                
+                const itemBefore = relevantItems[targetIndexInCat - 1];
+                if (itemBefore && !itemBefore.checked) {
+                    indexBefore = itemBefore.orderIndex !== undefined ? itemBefore.orderIndex : itemBefore.added;
+                } else {
+                    indexBefore = indexAfter - 1000; 
+                }
+            }
+            
+            const newOrderIndex = (indexBefore + indexAfter) / 2;
+
+            const updatedItems = items.map(i => {
+                if (i.id === draggedId) {
+                    return { ...i, orderIndex: newOrderIndex };
+                }
+                return i;
+            });
+
+            saveItems(updatedItems);
+        };
+        
+        window.handleDragEnd = (e) => {
+            draggedId = null;
+            if (e && e.target) {
+                e.target.classList.remove('dragging');
+            }
+            document.querySelectorAll('.item-row').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+            hapticFeedback('end_drag'); 
+        };
+
         // =========================================================================
         // UI HILFSFUNKTIONEN (Konsolidiert)
         // =========================================================================
@@ -1237,7 +1575,6 @@
                             // Drag & Drop nur bei Kategorie-Sortierung und ohne Filter erlaubt
                             el.draggable = (sortMode === 'category' && filterMode === 'all' && !item.checked);
                             
-                            // Hinzugefügt: touch/mouse events für Drag & Drop
                             el.setAttribute('ondragstart', `handleDragStart(event, ${item.id})`);
                             el.setAttribute('ondragover', `handleDragOver(event, ${item.id})`);
                             el.setAttribute('ondragleave', `handleDragLeave(event, ${item.id})`);
@@ -1286,7 +1623,7 @@
             });
         }
         
-        // --- Drag & Drop Handler (Aktualisiert für haptisches Feedback) ---
+        // --- Drag & Drop Handler (Unverändert) ---
         window.handleDragStart = (e, id) => {
             if (sortMode !== 'category' || filterMode !== 'all') {
                  e.preventDefault();
@@ -1295,7 +1632,7 @@
             draggedId = id;
             e.dataTransfer.effectAllowed = 'move';
             e.target.classList.add('dragging');
-            hapticFeedback('start_drag'); // Haptisches Feedback beim Start
+            hapticFeedback('start_drag'); 
         };
 
         window.handleDragOver = (e, targetId) => {
@@ -1360,10 +1697,9 @@
                 indexBefore = targetItem.orderIndex !== undefined ? targetItem.orderIndex : targetItem.added;
                 
                 const itemAfter = relevantItems[targetIndexInCat + 1];
-                if (itemAfter && !itemAfter.checked) { // Nur mit nicht-erledigten Items vergleichen
+                if (itemAfter && !itemAfter.checked) { 
                     indexAfter = itemAfter.orderIndex !== undefined ? itemAfter.orderIndex : itemAfter.added;
                 } else if (itemAfter && itemAfter.checked) {
-                     // Wenn das Element danach erledigt ist, nehmen wir targetItem's Index + 1000, um sicherzustellen, dass es vor erledigten Elementen bleibt.
                      indexAfter = indexBefore + 1000;
                 }
             } else {
@@ -1397,7 +1733,7 @@
             document.querySelectorAll('.item-row').forEach(el => {
                 el.classList.remove('drag-over-top', 'drag-over-bottom');
             });
-            hapticFeedback('end_drag'); // Haptisches Feedback beim Ende
+            hapticFeedback('end_drag'); 
         };
 
     </script>
