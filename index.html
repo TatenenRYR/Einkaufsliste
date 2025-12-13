@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V32 👑</title>
+    <title>SmartEinkauf V34 👑</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -560,7 +560,7 @@
 
 
         // =========================================================================
-        // KONSOLE INTERCEPTOR
+        // KONSOLE INTERCEPTOR (Unverändert)
         // =========================================================================
 
         function logToDebugConsole(level, message, color) {
@@ -652,7 +652,7 @@
         }
 
         // =========================================================================
-        // FIREBASE INITIALISIERUNG
+        // FIREBASE INITIALISIERUNG (NEU AUFGEBAUT)
         // =========================================================================
 
         const externalFirebaseConfig = {
@@ -667,16 +667,17 @@
         
         const firebaseConfig = externalFirebaseConfig; 
         const appId = 'default-webspace-app'; 
-        const initialAuthToken = null; 
 
+        // Initialisiere die Firebase Services
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
         setLogLevel('debug');
+        
+        let currentUser = null; // Aktueller Benutzer, gesetzt durch onAuthStateChanged
 
         // =========================================================================
-        // STATE & SHOP MODE VERWALTUNG
+        // STATE & SHOP MODE VERWALTUNG (Unverändert)
         // =========================================================================
 
         const baseCategoryData = {
@@ -748,9 +749,130 @@
         }
 
         // =========================================================================
-        // GPS & GEOCENTER LOGIK (AKTUALISIERT FÜR GESCHWINDIGKEIT)
+        // AUTH & DB HANDLER (NEU AUFGEBAUT)
         // =========================================================================
+
+        /**
+         * Führt die asynchrone anonyme Anmeldung durch.
+         */
+        const initAuth = async () => {
+            console.log("Starte Authentifizierung...");
+            try {
+                // Nur anonyme Anmeldung für Webspace/öffentliche Listen
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Auth Error (Anmeldefehler):", error);
+                const errorCode = error.code || 'unknown';
+                console.error(`AUTH Error Code: ${errorCode}`);
+                displayError("Anmeldung fehlgeschlagen. Bitte Firebase-Konfiguration prüfen.", true, errorCode);
+            }
+        };
+
+        /**
+         * Verwaltet den globalen Benutzerstatus und startet die Daten-Subscriptions.
+         */
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('statusDot').classList.add('online'); 
+                console.log("AUTH OK: Benutzer erfolgreich anonym angemeldet. UID:", user.uid);
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const sharedList = urlParams.get('list');
+                if (sharedList && !myLists.includes(sharedList)) {
+                    myLists.push(sharedList);
+                    localStorage.setItem('myLists', JSON.stringify(myLists));
+                    currentListId = sharedList;
+                }
+                
+                // Starte Daten-Subscription, da der Benutzer jetzt definiert ist
+                subscribeToList(currentListId);
+                renderDrawer();
+                renderFavorites();
+                renderFabBar(); 
+                
+                if (shopModeActive) {
+                    startLocationTracking(true); 
+                }
+
+                document.getElementById('errorMsg').style.display = 'none'; 
+            } else {
+                currentUser = null;
+                document.getElementById('statusDot').classList.remove('online'); 
+                console.warn("AUTH FEHLER: Anonyme Anmeldung fehlgeschlagen.");
+            }
+        });
+
+        // Startet die asynchrone Authentifizierung beim Laden des Moduls
+        initAuth();
+
+        /**
+         * Abonniert die aktuelle Einkaufsliste in Firestore.
+         */
+        function subscribeToList(listId) {
+            if(unsubscribe) unsubscribe();
+            // Stabile Prüfung auf erforderliche Abhängigkeiten
+            if(!currentUser) {
+                 console.warn("Subscription blockiert: currentUser ist null.");
+                 return; 
+            }
+            
+            console.log("Starte Subscription für Liste:", listId);
+            currentListId = listId;
+            document.getElementById('headerTitle').innerText = listId;
+            
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
+            window.history.pushState({path:newUrl},'',newUrl);
+            renderDrawer();
+
+            const listRef = getListDocRef(listId);
+
+            unsubscribe = onSnapshot(listRef, (snap) => {
+                if (snap.exists()) {
+                    items = snap.data().items || [];
+                    console.log("DB Update erhalten. Anzahl Items:", items.length);
+                    renderList();
+                } else {
+                    console.warn("DB Dokument existiert nicht. Versuche, leeres Dokument zu erstellen.");
+                    // Versucht, Dokument beim ersten Mal zu erstellen
+                    saveItems([], true); 
+                    items = [];
+                    renderList();
+                }
+            }, (error) => {
+                console.error("Snapshot Error (Abonnement-Fehler):", error);
+                const errorCode = error.code || 'unknown';
+                console.error(`DB Error Code (Snapshot): ${errorCode}`);
+                displayError("Fehler beim Abonnieren der Liste (Regelfehler oder Verbindung).", false, errorCode);
+            });
+        }
+
+        /**
+         * Speichert die Item-Liste in Firestore.
+         */
+        async function saveItems(newItems, isInitialCreation = false) {
+            if(!currentUser) {
+                console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
+                displayError("Du bist nicht angemeldet. Daten können nicht gespeichert werden.", true, 'auth/unauthenticated');
+                return;
+            }
+            try {
+                const listRef = getListDocRef(currentListId);
+                await setDoc(listRef, { items: newItems }, { merge: !isInitialCreation });
+                console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
+                document.getElementById('errorMsg').style.display = 'none';
+            } catch (e) { 
+                console.error("Save Error (Speicherfehler):", e);
+                const errorCode = e.code || 'unknown';
+                console.error(`DB Error Code (Write): ${errorCode}`);
+                displayError("Speicherfehler: Konnte Daten nicht speichern (Sicherheitsregeln verletzt?).", false, errorCode);
+            }
+        }
         
+        // =========================================================================
+        // GPS & GEOCENTER LOGIK (V32/V33 Code beibehalten)
+        // =========================================================================
+
         // Haversine-Formel (GPS Distanz in Metern)
         function getDistanceMeters(lat1, lon1, lat2, lon2) {
             const R = 6371000; // Erdradius in Metern
@@ -808,20 +930,17 @@
 
                     if (recognizedStore) {
                         if (speedKmh > DRIVING_SPEED_MIN) {
-                            // Fahren: Keine automatische Nachfrage, User ist noch nicht bereit
                             document.getElementById('shopModePrompt').innerText = `Laden (${recognizedStore}) erkannt, aber du fährst zu schnell (${speedKmh.toFixed(1)} km/h). Bitte anhalten und dann starten.`;
-                            document.getElementById('shopNameInput').style.display = 'block'; // Zeige Eingabefeld als Info
+                            document.getElementById('shopNameInput').style.display = 'block'; 
                             document.getElementById('shopNameInput').value = recognizedStore;
-                            document.getElementById('shopModeStartBtn').style.display = 'block'; // Manuell starten (z.B. wenn man drin sitzt)
+                            document.getElementById('shopModeStartBtn').style.display = 'block'; 
 
                         } else if (speedKmh <= WALKING_SPEED_MAX) {
-                            // Gehen/Stehen: Frage automatisch
                             document.getElementById('shopModePrompt').innerText = `Laden erkannt. Möchtest du den Shopping-Modus hier starten?`;
                             document.getElementById('recognizedShopName').innerText = recognizedStore;
                             document.getElementById('shopNameInput').value = recognizedStore;
                             document.getElementById('shopModeRecognizedBtn').style.display = 'block';
                         } else {
-                            // Mittlere Geschwindigkeit (Radfahren)
                             document.getElementById('shopModePrompt').innerText = `Laden (${recognizedStore}) erkannt. Geschwindigkeit ist ${speedKmh.toFixed(1)} km/h. Manuell starten?`;
                             document.getElementById('shopNameInput').style.display = 'block';
                             document.getElementById('shopNameInput').value = recognizedStore;
@@ -918,6 +1037,7 @@
         window.stopShoppingMode = window.finalizeShoppingTrip; 
 
         async function saveStoreLocation(shopName, lat, lon) {
+             if(!currentUser) return; // DB-Operationen nur bei angemeldetem User
              try {
                 const knownStoresRef = getKnownStoresDocRef();
                 const snap = await getDoc(knownStoresRef);
@@ -989,6 +1109,7 @@
         }
 
         async function generateRoadmap(shopName) {
+            if(!currentUser) return;
             const layoutRef = getStoreLayoutRef(shopName);
             
             const maxGeoIndex = items.reduce((max, i) => Math.max(max, i.geoOrderIndex || 0), 0);
@@ -1020,6 +1141,7 @@
         }
         
         async function learnFromShoppingTrip(shopName) {
+            if(!currentUser) return;
             const layoutRef = getStoreLayoutRef(shopName);
             const completedItems = items.filter(i => i.geoOrderIndex !== undefined && i.geoOrderIndex >= 1 && i.checked);
             
@@ -1057,117 +1179,26 @@
                 displayError("Fehler beim Speichern der gelernten Route.", false, e.code);
             }
         }
-        
-        // =========================================================================
-        // AUTH & DB HANDLER (Fixes)
-        // =========================================================================
 
-        // INIT AUTH
-        const initAuth = async () => {
-            console.log("Starte Authentifizierung...");
-            try {
-                // Nur anonyme Anmeldung für Webspace/öffentliche Listen
-                await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Auth Error (Anmeldefehler):", error);
-                const errorCode = error.code || 'unknown';
-                console.error(`AUTH Error Code: ${errorCode}`);
-                displayError("Anmeldung fehlgeschlagen. Bitte Firebase-Konfiguration prüfen.", true, errorCode);
-            }
-        };
-
-        initAuth();
-
-        // AUTH LISTENER
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('statusDot').classList.add('online'); 
-                console.log("AUTH OK: Benutzer erfolgreich anonym angemeldet. UID:", user.uid);
-                
-                const urlParams = new URLSearchParams(window.location.search);
-                const sharedList = urlParams.get('list');
-                if (sharedList && !myLists.includes(sharedList)) {
-                    myLists.push(sharedList);
-                    localStorage.setItem('myLists', JSON.stringify(myLists));
-                    currentListId = sharedList;
-                }
-                
-                // Wichtig: Subscribe nur, wenn Auth erfolgreich ist
-                subscribeToList(currentListId);
-                renderDrawer();
-                renderFavorites();
-                renderFabBar(); 
-                
-                // Wenn die Seite im Shop Mode neu geladen wurde, Tracking re-initialisieren
-                if (shopModeActive) {
-                    startLocationTracking(true); 
-                }
-
-                document.getElementById('errorMsg').style.display = 'none'; 
+        function renderFabBar() {
+            const fabBar = document.getElementById('fabBar');
+            const modeDependentFab = document.getElementById('modeDependentFab');
+            
+            if (shopModeActive) {
+                modeDependentFab.innerText = '✅ Einkauf beenden (Roadmap speichern)';
+                modeDependentFab.onclick = window.finalizeShoppingTrip;
+                modeDependentFab.style.background = `var(--shop-mode)`;
             } else {
-                currentUser = null;
-                document.getElementById('statusDot').classList.remove('online'); 
-                console.warn("AUTH FEHLER: Anonyme Anmeldung fehlgeschlagen.");
-            }
-        });
-
-        // DB SYNC 
-        function subscribeToList(listId) {
-            if(unsubscribe) unsubscribe();
-            if(!currentUser) return; 
-            
-            console.log("Starte Subscription für Liste:", listId);
-            currentListId = listId;
-            document.getElementById('headerTitle').innerText = listId;
-            
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
-            window.history.pushState({path:newUrl},'',newUrl);
-            renderDrawer();
-
-            const listRef = getListDocRef(listId);
-
-            unsubscribe = onSnapshot(listRef, (snap) => {
-                if (snap.exists()) {
-                    items = snap.data().items || [];
-                    console.log("DB Update erhalten. Anzahl Items:", items.length);
-                    renderList();
-                } else {
-                    console.warn("DB Dokument existiert nicht. Versuche, leeres Dokument zu erstellen.");
-                    saveItems([], true); 
-                    items = [];
-                    renderList();
-                }
-            }, (error) => {
-                console.error("Snapshot Error (Abonnement-Fehler):", error);
-                const errorCode = error.code || 'unknown';
-                console.error(`DB Error Code (Snapshot): ${errorCode}`);
-                displayError("Fehler beim Abonnieren der Liste (Regelfehler oder Verbindung).", false, errorCode);
-            });
-        }
-
-        async function saveItems(newItems, isInitialCreation = false) {
-            if(!currentUser) {
-                console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
-                displayError("Du bist nicht angemeldet. Daten können nicht gespeichert werden.", true, 'auth/unauthenticated');
-                return;
-            }
-            try {
-                const listRef = getListDocRef(currentListId);
-                await setDoc(listRef, { items: newItems }, { merge: !isInitialCreation });
-                console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
-                document.getElementById('errorMsg').style.display = 'none';
-            } catch (e) { 
-                console.error("Save Error (Speicherfehler):", e);
-                const errorCode = e.code || 'unknown';
-                console.error(`DB Error Code (Write): ${errorCode}`);
-                displayError("Speicherfehler: Konnte Daten nicht speichern (Sicherheitsregeln verletzt?).", false, errorCode);
+                modeDependentFab.innerText = '📍 Laden betreten';
+                modeDependentFab.onclick = window.checkAndOpenShopModeModal;
+                modeDependentFab.style.background = `var(--primary)`;
             }
         }
         
-        // --- Restliche Logik (renderList, Drag & Drop, etc.) ist identisch zu V30 ---
+        // =========================================================================
+        // UI HILFSFUNKTIONEN (Unverändert)
+        // =========================================================================
 
-        // RENDER (Unverändert)
         function renderList() {
             const container = document.getElementById('listContainer');
             container.innerHTML = '';
@@ -1401,7 +1432,7 @@
                 return b.added - a.added;
             });
             
-            const targetIndexInCat = relevantItems.findIndex(i => i.id === targetId);
+            const targetIndexInCat = relevantItems.findIndex(i => i.id == targetId);
             const insertAfter = e.clientY > document.getElementById(`item-${targetId}`).getBoundingClientRect().y + document.getElementById(`item-${targetId}`).offsetHeight / 2;
 
             let indexBefore = -1;
@@ -1554,6 +1585,103 @@
             }
             renderList();
         };
+        
+        window.addItem = async (overrideText = null) => {
+            const input = document.getElementById('inputField');
+            const text = overrideText || input.value.trim();
+            if(!text) return;
+            
+            let newItem = smartMode ? parseSmart(text) : { 
+                id: Date.now(), 
+                name: text, 
+                amount: 1, 
+                unit: '', 
+                category: 'Manuell', 
+                price: 0, 
+                checked: false, 
+                added: Date.now(),
+                orderIndex: Date.now() 
+            };
+            if (!newItem.added) newItem.added = Date.now();
+            if (!newItem.orderIndex) newItem.orderIndex = newItem.added;
+            
+            const itemNameKey = newItem.name; 
+            
+            if (overrideText && topItems[itemNameKey]) {
+                const cached = topItems[itemNameKey];
+                
+                if (smartMode && newItem.amount === 1 && !newItem.unit && cached.lastAmount && cached.lastAmount > 1) {
+                     newItem.amount = cached.lastAmount;
+                     newItem.unit = cached.lastUnit;
+                     newItem.category = cached.lastCategory; 
+                }
+                
+                if (smartMode && newItem.category === 'Sonstiges' && cached.lastCategory !== 'Sonstiges' && cached.lastCategory !== 'Manuell') {
+                    newItem.category = cached.lastCategory;
+                }
+            }
+
+            if (!topItems[itemNameKey]) {
+                topItems[itemNameKey] = { count: 0, lastAmount: newItem.amount, lastUnit: newItem.unit, lastCategory: newItem.category };
+            }
+            topItems[itemNameKey].count++;
+            topItems[itemNameKey].lastAmount = newItem.amount;
+            topItems[itemNameKey].lastUnit = newItem.unit;
+            topItems[itemNameKey].lastCategory = newItem.category;
+
+            localStorage.setItem('topItems', JSON.stringify(topItems));
+            renderFavorites();
+
+            await saveItems([...items, newItem]);
+            if(!overrideText) input.value = '';
+            
+            document.getElementById('autocompleteContainer').style.display = 'none';
+        };
+
+        function parseSmart(text) {
+            const allCategories = getCategoryData();
+
+            let clean = text;
+            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg|kasten|flasche|pck|packung)?/i;
+            let amount = 1, unit = "";
+            const match = clean.match(amountRegex);
+            if(match) { 
+                amount = parseFloat(match[1].replace(',','.')); 
+                unit = match[2] || ""; 
+                clean = clean.replace(match[0], "").trim(); 
+            }
+            if(unit.toLowerCase() === 'kasten') clean += " Getränk";
+
+            let category = "Sonstiges";
+            const lower = clean.toLowerCase();
+
+            const allCategoryNames = Object.keys(allCategories);
+            for(const catName of allCategoryNames) {
+                if (catName === 'Manuell' || catName === 'Sonstiges') continue; 
+
+                const keywords = allCategories[catName].keywords;
+                if(keywords.some(k => lower.includes(k))) { 
+                    category = catName; 
+                    break; 
+                }
+            }
+            
+            const name = clean.charAt(0).toUpperCase() + clean.slice(1);
+            
+            if (!smartMode && category === "Sonstiges") category = "Manuell";
+            
+            return { 
+                id: Date.now() + Math.random(), 
+                name, 
+                amount, 
+                unit, 
+                category, 
+                price: 0, 
+                checked: false, 
+                added: Date.now(),
+                orderIndex: Date.now() 
+            };
+        }
     </script>
 </body>
-</html>
+    </html>
