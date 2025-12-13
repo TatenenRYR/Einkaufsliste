@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V20 👑</title>
+    <title>SmartEinkauf V24 👑</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -75,7 +75,7 @@
         .drawer-item { padding: 15px; border-radius: 12px; margin-bottom: 8px; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .drawer-item.active { background: #e0e7ff; color: var(--primary); }
         .drawer-item:hover:not(.active) { background: var(--bg); }
-        .new-list-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; }
+        .new-list-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px 15px; }
         .magic-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 10px; scrollbar-width: none; }
         .magic-chip { background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px; color: var(--text-light); transition: 0.2s; }
@@ -98,7 +98,13 @@
         .cat-title-icon { font-size: 1.2rem; line-height: 1; margin-right: 5px; transition: transform 0.2s; }
         .cat-title-wrapper.collapsed .cat-title-icon { transform: rotate(-90deg); }
         .item-row { background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); transition: all 0.2s; position: relative; overflow: hidden; cursor: grab; }
-        .item-row.dragging { opacity: 0.5; border: 2px dashed var(--primary); }
+        /* Visuelles Feedback für Drag verbessert */
+        .item-row.dragging { 
+            opacity: 0.8; 
+            border: 2px dashed var(--primary); 
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+        }
         .item-row.drag-over-top { border-top: 2px solid var(--primary); }
         .item-row.drag-over-bottom { border-bottom: 2px solid var(--primary); }
         .item-row.checked { opacity: 0.6; background: var(--bg); border-color: transparent; }
@@ -122,7 +128,9 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; display: none; justify-content: center; align-items: center; }
         .modal { background: var(--card); padding: 20px; border-radius: 16px; width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal h3 { margin-top: 0; color: var(--primary); }
-        .modal input, .modal select { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background: var(--bg); color: var(--text); outline: none; }
+        .modal input, .modal select, .modal textarea { 
+            width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; background: var(--bg); color: var(--text); outline: none; 
+        }
         .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
         .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background: var(--bg); color: var(--text); }
@@ -157,6 +165,42 @@
             cursor: pointer;
             font-weight: bold;
         }
+        
+        /* Kategorie-Listenstil */
+        .cat-item-row {
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+        .cat-item-row:last-child { border-bottom: none; }
+        .cat-item-row .cat-controls { display: flex; gap: 5px; align-items: center; }
+        .cat-item-row button {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 6px;
+        }
+        .cat-item-row .del-btn { color: #ef4444; }
+
+        /* Sortierbuttons im Modal */
+        .cat-sort-btn {
+            background: var(--bg);
+            color: var(--primary);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
         
         /* --- Debug Console (Unverändert) --- */
         .debug-toggle-btn {
@@ -225,7 +269,7 @@
         #debugConsoleContent::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 4px; }
     </style>
 </head>
-<body>
+<body onload="document.getElementById('inputField').focus()">
 
     <!-- Debug Console (Unverändert) -->
     <div id="debugConsole">
@@ -238,14 +282,20 @@
     <!-- Debug Toggle Button (Unverändert) -->
     <button class="debug-toggle-btn" id="debugToggleBtn" onclick="toggleDebugConsole()">🐛</button>
 
-    <!-- Drawer Menu (Multi-List) (Unverändert) -->
+    <!-- Drawer Menu (Multi-List) -->
     <div class="drawer-overlay" id="overlay" onclick="toggleDrawer()"></div>
     <div class="drawer" id="drawer">
         <h2>📑 Deine Listen</h2>
         <div class="drawer-list" id="drawerList"></div>
         
+        <!-- Kategorie-Management Button -->
+        <div class="drawer-item" onclick="openCategoryModal()">
+            <span>📂 Kategorien verwalten</span>
+            <span style="opacity:0.5;font-size:1.2rem;">&rarr;</span>
+        </div>
+        
         <!-- Dark Mode Toggle -->
-        <div class="drawer-item" style="margin-top:20px; border-top: 1px solid var(--border);">
+        <div class="drawer-item" style="margin-top:10px; border-top: 1px solid var(--border); padding-top: 15px;">
             <span>🌓 Dark Mode</span>
             <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)" style="width: auto; margin-bottom: 0; transform: scale(1.2);">
         </div>
@@ -253,7 +303,7 @@
         <button class="new-list-btn" onclick="createNewList()">+ Neue Liste</button>
     </div>
 
-    <!-- Edit Item Modal (Unverändert) -->
+    <!-- Edit Item Modal -->
     <div class="modal-overlay" id="editModal">
         <div class="modal">
             <h3>✏️ Eintrag bearbeiten</h3>
@@ -270,15 +320,8 @@
                 <input type="number" id="editAmount" placeholder="Menge" style="width:30%">
                 <input type="text" id="editUnit" placeholder="Einheit" style="width:30%">
             </div>
-            <select id="editCategory">
-                <option value="Obst & Gemüse">Obst & Gemüse</option>
-                <option value="Getränke">Getränke</option>
-                <option value="Kühlregal">Kühlregal</option>
-                <option value="Vorrat">Vorrat</option>
-                <option value="Haushalt">Haushalt</option>
-                <option value="Sonstiges">Sonstiges</option>
-                <option value="Manuell">Manuell</option> 
-            </select>
+            <!-- Kategorie Select wird dynamisch befüllt -->
+            <select id="editCategory"></select>
             <div class="modal-btns">
                 <button class="btn btn-cancel" onclick="closeEdit()">Abbrechen</button>
                 <button class="btn btn-save" onclick="saveEdit()">Speichern</button>
@@ -294,6 +337,50 @@
             <div class="modal-btns">
                 <button class="btn btn-cancel" onclick="closeDeleteModal()">Abbrechen</button>
                 <button class="btn btn-danger" id="confirmDeleteListBtn">Löschen</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kategorie Management Modal -->
+    <div class="modal-overlay" id="categoryModal">
+        <div class="modal">
+            <h3>📂 Kategorien verwalten</h3>
+            <div id="categoryListContainer" style="max-height: 250px; overflow-y: auto; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);">
+                <!-- Kategorie-Liste wird hier gerendert -->
+            </div>
+
+            <button class="btn btn-save" onclick="openCategoryEdit()">+ Neue Kategorie erstellen</button>
+            
+            <div id="categoryEditForm" style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px; display: none;">
+                <h4>Kategorie bearbeiten</h4>
+                <input type="hidden" id="editCatOriginalName">
+                <input type="text" id="editCatName" placeholder="Name (z.B. 'Tierfutter')">
+                <input type="text" id="editCatIcon" placeholder="Emoji-Icon (z.B. '🐾')">
+                <textarea id="editCatKeywords" placeholder="Suchbegriffe, kommasepariert (z.B. 'katze, hund, dose')" rows="2"></textarea>
+                <div class="modal-btns">
+                    <button class="btn btn-cancel" onclick="closeCategoryEditForm()">Abbrechen</button>
+                    <button class="btn btn-save" onclick="saveCategory()">Speichern</button>
+                </div>
+            </div>
+
+            <div class="modal-btns" style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;">
+                <button class="btn btn-cancel" onclick="closeCategoryModal()">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEU: Kategorie Löschbestätigungs-/Verschiebe-Modal -->
+    <div class="modal-overlay" id="categoryDeleteModal">
+        <div class="modal">
+            <h3>Kategorie löschen</h3>
+            <p>Die Kategorie "<strong id="deleteCatName"></strong>" wird gelöscht.</p>
+            <p>Wohin sollen die <span id="itemCountInCat">0</span> zugehörigen Einträge verschoben werden?</p>
+            
+            <select id="deleteCatTargetSelect" style="margin-bottom: 15px;"></select>
+
+            <div class="modal-btns">
+                <button class="btn btn-cancel" onclick="closeCategoryDeleteModal()">Abbrechen</button>
+                <button class="btn btn-danger" id="confirmDeleteCategoryBtn">Löschen & Verschieben</button>
             </div>
         </div>
     </div>
@@ -343,7 +430,7 @@
             <!-- Auto-Favorites werden hier eingefügt -->
         </div>
 
-        <!-- Input Area (Unverändert) -->
+        <!-- Input Area (Unverändert, aber Body-onload sorgt für Focus) -->
         <div class="input-card">
             <button class="action-btn mode-btn" id="modeBtn" onclick="toggleMode()">✨</button>
             <button class="action-btn budget-btn" id="budgetBtn" onclick="toggleBudgetMode()">€</button>
@@ -470,9 +557,11 @@
              }
         });
         
-        function displayError(message) {
+        // Verbesserte Fehleranzeige
+        function displayError(message, isAuthError = false) {
             const errorEl = document.getElementById('errorMsg');
-            document.getElementById('errorMsgText').innerText = message;
+            let prefix = isAuthError ? "AUTH FEHLER: " : "DB FEHLER: ";
+            document.getElementById('errorMsgText').innerText = prefix + message;
             errorEl.style.display = 'flex'; 
         }
 
@@ -483,7 +572,6 @@
         const externalFirebaseConfig = {
             apiKey: "AIzaSyD7pocrD9_46QNoz1jrxggpzkL7E6IhetY",
             authDomain: "einkaufliste-cd5d3.firebaseapp.com",
-            databaseURL: "https://einkaufliste-cd5d3-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "einkaufliste-cd5d3",
             storageBucket: "einkaufliste-cd5d3.firebasestorage.app",
             messagingSenderId: "36721747923",
@@ -500,7 +588,35 @@
         
         setLogLevel('debug');
 
-        // STATE (mit Aktualisierungen für Smart-Caching)
+        // =========================================================================
+        // STATE & KATEGORIEN-LOGIK
+        // =========================================================================
+
+        // Basis-Kategorien (statisch)
+        const baseCategoryData = {
+            "Obst & Gemüse": { order: 100, icon: "🍎", keywords: ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel", "beere", "knoblauch", "avocado", "paprika", "möhre", "karotte", "ingwer", "zitrone", "limette", "traube", "orange"] },
+            "Kühlregal": { order: 200, icon: "🧀", keywords: ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst", "quark", "mozarella", "frischkäse", "skyr", "pizza", "fertiggericht"] },
+            "Vorrat": { order: 300, icon: "🥫", keywords: ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve", "soße", "gewürz", "ketchup", "müsli", "haferflocken", "toast", "nutella", "honig", "schokolade", "chips", "tiefkühl"] },
+            "Getränke": { order: 400, icon: "🥤", keywords: ["wasser", "saft", "bier", "cola", "limo", "kaffee", "kasten", "pfand", "flasche", "sixpack", "sprudel", "tee", "energy", "wein", "sekt", "milchshake"] },
+            "Haushalt": { order: 500, icon: "🧹", keywords: ["papier", "reiniger", "waschmittel", "zahnpasta", "seife", "duschgel", "shampoo", "müllbeutel", "deo", "schwamm", "tabs", "batterie", "folie", "serviette"] },
+            "Manuell": { order: 990, icon: "✍️", keywords: [] },
+            "Sonstiges": { order: 1000, icon: "❓", keywords: [] }
+        };
+
+        // Custom Categories (AKTUALISIERT: Nun mit optionalem 'order' Index)
+        let customCategories = JSON.parse(localStorage.getItem('customCategories')) || [];
+        
+        // --- Migration für Custom Categories: Default Order setzen
+        if (customCategories.some(c => c.order === undefined)) {
+            console.warn("Migriere alte customCategories Struktur auf V23 (Order Index).");
+            customCategories = customCategories.map((c, index) => ({
+                ...c,
+                order: c.order !== undefined ? c.order : 600 + index * 10
+            }));
+            localStorage.setItem('customCategories', JSON.stringify(customCategories));
+        }
+
+
         let currentListId = "Einkauf";
         let items = [];
         let smartMode = true;
@@ -513,6 +629,7 @@
         let currentUser = null;
         let suggestionTimeout;
         let draggedId = null; 
+        let categoryToDelete = null; 
 
         let sortMode = 'category'; 
         let filterMode = 'all';    
@@ -520,10 +637,9 @@
         let darkModePreference = localStorage.getItem('darkModePreference'); 
         let myLists = JSON.parse(localStorage.getItem('myLists')) || ["Einkauf"];
         
-        // NEU: TopItems Struktur und Migrationslogik
         let topItems = JSON.parse(localStorage.getItem('topItems')) || {}; 
         
-        // Migration von alter, simpler Struktur (nur Zähler) zu neuer, komplexer Struktur
+        // Migration von alter, simpler topItems Struktur (Unverändert)
         if (Object.values(topItems).length > 0 && typeof Object.values(topItems)[0] === 'number') {
             console.warn("Migriere alte topItems Struktur auf V20 (Smart-Caching).");
             const migratedItems = {};
@@ -536,29 +652,247 @@
 
         let collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories')) || {};
         
-        // NEU: Category Icons Mapping
-        const categoryIcons = {
-            "Obst & Gemüse": "🍎",
-            "Getränke": "🥤",
-            "Kühlregal": "🧀",
-            "Vorrat": "🥫",
-            "Haushalt": "🧹",
-            "Manuell": "✍️",
-            "Sonstiges": "❓"
+        // --- HELPER: Merged Category Data ---
+        function getCategoryData() {
+            const allCategories = { ...baseCategoryData };
+            // Custom categories haben Priorität (keywords werden nicht gemergt, sondern überschrieben)
+            customCategories
+                .sort((a, b) => a.order - b.order) 
+                .forEach(cat => {
+                    allCategories[cat.name] = { 
+                        order: cat.order, 
+                        icon: cat.icon, 
+                        keywords: cat.keywords.split(',').map(k => k.trim().toLowerCase()).filter(k => k)
+                    };
+            });
+            return allCategories;
+        }
+
+        // =========================================================================
+        // KATEGORIE MANAGEMENT FUNKTIONEN
+        // =========================================================================
+        
+        window.openCategoryModal = () => {
+            renderCategoryList();
+            closeCategoryEditForm();
+            document.getElementById('categoryModal').style.display = 'flex';
+            toggleDrawer(); 
+        };
+
+        window.closeCategoryModal = () => {
+            document.getElementById('categoryModal').style.display = 'none';
+        };
+
+        window.openCategoryEdit = (categoryName = '') => {
+            const form = document.getElementById('categoryEditForm');
+            const cat = customCategories.find(c => c.name === categoryName);
+
+            document.getElementById('editCatOriginalName').value = categoryName;
+            document.getElementById('editCatName').value = cat ? cat.name : '';
+            document.getElementById('editCatIcon').value = cat ? cat.icon : '';
+            document.getElementById('editCatKeywords').value = cat ? cat.keywords : '';
+            form.style.display = 'block';
+            document.getElementById('editCatName').focus();
+
+            document.querySelector('#categoryEditForm h4').innerText = categoryName ? `Kategorie '${categoryName}' bearbeiten` : 'Neue Kategorie erstellen';
+        };
+
+        window.closeCategoryEditForm = () => {
+             document.getElementById('categoryEditForm').style.display = 'none';
+        };
+
+        window.saveCategory = () => {
+            const originalName = document.getElementById('editCatOriginalName').value;
+            const newName = document.getElementById('editCatName').value.trim();
+            const newIcon = document.getElementById('editCatIcon').value.trim() || '💡';
+            const newKeywords = document.getElementById('editCatKeywords').value.trim();
+
+            if (!newName) {
+                alert("Der Name der Kategorie darf nicht leer sein.");
+                return;
+            }
+
+            const isNew = !originalName;
+
+            const allCategories = getCategoryData();
+            if (newName !== originalName && allCategories[newName]) {
+                 alert(`Der Name "${newName}" ist bereits vergeben oder für eine System-Kategorie reserviert.`);
+                 return;
+            }
+
+            let catToUpdate = customCategories.find(c => c.name === originalName);
+
+            if (catToUpdate) {
+                catToUpdate.name = newName;
+                catToUpdate.icon = newIcon;
+                catToUpdate.keywords = newKeywords;
+            } else {
+                const lastOrder = customCategories.length > 0 ? Math.max(...customCategories.map(c => c.order)) : 600;
+                customCategories.push({
+                    name: newName,
+                    icon: newIcon,
+                    keywords: newKeywords,
+                    order: lastOrder + 10 
+                });
+            }
+
+            if (originalName && originalName !== newName) {
+                 const updatedItems = items.map(i => {
+                    if (i.category === originalName) {
+                        return { ...i, category: newName };
+                    }
+                    return i;
+                });
+                saveItems(updatedItems);
+            }
+
+
+            localStorage.setItem('customCategories', JSON.stringify(customCategories));
+            renderCategoryList();
+            closeCategoryEditForm();
+            renderList(); 
+            // NEU: Fokus auf Input setzen
+            document.getElementById('inputField').focus();
+        };
+
+        window.moveCategory = (name, direction) => {
+            // Sortiere Custom-Kategorien zuerst nach Order, um die aktuelle Reihenfolge zu kennen
+            customCategories.sort((a, b) => a.order - b.order);
+            const sortedIndex = customCategories.findIndex(c => c.name === name);
+
+            const targetIndex = sortedIndex + direction;
+            if (targetIndex < 0 || targetIndex >= customCategories.length) return;
+
+            const currentCat = customCategories[sortedIndex];
+            const targetCat = customCategories[targetIndex];
+
+            // Tausche die Order-Werte
+            [currentCat.order, targetCat.order] = [targetCat.order, currentCat.order];
+
+            localStorage.setItem('customCategories', JSON.stringify(customCategories));
+            renderCategoryList();
+            renderList(); 
+        };
+
+        window.openCategoryDeleteModal = (name) => {
+            categoryToDelete = name;
+            const count = items.filter(i => i.category === name).length;
+            
+            document.getElementById('deleteCatName').innerText = name;
+            document.getElementById('itemCountInCat').innerText = count;
+
+            const select = document.getElementById('deleteCatTargetSelect');
+            select.innerHTML = '';
+            
+            const categories = getCategoryData();
+            const validTargets = Object.keys(categories)
+                .filter(catName => catName !== name && catName !== 'Manuell')
+                .sort((a, b) => categories[a].order - categories[b].order) // Nach Order sortieren
+                .map(catName => ({
+                    name: catName,
+                    icon: categories[catName].icon
+                }));
+
+            validTargets.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.innerText = `${cat.icon} ${cat.name}`;
+                select.appendChild(option);
+            });
+            
+            if (validTargets.length === 0) {
+                 select.innerHTML = '<option value="Sonstiges">❓ Sonstiges</option>';
+            }
+
+            document.getElementById('categoryDeleteModal').style.display = 'flex';
+        };
+
+        window.closeCategoryDeleteModal = () => {
+            document.getElementById('categoryDeleteModal').style.display = 'none';
+            categoryToDelete = null;
+        };
+
+        document.getElementById('confirmDeleteCategoryBtn').onclick = () => {
+            if (!categoryToDelete) return;
+
+            const targetCategory = document.getElementById('deleteCatTargetSelect').value;
+            const deletedCatName = categoryToDelete;
+
+            // 1. Items zur Zielkategorie verschieben
+            const updatedItems = items.map(i => {
+                if (i.category === deletedCatName) {
+                    return { ...i, category: targetCategory };
+                }
+                return i;
+            });
+            
+            // 2. Kategorie aus customCategories entfernen
+            customCategories = customCategories.filter(c => c.name !== deletedCatName);
+            localStorage.setItem('customCategories', JSON.stringify(customCategories));
+
+            // 3. Speichern, neu rendern und Modal schließen
+            saveItems(updatedItems); 
+            renderCategoryList();
+            renderList();
+            closeCategoryDeleteModal();
         };
 
 
-        // --- HAPTIC FEEDBACK (Unverändert) ---
+        function renderCategoryList() {
+            const container = document.getElementById('categoryListContainer');
+            // Sortiere Custom Categories nach der gespeicherten Order
+            const displayCategories = [...customCategories].sort((a, b) => a.order - b.order);
+
+            if (displayCategories.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-light);">Noch keine eigenen Kategorien vorhanden.</p>';
+                return;
+            }
+            
+            const minOrder = displayCategories[0].order;
+            const maxOrder = displayCategories[displayCategories.length - 1].order;
+
+            container.innerHTML = displayCategories.map(cat => `
+                <div class="cat-item-row">
+                    <div>
+                        <span style="margin-right: 5px;">${cat.icon}</span>
+                        <strong>${cat.name}</strong>
+                        <br>
+                        <small style="color: var(--text-light);">Keywords: ${cat.keywords || '—'}</small>
+                    </div>
+                    <div class="cat-controls">
+                        <!-- Up Button (disabled wenn erste) -->
+                        <button class="cat-sort-btn" 
+                                onclick="moveCategory('${cat.name.replace(/'/g, "\\'")}', -1)"
+                                ${cat.order === minOrder ? 'disabled' : ''}>
+                            ▲
+                        </button>
+                        <!-- Down Button (disabled wenn letzte) -->
+                        <button class="cat-sort-btn" 
+                                onclick="moveCategory('${cat.name.replace(/'/g, "\\'")}', 1)"
+                                ${cat.order === maxOrder ? 'disabled' : ''}>
+                            ▼
+                        </button>
+                        <button onclick="openCategoryEdit('${cat.name.replace(/'/g, "\\'")}')">Bearbeiten</button>
+                        <button class="del-btn" onclick="openCategoryDeleteModal('${cat.name.replace(/'/g, "\\'")}')">&times;</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // =========================================================================
+        // UI HILFSFUNKTIONEN (Konsolidiert)
+        // =========================================================================
+
+        // HAPTIC FEEDBACK (AKTUALISIERT FÜR DRAG)
         function hapticFeedback(style) {
             if (!('vibrate' in navigator) || !navigator.vibrate) return;
-            if (style === 'check') {
+            if (style === 'check' || style === 'start_drag') {
                 navigator.vibrate(50); 
-            } else if (style === 'delete') {
-                navigator.vibrate([100, 30, 100]); 
+            } else if (style === 'delete' || style === 'end_drag') {
+                navigator.vibrate(75); 
             }
         }
-
-        // --- DARK MODE LOGIC (Unverändert) ---
+        
         window.toggleDarkMode = (isDark) => {
             if (isDark) {
                 document.body.classList.add('dark-mode-override');
@@ -568,348 +902,13 @@
                 localStorage.setItem('darkModePreference', 'light');
             }
         };
-
-        if (darkModePreference === 'dark') {
-            document.body.classList.add('dark-mode-override');
-        }
-        document.addEventListener('DOMContentLoaded', () => {
-             const toggle = document.getElementById('darkModeToggle');
-             if (toggle) toggle.checked = document.body.classList.contains('dark-mode-override') || darkModePreference === 'dark';
-        });
-
-        // INIT AUTH
-        const initAuth = async () => {
-            console.log("Starte Authentifizierung...");
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    console.log("Verwende Canvas Auth Token.");
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    console.log("Verwende Anonyme Anmeldung (Webspace Modus).");
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Auth Error (Anmeldefehler):", error);
-                displayError("Verbindungsproblem: Anmeldefehler. (Orange Status)");
-            }
-        };
-
-        initAuth();
-
-        // AUTH LISTENER
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('statusDot').classList.add('online'); 
-                console.log("AUTH OK: Benutzer erfolgreich angemeldet. UID:", user.uid);
-                
-                const urlParams = new URLSearchParams(window.location.search);
-                const sharedList = urlParams.get('list');
-                if (sharedList && !myLists.includes(sharedList)) {
-                    myLists.push(sharedList);
-                    localStorage.setItem('myLists', JSON.stringify(myLists));
-                    currentListId = sharedList;
-                }
-                
-                subscribeToList(currentListId);
-                renderDrawer();
-                renderFavorites();
-                document.getElementById('errorMsg').style.display = 'none'; 
-            } else {
-                currentUser = null;
-                document.getElementById('statusDot').classList.remove('online'); 
-                console.error("AUTH FEHLER: Benutzer nicht angemeldet. Speichern nicht möglich.");
-            }
-        });
-
-        // HELPER: Pfad-Generator (Unverändert)
-        function getListDocRef(listId) {
-            return doc(db, 'artifacts', appId, 'public', 'data', 'shopping_lists', listId);
-        }
-
-        // DB SYNC (Fehlerbehandlung optimiert)
-        function subscribeToList(listId) {
-            if(unsubscribe) unsubscribe();
-            if(!currentUser) return; 
-            
-            console.log("Starte Subscription für Liste:", listId);
-            currentListId = listId;
-            document.getElementById('headerTitle').innerText = listId;
-            
-            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
-            window.history.pushState({path:newUrl},'',newUrl);
-            renderDrawer();
-
-            const listRef = getListDocRef(listId);
-
-            unsubscribe = onSnapshot(listRef, (snap) => {
-                if (snap.exists()) {
-                    items = snap.data().items || [];
-                    console.log("DB Update erhalten. Anzahl Items:", items.length);
-                    renderList();
-                } else {
-                    console.warn("DB Dokument existiert nicht. Erstelle leeres Dokument.");
-                    saveItems([]); 
-                    items = [];
-                    renderList();
-                }
-            }, (error) => {
-                console.error("Snapshot Error (Abonnement-Fehler):", error);
-                displayError("Sync Fehler: Kann Liste nicht abonnieren (Regelfehler?).");
-            });
-        }
-
-        async function saveItems(newItems) {
-            if(!currentUser) {
-                console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
-                displayError("FEHLER: Du bist nicht angemeldet. Daten können nicht gespeichert werden.");
-                return;
-            }
-            try {
-                const listRef = getListDocRef(currentListId);
-                await setDoc(listRef, { items: newItems }, { merge: true });
-                console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
-                document.getElementById('errorMsg').style.display = 'none';
-            } catch (e) { 
-                console.error("Save Error (Speicherfehler):", e);
-                displayError("Speicherfehler: Daten konnten nicht in Firestore geschrieben werden (Regelfehler?).");
-            }
-        }
-
-        // --- CORE LOGIC (Smart-Caching implementiert) ---
-
-        window.addItem = async (overrideText = null) => {
-            const input = document.getElementById('inputField');
-            const text = overrideText || input.value.trim();
-            if(!text) return;
-            
-            // 1. Parse based on input
-            let newItem = smartMode ? parseSmart(text) : { id: Date.now(), name: text, amount: 1, unit: '', category: 'Manuell', price: 0, checked: false, added: Date.now() };
-            if (!newItem.added) newItem.added = Date.now();
-            
-            const itemNameKey = newItem.name; 
-            
-            // 2. Load from Cache (wenn über Favorit/Autocomplete hinzugefügt)
-            if (overrideText && topItems[itemNameKey]) {
-                const cached = topItems[itemNameKey];
-                
-                // Verwende die gespeicherten Details, wenn der Parser keine spezifischen Details gefunden hat 
-                // (Amount ist 1 und Unit ist leer), ABER der Cache hat bessere Daten.
-                if (smartMode && newItem.amount === 1 && !newItem.unit && cached.lastAmount && cached.lastAmount > 1) {
-                     newItem.amount = cached.lastAmount;
-                     newItem.unit = cached.lastUnit;
-                     newItem.category = cached.lastCategory; 
-                     console.log(`Cache HIT: Verwende gespeicherte Details für ${itemNameKey}: ${cached.lastAmount}${cached.lastUnit} (${cached.lastCategory})`);
-                }
-                
-                // Wenn im Smart-Mode keine Kategorie erkannt wurde, nutze die zuletzt gespeicherte.
-                if (smartMode && newItem.category === 'Sonstiges' && cached.lastCategory !== 'Sonstiges' && cached.lastCategory !== 'Manuell') {
-                    newItem.category = cached.lastCategory;
-                    console.log(`Cache HIT: Kategorie für ${itemNameKey} von 'Sonstiges' auf '${cached.lastCategory}' gesetzt.`);
-                }
-            }
-
-            // 3. Update Cache (immer mit den *neuesten* Details)
-            if (!topItems[itemNameKey]) {
-                topItems[itemNameKey] = { count: 0, lastAmount: newItem.amount, lastUnit: newItem.unit, lastCategory: newItem.category };
-            }
-            topItems[itemNameKey].count++;
-            topItems[itemNameKey].lastAmount = newItem.amount;
-            topItems[itemNameKey].lastUnit = newItem.unit;
-            topItems[itemNameKey].lastCategory = newItem.category;
-
-            localStorage.setItem('topItems', JSON.stringify(topItems));
-            renderFavorites();
-
-            console.log("Füge Item hinzu:", newItem.name, "Kategorie:", newItem.category, "Menge:", newItem.amount, newItem.unit);
-
-            await saveItems([...items, newItem]);
-            if(!overrideText) input.value = '';
-            
-            document.getElementById('autocompleteContainer').style.display = 'none';
-        };
-
-        function parseSmart(text) {
-            const categories = {
-                "Obst & Gemüse": ["apfel", "banane", "salat", "gurke", "tomate", "zwiebel", "kartoffel", "beere", "knoblauch", "avocado", "paprika", "möhre", "karotte", "ingwer", "zitrone", "limette", "traube", "orange"],
-                "Getränke": ["wasser", "saft", "bier", "cola", "limo", "kaffee", "kasten", "pfand", "flasche", "sixpack", "sprudel", "tee", "energy", "wein", "sekt", "milchshake"],
-                "Kühlregal": ["milch", "käse", "joghurt", "butter", "sahne", "ei", "wurst", "quark", "mozarella", "frischkäse", "skyr", "pizza", "fertiggericht"],
-                "Vorrat": ["brot", "nudeln", "reis", "mehl", "zucker", "öl", "konserve", "soße", "gewürz", "ketchup", "müsli", "haferflocken", "toast", "nutella", "honig", "schokolade", "chips", "tiefkühl"],
-                "Haushalt": ["papier", "reiniger", "waschmittel", "zahnpasta", "seife", "duschgel", "shampoo", "müllbeutel", "deo", "schwamm", "tabs", "batterie", "folie", "serviette"]
-            };
-
-            let clean = text;
-            const amountRegex = /^(\d+[.,]?\d*)\s*(kg|g|l|ml|stk|pkg|kasten|flasche|pck|packung)?/i;
-            let amount = 1, unit = "";
-            const match = clean.match(amountRegex);
-            if(match) { 
-                amount = parseFloat(match[1].replace(',','.')); 
-                unit = match[2] || ""; 
-                clean = clean.replace(match[0], "").trim(); 
-            }
-            if(unit.toLowerCase() === 'kasten') clean += " Getränk";
-
-            let category = "Sonstiges";
-            const lower = clean.toLowerCase();
-            for(const [cat, keywords] of Object.entries(categories)) {
-                if(keywords.some(k => lower.includes(k))) { category = cat; break; }
-            }
-            
-            const name = clean.charAt(0).toUpperCase() + clean.slice(1);
-            
-            // Setze Kategorie auf 'Manuell', wenn SmartMode aus ist oder keine Kategorie gefunden wurde
-            if (!smartMode && category === "Sonstiges") category = "Manuell";
-            
-            return { id: Date.now() + Math.random(), name, amount, unit, category, price: 0, checked: false, added: Date.now() };
-        }
-
-        // --- AUTOSUGGEST (An neue topItems Struktur angepasst) ---
-        window.showSuggestions = () => {
-            clearTimeout(suggestionTimeout);
-            suggestionTimeout = setTimeout(() => {
-                const input = document.getElementById('inputField');
-                const container = document.getElementById('autocompleteContainer');
-                const query = input.value.trim().toLowerCase();
-
-                if (query.length < 2) {
-                    container.style.display = 'none';
-                    return;
-                }
-                
-                // Konvertiere topItems in Array für Sortierung/Filterung
-                const suggestions = Object.entries(topItems)
-                    .map(([name, data]) => ({ name, count: data.count, data }))
-                    .filter(({ name }) => name.toLowerCase().includes(query))
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 5); 
-
-                if (suggestions.length === 0) {
-                    container.style.display = 'none';
-                    return;
-                }
-
-                container.innerHTML = suggestions.map(({ name, data }) => 
-                    `<div class="suggestion-chip" onclick="selectSuggestion('${name.replace(/'/g, "\\'")}')">
-                        ${name} 
-                        <span style="font-size:0.75em; color:var(--text-light); margin-left:8px;">
-                            ${data.lastAmount > 1 ? `(${data.lastAmount}${data.lastUnit})` : ''}
-                        </span>
-                    </div>`
-                ).join('');
-                container.style.display = 'block';
-            }, 200);
-        };
-
-        window.selectSuggestion = (name) => {
-            document.getElementById('inputField').value = name;
-            document.getElementById('autocompleteContainer').style.display = 'none';
-            document.getElementById('inputField').focus();
-            window.addItem(name); // Sofortiges Hinzufügen, um Cachedetails zu nutzen
-        };
-
-        // --- FILTER / SORT LOGIC (Unverändert) ---
-        window.toggleSort = (mode) => {
-            sortMode = mode;
-            document.getElementById('sortCategory').classList.remove('active');
-            document.getElementById('sortAdded').classList.remove('active');
-            document.getElementById(`sort${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.add('active');
-            renderList();
-        };
-
-        window.toggleFilter = (mode) => {
-            if (mode === 'unchecked' && filterMode === 'unchecked') {
-                filterMode = 'all';
-                document.getElementById('filterUnchecked').classList.remove('active');
-            } else {
-                filterMode = 'unchecked';
-                document.getElementById('filterUnchecked').classList.add('active');
-            }
-            renderList();
-        };
-
-        // --- DRAG AND DROP LOGIC (Unverändert) ---
-        window.handleDragStart = (e, id) => {
-            if (sortMode !== 'category' || filterMode !== 'all') {
-                 e.preventDefault();
-                 return;
-            }
-            draggedId = id;
-            e.dataTransfer.effectAllowed = 'move';
-            e.target.classList.add('dragging');
-        };
-
-        window.handleDragOver = (e, targetId) => {
-            if (sortMode !== 'category' || filterMode !== 'all') return;
-            e.preventDefault();
-            const targetEl = document.getElementById(`item-${targetId}`);
-            if (!targetEl || draggedId == targetId) return;
-
-            document.querySelectorAll('.item-row').forEach(el => {
-                el.classList.remove('drag-over-top', 'drag-over-bottom');
-            });
-
-            const rect = targetEl.getBoundingClientRect();
-            const midpoint = rect.y + rect.height / 2;
-
-            if (e.clientY < midpoint) {
-                targetEl.classList.add('drag-over-top');
-            } else {
-                targetEl.classList.add('drag-over-bottom');
-            }
-        };
-
-        window.handleDragLeave = (e, id) => {
-            e.target.classList.remove('drag-over-top', 'drag-over-bottom');
-        };
-
-        window.handleDrop = (e, targetId) => {
-            if (sortMode !== 'category' || filterMode !== 'all') return;
-            e.preventDefault();
-            
-            window.handleDragEnd(e);
-
-            if (!draggedId || draggedId == targetId) return;
-
-            const itemToMove = items.find(i => i.id == draggedId);
-            if (!itemToMove) return;
-
-            const targetEl = document.getElementById(`item-${targetId}`);
-            const rect = targetEl.getBoundingClientRect();
-            const midpoint = rect.y + rect.height / 2;
-            const insertAfter = e.clientY > midpoint;
-
-            const newItems = items.filter(i => i.id != draggedId);
-            let targetIndex = newItems.findIndex(i => i.id == targetId);
-
-            if (insertAfter) {
-                targetIndex += 1;
-            }
-            
-            newItems.splice(targetIndex, 0, itemToMove);
-            
-            saveItems(newItems);
-        };
         
-        window.handleDragEnd = (e) => {
-            draggedId = null;
-            if (e && e.target) {
-                e.target.classList.remove('dragging');
-            }
-            document.querySelectorAll('.item-row').forEach(el => {
-                el.classList.remove('drag-over-top', 'drag-over-bottom');
-            });
-        };
-        // --- END DRAG AND DROP LOGIC ---
-
-
-        // --- CATEGORY COLLAPSE LOGIC (Unverändert) ---
         window.toggleCategoryCollapse = (categoryName) => {
             collapsedCategories[categoryName] = !collapsedCategories[categoryName];
             localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
             renderList();
         };
 
-        // --- EDITING, QUICK ADD, BUDGET MODE, STANDARD FUNCTIONS (Unverändert) ---
         window.openEdit = (id) => {
             const item = items.find(i => i.id === id);
             if(!item) return;
@@ -917,7 +916,20 @@
             document.getElementById('editName').value = item.name;
             document.getElementById('editAmount').value = item.amount;
             document.getElementById('editUnit').value = item.unit || "";
-            document.getElementById('editCategory').value = item.category || "Sonstiges";
+            
+            const select = document.getElementById('editCategory');
+            select.innerHTML = ''; 
+            const allCategories = getCategoryData();
+            
+            Object.keys(allCategories).forEach(catName => {
+                const option = document.createElement('option');
+                option.value = catName;
+                option.innerText = `${allCategories[catName].icon || ''} ${catName}`;
+                select.appendChild(option);
+            });
+
+            select.value = item.category || "Sonstiges";
+
             document.getElementById('editModal').style.display = 'flex';
             document.getElementById('quickAddInput').value = ''; 
         };
@@ -929,10 +941,15 @@
             const newUnit = document.getElementById('editUnit').value;
             const newCat = document.getElementById('editCategory').value;
 
-            const updated = items.map(i => i.id === editItemId ? { ...i, name: newName, amount: newAmount, unit: newUnit, category: newCat } : i);
+            const updated = items.map(i => i.id === editItemId ? { 
+                ...i, 
+                name: newName, 
+                amount: newAmount, 
+                unit: newUnit, 
+                category: newCat 
+            } : i);
             await saveItems(updated);
             
-            // NEU: Nach Bearbeiten den Cache aktualisieren
             if (topItems[newName]) {
                 topItems[newName].lastAmount = newAmount;
                 topItems[newName].lastUnit = newUnit;
@@ -950,7 +967,6 @@
             const text = input.value.trim();
             if(!text) return;
             
-            // NEU: addItem mit Text-Override verwenden, um Cache-Logik zu nutzen
             await window.addItem(text);
 
             input.value = '';
@@ -962,24 +978,6 @@
                 e.preventDefault(); 
                 window.quickAddItem(); 
             }
-        };
-
-        window.toggleBudgetMode = () => {
-            budgetMode = !budgetMode;
-            const btn = document.getElementById('budgetBtn');
-            const footer = document.getElementById('footerBar');
-            const fab = document.getElementById('fabBar');
-            
-            if(budgetMode) {
-                btn.classList.add('active');
-                footer.style.display = 'flex';
-                fab.style.display = 'none';
-            } else {
-                btn.classList.remove('active');
-                footer.style.display = 'none';
-                fab.style.display = 'flex';
-            }
-            renderList();
         };
 
         window.updatePrice = (id, val) => {
@@ -1029,8 +1027,7 @@
              const add = r[t].map(n => parseSmart(n));
              await saveItems([...items, ...add]);
         };
-
-        // UI HELPERS (Unverändert)
+        
         window.toggleMode = () => {
             smartMode = !smartMode;
             const btn = document.getElementById('modeBtn');
@@ -1043,7 +1040,6 @@
         window.handleEnter = (e) => { 
             if(e.key === 'Enter') {
                 document.getElementById('autocompleteContainer').style.display = 'none';
-                // NEU: Aufruf von addItem ohne Parameter, damit der Input-Feldwert verwendet wird.
                 window.addItem(); 
             }
         };
@@ -1054,8 +1050,7 @@
             t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 2000);
         };
-
-        // MULTI LIST (Unverändert)
+        
         window.switchList = (id) => { toggleDrawer(); subscribeToList(id); };
         window.createNewList = () => {
             const n = prompt("Name der neuen Liste:"); 
@@ -1115,7 +1110,6 @@
         }
         window.toggleDrawer = () => { document.getElementById('drawer').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); };
 
-        // SPEECH (Unverändert)
         function initSpeech() {
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1142,10 +1136,20 @@
                 displayItems = displayItems.filter(i => !i.checked);
             }
 
+            const itemSorter = (a, b) => {
+                if (a.checked !== b.checked) return a.checked - b.checked; 
+
+                const orderA = a.orderIndex !== undefined ? a.orderIndex : a.added;
+                const orderB = b.orderIndex !== undefined ? b.orderIndex : b.added;
+                if (orderA !== orderB) return orderA - orderB; 
+                
+                return b.added - a.added; 
+            };
+
             if (sortMode === 'added') {
                 displayItems.sort((a, b) => b.added - a.added);
             } else {
-                 displayItems.sort((a,b) => a.checked - b.checked);
+                 displayItems.sort(itemSorter);
             }
 
 
@@ -1174,11 +1178,14 @@
             if(items.length === 0) { document.getElementById('emptyState').style.display = 'block'; return; }
             document.getElementById('emptyState').style.display = 'none';
 
-
-            const order = ["Obst & Gemüse", "Kühlregal", "Vorrat", "Getränke", "Haushalt", "Manuell", "Sonstiges"];
+            // Dynamische Kategorie-Reihenfolge (Basis + Custom, sortiert nach Order)
+            const allCategories = getCategoryData();
+            
+            const orderedCategoryNames = Object.keys(allCategories)
+                .sort((a, b) => allCategories[a].order - allCategories[b].order);
             
             let categoriesToRender = sortMode === 'category' 
-                ? [...order, ...Object.keys(groups)].filter((v,i,a)=>a.indexOf(v)===i) 
+                ? [...orderedCategoryNames, ...Object.keys(groups)].filter((v,i,a)=>a.indexOf(v)===i) 
                 : ['Alle Artikel']; 
 
             if (sortMode === 'added') {
@@ -1191,7 +1198,7 @@
                     const isCollapsed = collapsedCategories[cat];
                     
                     if (sortMode === 'category') {
-                         const icon = categoryIcons[cat] || '❓'; 
+                         const icon = allCategories[cat] ? allCategories[cat].icon : '❓'; 
                          const titleWrapper = document.createElement('div');
                          titleWrapper.className = `cat-title-wrapper ${isCollapsed ? 'collapsed' : ''}`;
                          titleWrapper.setAttribute('onclick', `toggleCategoryCollapse('${cat.replace(/'/g, "\\'")}')`);
@@ -1213,7 +1220,6 @@
                             if(budgetMode) {
                                 rightSide = `<input type="number" class="price-input" placeholder="€" value="${item.price||''}" onchange="updatePrice(${item.id}, this.value)" onclick="event.stopPropagation()">`;
                             } else {
-                                // Mengensteuerung wird IMMER angezeigt, außer im Budget-Modus (V19 Fix)
                                 rightSide = `
                                     <div class="qty-control" onclick="event.stopPropagation()">
                                         <div class="qty-btn" onclick="updateQty(${item.id}, -1)">-</div>
@@ -1227,8 +1233,11 @@
                             const el = document.createElement('div');
                             el.className = `item-row ${item.checked ? 'checked' : ''}`;
                             el.id = `item-${item.id}`; 
-                            el.draggable = (sortMode === 'category' && filterMode === 'all');
                             
+                            // Drag & Drop nur bei Kategorie-Sortierung und ohne Filter erlaubt
+                            el.draggable = (sortMode === 'category' && filterMode === 'all' && !item.checked);
+                            
+                            // Hinzugefügt: touch/mouse events für Drag & Drop
                             el.setAttribute('ondragstart', `handleDragStart(event, ${item.id})`);
                             el.setAttribute('ondragover', `handleDragOver(event, ${item.id})`);
                             el.setAttribute('ondragleave', `handleDragLeave(event, ${item.id})`);
@@ -1262,12 +1271,12 @@
             `;
             // Top Items
             Object.entries(topItems)
-                .map(([name, data]) => ({ name, count: data.count, data })) // NEU: TopItems zu Array mappen
+                .map(([name, data]) => ({ name, count: data.count, data }))
                 .sort((a,b)=>b.count-a.count)
                 .slice(0, 6)
                 .forEach(({ name, count, data }) => {
                 if(count > 1) {
-                    const label = data.lastAmount > 1 ? `+ ${data.lastAmount}${data.lastUnit} ${name}` : `+ ${name}`; // NEU: Mengenanzeige
+                    const label = data.lastAmount > 1 ? `+ ${data.lastAmount}${data.lastUnit} ${name}` : `+ ${name}`; 
                     const el = document.createElement('div');
                     el.className = 'magic-chip fav';
                     el.innerText = label;
@@ -1276,6 +1285,121 @@
                 }
             });
         }
+        
+        // --- Drag & Drop Handler (Aktualisiert für haptisches Feedback) ---
+        window.handleDragStart = (e, id) => {
+            if (sortMode !== 'category' || filterMode !== 'all') {
+                 e.preventDefault();
+                 return;
+            }
+            draggedId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.classList.add('dragging');
+            hapticFeedback('start_drag'); // Haptisches Feedback beim Start
+        };
+
+        window.handleDragOver = (e, targetId) => {
+            if (sortMode !== 'category' || filterMode !== 'all') return;
+            e.preventDefault();
+            
+            const draggedItem = items.find(i => i.id == draggedId);
+            const targetItem = items.find(i => i.id == targetId);
+
+            if (!draggedItem || !targetItem || draggedItem.category !== targetItem.category || draggedId == targetId) return;
+
+            const targetEl = document.getElementById(`item-${targetId}`);
+            if (!targetEl) return;
+
+            document.querySelectorAll('.item-row').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+
+            const rect = targetEl.getBoundingClientRect();
+            const midpoint = rect.y + rect.height / 2;
+
+            if (e.clientY < midpoint) {
+                targetEl.classList.add('drag-over-top');
+            } else {
+                targetEl.classList.add('drag-over-bottom');
+            }
+        };
+
+        window.handleDragLeave = (e, id) => {
+            e.target.classList.remove('drag-over-top', 'drag-over-bottom');
+        };
+
+        window.handleDrop = (e, targetId) => {
+            if (sortMode !== 'category' || filterMode !== 'all') return;
+            e.preventDefault();
+            
+            window.handleDragEnd(e);
+
+            if (!draggedId || draggedId == targetId) return;
+
+            const draggedItem = items.find(i => i.id == draggedId);
+            const targetItem = items.find(i => i.id == targetId);
+
+            if (!draggedItem || !targetItem || draggedItem.category !== targetItem.category) return;
+            
+            let relevantItems = items.filter(i => i.category === draggedItem.category);
+            relevantItems.sort((a, b) => {
+                if (a.checked !== b.checked) return a.checked - b.checked;
+                const orderA = a.orderIndex !== undefined ? a.orderIndex : a.added;
+                const orderB = b.orderIndex !== undefined ? b.orderIndex : b.added;
+                if (orderA !== orderB) return orderA - orderB;
+                return b.added - a.added;
+            });
+            
+            const targetIndexInCat = relevantItems.findIndex(i => i.id === targetId);
+            const insertAfter = e.clientY > document.getElementById(`item-${targetId}`).getBoundingClientRect().y + document.getElementById(`item-${targetId}`).offsetHeight / 2;
+
+            let indexBefore = -1;
+            let indexAfter = Infinity;
+
+            if (insertAfter) {
+                indexBefore = targetItem.orderIndex !== undefined ? targetItem.orderIndex : targetItem.added;
+                
+                const itemAfter = relevantItems[targetIndexInCat + 1];
+                if (itemAfter && !itemAfter.checked) { // Nur mit nicht-erledigten Items vergleichen
+                    indexAfter = itemAfter.orderIndex !== undefined ? itemAfter.orderIndex : itemAfter.added;
+                } else if (itemAfter && itemAfter.checked) {
+                     // Wenn das Element danach erledigt ist, nehmen wir targetItem's Index + 1000, um sicherzustellen, dass es vor erledigten Elementen bleibt.
+                     indexAfter = indexBefore + 1000;
+                }
+            } else {
+                indexAfter = targetItem.orderIndex !== undefined ? targetItem.orderIndex : targetItem.added;
+                
+                const itemBefore = relevantItems[targetIndexInCat - 1];
+                if (itemBefore && !itemBefore.checked) {
+                    indexBefore = itemBefore.orderIndex !== undefined ? itemBefore.orderIndex : itemBefore.added;
+                } else {
+                    indexBefore = indexAfter - 1000; 
+                }
+            }
+            
+            const newOrderIndex = (indexBefore + indexAfter) / 2;
+
+            const updatedItems = items.map(i => {
+                if (i.id === draggedId) {
+                    return { ...i, orderIndex: newOrderIndex };
+                }
+                return i;
+            });
+
+            saveItems(updatedItems);
+        };
+        
+        window.handleDragEnd = (e) => {
+            draggedId = null;
+            if (e && e.target) {
+                e.target.classList.remove('dragging');
+            }
+            document.querySelectorAll('.item-row').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+            hapticFeedback('end_drag'); // Haptisches Feedback beim Ende
+        };
+
     </script>
 </body>
 </html>
