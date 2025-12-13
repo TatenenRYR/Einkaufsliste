@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SmartEinkauf V34 👑</title>
+    <title>SmartEinkauf V35 👑</title>
     <!-- Confetti Library für den "Fertig"-Effekt -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -647,6 +647,7 @@
         const firebaseConfig = externalFirebaseConfig; 
         const appId = 'default-webspace-app'; 
 
+        // Initialisiere die Firebase Services
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -656,7 +657,7 @@
         let unsubscribe = null;
 
         // =========================================================================
-        // STATE & SHOP MODE VERWALTUNG
+        // STATE & SHOP MODE VERWALTUNG (Unverändert)
         // =========================================================================
 
         const baseCategoryData = {
@@ -727,6 +728,128 @@
         }
 
         // =========================================================================
+        // AUTH & DB HANDLER
+        // =========================================================================
+
+        /**
+         * Führt die asynchrone anonyme Anmeldung durch.
+         */
+        const initAuth = async () => {
+            console.log("Starte Authentifizierung...");
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Auth Error (Anmeldefehler):", error);
+                const errorCode = error.code || 'unknown';
+                console.error(`AUTH Error Code: ${errorCode}`);
+                displayError("Anmeldung fehlgeschlagen. Bitte Firebase-Konfiguration prüfen.", true, errorCode);
+            }
+        };
+
+        /**
+         * Verwaltet den globalen Benutzerstatus und startet die Daten-Subscriptions.
+         */
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('statusDot').classList.add('online'); 
+                console.log("AUTH OK: Benutzer erfolgreich anonym angemeldet. UID:", user.uid);
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const sharedList = urlParams.get('list');
+                if (sharedList && !myLists.includes(sharedList)) {
+                    myLists.push(sharedList);
+                    localStorage.setItem('myLists', JSON.stringify(myLists));
+                    currentListId = sharedList;
+                }
+                
+                // Starte Daten-Subscription, da der Benutzer jetzt definiert ist
+                subscribeToList(currentListId);
+                renderDrawer();
+                renderFavorites();
+                renderFabBar(); 
+                
+                // Re-initialisiere Shop Mode, falls nötig
+                if (localStorage.getItem('shopModeActive') === 'true' && localStorage.getItem('currentShop')) {
+                    shopModeActive = true;
+                    currentShop = localStorage.getItem('currentShop');
+                    startLocationTracking(true); 
+                }
+
+                document.getElementById('errorMsg').style.display = 'none'; 
+            } else {
+                currentUser = null;
+                document.getElementById('statusDot').classList.remove('online'); 
+                console.warn("AUTH FEHLER: Anonyme Anmeldung fehlgeschlagen.");
+            }
+        });
+
+        // Startet die asynchrone Authentifizierung beim Laden des Moduls
+        initAuth();
+
+
+        /**
+         * Abonniert die aktuelle Einkaufsliste in Firestore.
+         */
+        function subscribeToList(listId) {
+            if(unsubscribe) unsubscribe();
+            if(!currentUser) {
+                 console.warn("Subscription blockiert: currentUser ist null.");
+                 return; 
+            }
+            
+            console.log("Starte Subscription für Liste:", listId);
+            currentListId = listId;
+            document.getElementById('headerTitle').innerText = listId;
+            
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?list=' + listId;
+            window.history.pushState({path:newUrl},'',newUrl);
+            renderDrawer();
+
+            const listRef = getListDocRef(listId);
+
+            unsubscribe = onSnapshot(listRef, (snap) => {
+                if (snap.exists()) {
+                    items = snap.data().items || [];
+                    console.log("DB Update erhalten. Anzahl Items:", items.length);
+                    renderList();
+                } else {
+                    console.warn("DB Dokument existiert nicht. Versuche, leeres Dokument zu erstellen.");
+                    saveItems([], true); 
+                    items = [];
+                    renderList();
+                }
+            }, (error) => {
+                console.error("Snapshot Error (Abonnement-Fehler):", error);
+                const errorCode = error.code || 'unknown';
+                console.error(`DB Error Code (Snapshot): ${errorCode}`);
+                displayError("Fehler beim Abonnieren der Liste (Regelfehler oder Verbindung).", false, errorCode);
+            });
+        }
+
+        /**
+         * Speichert die Item-Liste in Firestore.
+         */
+        async function saveItems(newItems, isInitialCreation = false) {
+            if(!currentUser) {
+                console.error("FIREBASE ERROR: Speichern abgebrochen. Benutzer ist nicht authentifiziert.");
+                displayError("Du bist nicht angemeldet. Daten können nicht gespeichert werden.", true, 'auth/unauthenticated');
+                return;
+            }
+            try {
+                const listRef = getListDocRef(currentListId);
+                await setDoc(listRef, { items: newItems }, { merge: !isInitialCreation });
+                console.log("DB WRITE OK. Liste erfolgreich gespeichert.");
+                document.getElementById('errorMsg').style.display = 'none';
+            } catch (e) { 
+                console.error("Save Error (Speicherfehler):", e);
+                const errorCode = e.code || 'unknown';
+                console.error(`DB Error Code (Write): ${errorCode}`);
+                displayError("Speicherfehler: Konnte Daten nicht speichern (Sicherheitsregeln verletzt?).", false, errorCode);
+            }
+        }
+        
+        // =========================================================================
         // GPS & GEOCENTER LOGIK
         // =========================================================================
         
@@ -738,7 +861,7 @@
             const a = 
                 Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                 Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.atan2(Math.sqrt(1 - a)));
             return R * c;
         }
 
@@ -762,12 +885,12 @@
             navigator.geolocation.getCurrentPosition(async (position) => {
                 const currentLat = position.coords.latitude;
                 const currentLon = position.coords.longitude;
-                const speedMps = position.coords.speed || 0; // Geschwindigkeit in Meter pro Sekunde
-                const speedKmh = speedMps * 3.6; // Umrechnung in km/h
+                const speedMps = position.coords.speed || 0; 
+                const speedKmh = speedMps * 3.6; 
 
-                const NEARBY_THRESHOLD = 50; // Meter
-                const WALKING_SPEED_MAX = 5; // km/h
-                const DRIVING_SPEED_MIN = 15; // km/h
+                const NEARBY_THRESHOLD = 50; 
+                const WALKING_SPEED_MAX = 5; 
+                const DRIVING_SPEED_MIN = 15; 
                 
                 let recognizedStore = null;
 
@@ -1052,9 +1175,10 @@
             }
         }
         
-        // --- Restliche Logik (renderList, Drag & Drop, etc.) ist identisch zu V30 ---
+        // =========================================================================
+        // UI HILFSFUNKTIONEN (Unverändert)
+        // =========================================================================
 
-        // RENDER (Unverändert)
         function renderList() {
             const container = document.getElementById('listContainer');
             container.innerHTML = '';
@@ -1337,7 +1461,6 @@
             hapticFeedback('end_drag'); 
         };
         
-        // Funktion zum Anzeigen der Produktlokalisierung
         window.openProductLocationModal = (id) => {
             if (!shopModeActive) return; 
 
@@ -1442,24 +1565,64 @@
             renderList();
         };
         
+        window.openEdit = (id) => {
+            const item = items.find(i => i.id === id);
+            if(!item) return;
+            editItemId = id;
+            document.getElementById('editName').value = item.name;
+            document.getElementById('editAmount').value = item.amount;
+            document.getElementById('editUnit').value = item.unit || "";
+            
+            const select = document.getElementById('editCategory');
+            select.innerHTML = ''; 
+            const allCategories = getCategoryData();
+            
+            Object.keys(allCategories).forEach(catName => {
+                const option = document.createElement('option');
+                option.value = catName;
+                option.innerText = `${allCategories[catName].icon || ''} ${catName}`;
+                select.appendChild(option);
+            });
+
+            select.value = item.category || "Sonstiges";
+
+            document.getElementById('editModal').style.display = 'flex';
+            document.getElementById('quickAddInput').value = ''; 
+        };
+
+        window.saveEdit = async () => {
+            if(!editItemId) return;
+            const newName = document.getElementById('editName').value;
+            const newAmount = parseFloat(document.getElementById('editAmount').value) || 1;
+            const newUnit = document.getElementById('editUnit').value;
+            const newCat = document.getElementById('editCategory').value;
+
+            const updated = items.map(i => i.id === editItemId ? { 
+                ...i, 
+                name: newName, 
+                amount: newAmount, 
+                unit: newUnit, 
+                category: newCat 
+            } : i);
+            await saveItems(updated);
+            
+            if (topItems[newName]) {
+                topItems[newName].lastAmount = newAmount;
+                topItems[newName].lastUnit = newUnit;
+                topItems[newName].lastCategory = newCat;
+                localStorage.setItem('topItems', JSON.stringify(topItems));
+                renderFavorites();
+            }
+
+            closeEdit();
+        };
+        
         window.addItem = async (overrideText = null) => {
             const input = document.getElementById('inputField');
             const text = overrideText || input.value.trim();
             if(!text) return;
             
-            let newItem = smartMode ? parseSmart(text) : { 
-                id: Date.now(), 
-                name: text, 
-                amount: 1, 
-                unit: '', 
-                category: 'Manuell', 
-                price: 0, 
-                checked: false, 
-                added: Date.now(),
-                orderIndex: Date.now() 
-            };
-            if (!newItem.added) newItem.added = Date.now();
-            if (!newItem.orderIndex) newItem.orderIndex = newItem.added;
+            let newItem = parseSmart(text);
             
             const itemNameKey = newItem.name; 
             
@@ -1561,8 +1724,6 @@
                 }
             });
         }
-
-        // ... (restliche Standardfunktionen)
         
         // --- UX Fix V34 ---
         window.resetUIState = () => {
@@ -1587,4 +1748,4 @@
         });
     </script>
 </body>
-    </html>
+</html>
