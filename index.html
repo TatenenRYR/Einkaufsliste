@@ -948,6 +948,7 @@
 
 
         window.startShoppingMode = async (recognized = false) => {
+            console.log("[SSM] Starte Shopping Mode...");
             const shopName = document.getElementById('shopNameInput').value.trim();
             if (!shopName) {
                 alert("Bitte gib den Namen des Ladens ein.");
@@ -982,7 +983,10 @@
 
             renderList();
             renderFabBar();
-            closeShopModeModal();
+            
+            // KORREKTUR: Das Modal muss nach Abschluss der asynchronen Operationen geschlossen werden.
+            closeShopModeModal(); 
+            
             document.getElementById('inputField').focus();
         };
 
@@ -1702,30 +1706,6 @@
             };
         }
         
-        function renderFavorites() {
-            const c = document.getElementById('favContainer');
-            c.innerHTML = `
-                <div class="magic-chip" onclick="addRecipe('party')">🎉 Party</div>
-                <div class="magic-chip" onclick="addRecipe('breakfast')">🥞 Frühstück</div>
-            `;
-            // Top Items
-            Object.entries(topItems)
-                .map(([name, data]) => ({ name, count: data.count, data }))
-                .sort((a,b)=>b.count-a.count)
-                .slice(0, 6)
-                .forEach(({ name, count, data }) => {
-                if(count > 1) {
-                    const label = data.lastAmount > 1 ? `+ ${data.lastAmount}${data.lastUnit} ${name}` : `+ ${name}`; 
-                    const el = document.createElement('div');
-                    el.className = 'magic-chip fav';
-                    el.innerText = label;
-                    el.onclick = () => window.addItem(name);
-                    c.appendChild(el);
-                }
-            });
-        }
-        
-        // --- UX Fix V34 ---
         window.resetUIState = () => {
             // 1. Force close overlays
             document.getElementById('overlay').classList.remove('open');
@@ -1748,4 +1728,4 @@
         });
     </script>
 </body>
-</html>
+                </html>
